@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft,
   FileText,
@@ -9,10 +8,9 @@ import {
   RotateCcw,
   Trash2,
 } from 'lucide-react'
-import { meetingApi, ApiError } from '../api/client'
-import type { MeetingSearchResult } from '../api/types'
+import { ApiError } from '../api/client'
 import { useHistoryBulkActions } from '../hooks/useHistoryBulkActions'
-import { useAuth } from '../store/auth'
+import { useHistoryMeetings } from '../hooks/useHistoryMeetings'
 import { TopBar } from '../components/TopBar'
 import { HistoryFilters } from './HistoryFilters'
 import { HistoryBulkActions } from './HistoryBulkActions'
@@ -21,44 +19,45 @@ import { HistoryPagination } from './HistoryPagination'
 
 export default function History() {
   const navigate = useNavigate()
-  const qc = useQueryClient()
-  const [view, setView] = useState<'active' | 'trash'>('active')
-  const [deleting, setDeleting] = useState<number | null>(null)
-  const [q, setQ] = useState('')
-  const [debouncedQ, setDebouncedQ] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
-  const [range, setRange] = useState('all')
-  const [archivedFilter, setArchivedFilter] = useState('false')
-  const [tagFilter, setTagFilter] = useState('')
-  const [page, setPage] = useState(0)
-  const [pageSize, setPageSize] = useState(20)
-  const [selected, setSelected] = useState<Set<number>>(new Set())
   const [opNotice, setOpNotice] = useState<string | null>(null)
 
-  const user = useAuth((s) => s.user)
-  const hasToken = useAuth((s) => s.hasToken)
-  const needsLogin = !hasToken()
-  void user
-
-  const refresh = async () => {
-    setSelected(new Set())
-    await qc.invalidateQueries({ queryKey: ['meetings'] })
-  }
-
-  const removeFromCaches = (ids: number[]) => {
-    const removed = new Set(ids)
-    qc.setQueriesData<MeetingSearchResult>(
-      { queryKey: ['meetings'] },
-      (previous) =>
-        previous
-          ? {
-              ...previous,
-              items: previous.items.filter((item) => !removed.has(item.id)),
-              total: Math.max(0, previous.total - removed.size),
-            }
-          : previous,
-    )
-  }
+  const {
+    view,
+    setView,
+    deleting,
+    q,
+    setQ,
+    debouncedQ,
+    statusFilter,
+    setStatusFilter,
+    range,
+    setRange,
+    archivedFilter,
+    setArchivedFilter,
+    tagFilter,
+    setTagFilter,
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
+    selected,
+    setSelected,
+    needsLogin,
+    data,
+    isLoading,
+    error,
+    meetings,
+    total,
+    totalPages,
+    allSelected,
+    toggleOne,
+    toggleAll,
+    refresh,
+    removeFromCaches,
+    handleDelete,
+    handleRestore,
+    filtered,
+  } = useHistoryMeetings({ setOpNotice })
 
   const {
     busy,
@@ -92,117 +91,24 @@ export default function History() {
   })
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setDebouncedQ(q.trim()), 300)
-    return () => window.clearTimeout(timer)
-  }, [q])
-
-  const dateFrom = useMemo(() => {
-    if (range === '7d') {
-      return new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10)
-    }
-    if (range === '30d') {
-      return new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10)
-    }
-    return undefined
-  }, [range])
-
-  useEffect(() => {
     setPage(0)
     setSelected(new Set())
     setAction('none')
-  }, [view, debouncedQ, statusFilter, range, archivedFilter, tagFilter])
-
-  const { data, isLoading, error } = useQuery({
-    queryKey: [
-      'meetings',
-      view,
-      debouncedQ,
-      statusFilter,
-      dateFrom,
-      archivedFilter,
-      tagFilter,
-      page,
-      pageSize,
-    ],
-    queryFn: () => {
-      if (view === 'trash') {
-        return meetingApi.trash(pageSize, page * pageSize)
-      }
-      return meetingApi.search({
-        q: debouncedQ || undefined,
-        status: statusFilter || undefined,
-        dateFrom,
-        archived: archivedFilter === 'all' ? undefined : archivedFilter,
-        tag: tagFilter || undefined,
-        limit: pageSize,
-        offset: page * pageSize,
-      })
-    },
-    enabled: !needsLogin,
-  })
-
-  const meetings = data?.items ?? []
-  const total = data?.total ?? 0
-  const totalPages = Math.max(1, Math.ceil(total / pageSize))
-  const allSelected =
-    meetings.length > 0 && meetings.every((m) => selected.has(m.id))
-
-  // 删除/彻底删除后当前页可能为空，自动回退一页
-  useEffect(() => {
-    if (!isLoading && meetings.length === 0 && total > 0 && page > 0) {
-      setPage((p) => Math.max(0, p - 1))
-    }
-  }, [isLoading, meetings.length, total, page])
-
-  const toggleOne = (id: number) => {
-    setSelected((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
-
-  const toggleAll = () => {
-    setSelected((prev) => {
-      const next = new Set(prev)
-      if (allSelected) meetings.forEach((m) => next.delete(m.id))
-      else meetings.forEach((m) => next.add(m.id))
-      return next
-    })
-  }
-
-  const handleDelete = async (id: number, e: React.MouseEvent) => {
-    e.stopPropagation()
-    if (!confirm('将这场会议移入回收站？30 天内可以恢复。')) return
-    setDeleting(id)
-    try {
-      await meetingApi.remove(id)
-      removeFromCaches([id])
-      await refresh()
-    } catch (e) {
-      setOpNotice(
-        e instanceof Error
-          ? e.message
-          : '删除失败；会议可能仍在收尾或已被移入回收站。',
-      )
-    } finally {
-      setDeleting(null)
-    }
-  }
-
-  const handleRestore = async (id: number, e: React.MouseEvent) => {
-    e.stopPropagation()
-    await meetingApi.bulkRestore([id])
-    await refresh()
-  }
+  }, [
+    view,
+    debouncedQ,
+    statusFilter,
+    range,
+    archivedFilter,
+    tagFilter,
+    setAction,
+    setPage,
+    setSelected,
+  ])
 
   const handleOpen = (id: number) => {
     if (view === 'active') navigate(`/history/${id}`)
   }
-  const filtered =
-    view === 'active' &&
-    Boolean(debouncedQ || statusFilter || range !== 'all' || archivedFilter !== 'false' || tagFilter)
 
   return (
     <div className="flex h-full flex-col">
