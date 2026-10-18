@@ -18,7 +18,7 @@ from fastapi.responses import ORJSONResponse, PlainTextResponse
 from .api.http import api_router
 from .api.http.routes.system import VERSION
 from .api.ws import stream
-from .db import init_db
+from .application.bootstrap import initialize_app_database
 from .settings import SERVER_CONFIG, get_config
 
 _LOG_FORMAT = "%(asctime)s %(levelname)-7s %(name)s: %(message)s"
@@ -91,7 +91,7 @@ def _orjson_dumps(content, *, default=None) -> bytes:
 async def lifespan(app: FastAPI):
     """启动：建库、加载配置、预热模型。"""
     logger.info("=== %s 启动中 ===", SERVER_CONFIG["app_name"])
-    init_db()
+    initialize_app_database()
     # init_db 内的 Alembic fileConfig 会重置根 logger；必须在迁移之后重装，
     # 否则只有启动日志落盘，真正重要的会话/定稿/错误事件全部丢失。
     _install_file_logging()

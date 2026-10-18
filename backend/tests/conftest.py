@@ -102,7 +102,8 @@ def reset_db(db_path: Path, _isolate_env: None) -> Iterator[None]:
     """
     from sqlmodel import SQLModel
 
-    from imeeting.db import engine, init_db
+    from imeeting.application.bootstrap import initialize_app_database
+    from imeeting.db import engine
     from imeeting.settings import config_store
 
     SQLModel.metadata.drop_all(engine)
@@ -118,7 +119,7 @@ def reset_db(db_path: Path, _isolate_env: None) -> Iterator[None]:
     config_store._db_overrides = {}
     _reset_config_caches()
 
-    init_db()
+    initialize_app_database()
 
     yield
 

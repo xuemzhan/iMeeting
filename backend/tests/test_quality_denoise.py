@@ -126,7 +126,8 @@ def test_accepted_fallback_runs_speaker_resolution(monkeypatch):
 
 
 def test_builtin_cyber_glossary_is_idempotent_and_applied(client):
-    from imeeting.db import _ensure_glossary_terms, engine
+    from imeeting.application.seeds import ensure_builtin_glossary_terms
+    from imeeting.db import engine
     from imeeting.glossary import apply_terms, invalidate_cache
     from imeeting.models import GlossaryTerm
 
@@ -150,8 +151,8 @@ def test_builtin_cyber_glossary_is_idempotent_and_applied(client):
         "防护对象",
         "基础理论",
     }
-    _ensure_glossary_terms()
-    _ensure_glossary_terms()
+    ensure_builtin_glossary_terms()
+    ensure_builtin_glossary_terms()
     invalidate_cache()
     with Session(engine) as db:
         terms = db.exec(select(GlossaryTerm)).all()

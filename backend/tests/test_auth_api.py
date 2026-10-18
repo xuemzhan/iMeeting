@@ -286,7 +286,8 @@ class TestBootstrap:
         """用环境变量换了出厂账号时，预填要跟着变，不能写死 admin/admin123。"""
         from sqlmodel import Session, select
 
-        from imeeting.db import engine, init_db
+        from imeeting.application.bootstrap import initialize_app_database
+        from imeeting.db import engine
         from imeeting.models import User
 
         monkeypatch.setenv("ADMIN_USERNAME", "ops")
@@ -297,7 +298,7 @@ class TestBootstrap:
                 db.delete(row)
             db.commit()
 
-        init_db()  # 重新按环境变量播种管理员
+        initialize_app_database()  # 重新按环境变量播种管理员
 
         body = client.get("/api/v1/auth/bootstrap").json()
         assert body["default_username"] == "ops"
