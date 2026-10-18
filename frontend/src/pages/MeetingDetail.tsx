@@ -1,21 +1,15 @@
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import {
-  ArrowLeft,
   CheckSquare,
-  Download,
-  Info,
   Loader2,
-  Share2,
-  ShieldCheck,
-  Users,
 } from 'lucide-react'
 
 import { ApiError } from '../api/client'
 import { useMeetingDetail } from '../hooks/useMeetingDetail'
-import { formatDuration } from '../store/session'
 import { ActionsPanel } from '../components/ActionsPanel'
 import { AudioPlayer } from '../components/AudioPlayer'
 import { CompliancePanel } from '../components/CompliancePanel'
+import { MeetingDetailHeader } from '../components/MeetingDetailHeader'
 import { MeetingInfoEditor } from '../components/MeetingInfoEditor'
 import { MembersDialog } from '../components/MembersDialog'
 import { MinutesEditor } from '../components/MinutesEditor'
@@ -27,16 +21,6 @@ import { SegmentEditDialog } from '../components/SegmentEditDialog'
 import { ShareDialog } from '../components/ShareDialog'
 import { TopBar } from '../components/TopBar'
 import { TranscriptPanel } from '../components/TranscriptPanel'
-
-const EXPORT_FORMATS = [
-  { key: 'srt', label: 'SRT 字幕' },
-  { key: 'vtt', label: 'VTT 字幕' },
-  { key: 'md', label: 'Markdown' },
-  { key: 'txt', label: '纯文本' },
-  { key: 'json', label: 'JSON' },
-  { key: 'docx', label: 'Word 文档' },
-  { key: 'pdf', label: 'PDF 文档' },
-]
 
 export default function MeetingDetail() {
   const { id } = useParams<{ id: string }>()
@@ -134,100 +118,17 @@ export default function MeetingDetail() {
 
       <main className="min-h-0 flex-1 overflow-y-auto p-4">
         <div className="mx-auto max-w-[980px]">
-          <Link
-            to="/history"
-            className="mb-4 inline-flex items-center gap-1 text-[12px] no-underline text-tertiary hover:text-secondary"
-          >
-            <ArrowLeft size={13} />
-            返回列表
-          </Link>
-
-          <div className="mb-4 flex items-start justify-between gap-4">
-            <div>
-              <h1 className="text-[16px] font-medium">{data.title}</h1>
-              <p className="mt-1 flex items-center gap-2 text-[12px] text-tertiary">
-                <span>{new Date(data.created_at).toLocaleString('zh-CN')}</span>
-                <span aria-hidden>·</span>
-                <span>{formatDuration(data.duration_ms)}</span>
-                <span aria-hidden>·</span>
-                <span>{data.segments.length} 段</span>
-                {data.has_audio && (
-                  <>
-                    <span aria-hidden>·</span>
-                    <span style={{ color: 'var(--live-text)' }}>有录音</span>
-                  </>
-                )}
-              </p>
-              {(data.participants || data.meeting_type || data.agenda) && (
-                <p className="mt-1 max-w-[680px] text-[11px] text-tertiary">
-                  {data.meeting_type && `类型：${data.meeting_type} · `}
-                  {data.participants && `参会：${data.participants}`}
-                  {data.participants && data.agenda && ' · '}
-                  {data.agenda && `议程：${data.agenda}`}
-                </p>
-              )}
-            </div>
-
-            <div className="flex shrink-0 items-center gap-1.5">
-              <button
-                type="button"
-                className="btn btn-ghost"
-                onClick={() => setShowInfo(true)}
-                title="编辑会议信息"
-              >
-                <Info size={13} /> 会议信息
-              </button>
-              <button
-                type="button"
-                className="btn btn-ghost"
-                onClick={() => setShowShare(true)}
-              >
-                <Share2 size={13} /> 分享
-              </button>
-              <button
-                type="button"
-                className="btn btn-ghost"
-                onClick={() => setShowCompliance(true)}
-              >
-                <ShieldCheck size={13} /> 合规
-              </button>
-              <button
-                type="button"
-                className="btn btn-ghost"
-                onClick={() => setShowMembers(true)}
-              >
-                <Users size={13} /> 协作
-              </button>
-              <div className="relative">
-              <button
-                type="button"
-                className="btn"
-                onClick={() => setShowExport((v) => !v)}
-                disabled={Boolean(exportStatus)}
-              >
-                <Download size={13} />
-                {exportStatus ?? '导出'}
-              </button>
-              {showExport && (
-                <div
-                  className="panel absolute right-0 z-10 mt-1 w-[140px] overflow-hidden py-1"
-                  style={{ boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}
-                >
-                  {EXPORT_FORMATS.map((f) => (
-                    <button
-                      key={f.key}
-                      type="button"
-                      onClick={() => void handleExport(f.key)}
-                      className="block w-full px-3 py-1.5 text-left text-[12px] transition-colors hover:bg-[var(--bg-hover)]"
-                    >
-                      {f.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-              </div>
-            </div>
-          </div>
+          <MeetingDetailHeader
+            meeting={data}
+            exportOpen={showExport}
+            exportStatus={exportStatus}
+            onToggleExport={() => setShowExport((value) => !value)}
+            onExport={(format) => void handleExport(format)}
+            onOpenInfo={() => setShowInfo(true)}
+            onOpenShare={() => setShowShare(true)}
+            onOpenCompliance={() => setShowCompliance(true)}
+            onOpenMembers={() => setShowMembers(true)}
+          />
 
           {/* 音频播放器 */}
           {data.has_audio && (
