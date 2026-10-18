@@ -56,3 +56,20 @@ jobs:
       - name: Build
         run: npm run build
 
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Compose configuration
+        run: |
+          docker compose \
+            --env-file deploy/production.env.example \
+            -f deploy/compose.yaml \
+            config
+      - name: Validate deployment scripts
+        run: |
+          sh -n deploy/backup_sqlite.sh
+          docker build --check -f deploy/backend.Dockerfile .
+      - name: Build frontend image
+        run: docker build -f deploy/frontend.Dockerfile -t imeeting-frontend:ci .
+

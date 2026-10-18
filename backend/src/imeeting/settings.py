@@ -1245,7 +1245,7 @@ SERVER_CONFIG = {
     "database_url": _env_or("DATABASE_URL", f"sqlite:///{BASE_DIR / 'data' / 'meeting.db'}"),
     "access_token_expire_minutes": int(_env_or("ACCESS_TOKEN_EXPIRE_MINUTES", "1440")),
     "cors_origins": _env_or("CORS_ORIGINS", "http://localhost:5173").split(","),
-    "data_dir": BASE_DIR / "data",
+    "data_dir": Path(_env_or("DATA_DIR", str(BASE_DIR / "data"))).expanduser().resolve(),
 }
 
 
