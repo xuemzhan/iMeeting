@@ -11,10 +11,6 @@ import {
   ShieldCheck,
   Trash2,
   Pencil,
-  ChevronRight,
-  Save,
-  Loader2,
-  RotateCcw,
 } from 'lucide-react'
 import { useSettings } from '../store/settings'
 import type { ThemeMode } from '../store/settings'
@@ -22,28 +18,15 @@ import { useSession } from '../store/session'
 import { useAuth } from '../store/auth'
 import { voiceprintApi } from '../api/client'
 import { VoiceprintEnroll } from './VoiceprintEnroll'
-import { ConfigGroupFields } from './ConfigGroupFields'
 import { useConfigEditor } from '../hooks/useConfigEditor'
 import type { Voiceprint } from '../api/types'
+import { SettingsBackendConfig } from './SettingsBackendConfig'
+import { SettingsRow as Row, SettingsSection as Section } from './SettingsPanelParts'
 
 const THEMES: { key: ThemeMode; label: string; icon: typeof Sun }[] = [
   { key: 'light', label: '浅色', icon: Sun },
   { key: 'dark', label: '深色', icon: Moon },
   { key: 'system', label: '跟随系统', icon: Monitor },
-]
-
-/**
- * 设置抽屉里直接可改的后端配置分组。
- *
- * 这里只放「模型 / FunASR 服务」这一条主线的分组——它们与转写质量、
- * 延迟直接相关，用户最常调；「会话与安全」偏运维，仍走「后台配置」页。
- * 分组名必须与后端 `CONFIG_SCHEMA` 里的 `group` 完全一致。
- */
-const INLINE_GROUPS: { name: string; title: string; defaultOpen: boolean }[] = [
-  { name: '模型与推理', title: '模型与推理', defaultOpen: false },
-  { name: '识别与断句', title: '识别与断句', defaultOpen: false },
-  { name: '说话人识别', title: '说话人识别', defaultOpen: false },
-  { name: 'LLM 纪要', title: 'LLM 纪要', defaultOpen: true },
 ]
 
 interface Health {
@@ -306,90 +289,11 @@ export function SettingsPanel({ open, onClose }: { open: boolean; onClose: () =>
         </Section>
 
         {/* ---- 后端配置（模型 / LLM）---- */}
-        {isAdminUser ? (
-          <>
-            {cfg.isLoading && !cfg.schema && (
-              <div className="mb-5 flex justify-center py-4">
-                <Loader2 size={15} className="animate-spin" style={{ color: 'var(--accent)' }} />
-              </div>
-            )}
-
-            {cfg.loadError && <InlineMsg kind="err">加载配置失败：{cfg.loadError}</InlineMsg>}
-            {cfg.toast && <InlineMsg kind={cfg.toast.kind}>{cfg.toast.text}</InlineMsg>}
-
-            {cfg.schema && (
-              <p
-                className="mb-3 text-[11px] leading-relaxed"
-                style={{ color: 'var(--text-tertiary)' }}
-              >
-                以下为后端 FunASR 与 LLM 配置。标「需重启」的项保存后要重启服务才生效；
-                其余即时生效（模型类参数在下次加载模型时生效）。
-              </p>
-            )}
-
-            {INLINE_GROUPS.map(({ name, title, defaultOpen }) => {
-              const fields = cfg.schema?.groups[name]
-              if (!fields?.length) return null
-              return (
-                <CollapsibleSection
-                  key={name}
-                  title={title}
-                  count={fields.length}
-                  defaultOpen={defaultOpen}
-                >
-                  <ConfigGroupFields
-                    fields={fields}
-                    draft={cfg.draft}
-                    errors={cfg.errors}
-                    onChange={cfg.handleChange}
-                  />
-                </CollapsibleSection>
-              )
-            })}
-
-            {cfg.schema && (
-              <div className="mb-5 flex items-center gap-2">
-                <button
-                  type="button"
-                  className="btn btn-primary flex-1"
-                  disabled={!cfg.hasChanges || cfg.saving}
-                  onClick={() => void cfg.save()}
-                >
-                  {cfg.saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
-                  保存配置
-                </button>
-                <button
-                  type="button"
-                  className="btn"
-                  disabled={!cfg.hasChanges || cfg.saving}
-                  onClick={cfg.reset}
-                >
-                  <RotateCcw size={13} />
-                  还原
-                </button>
-              </div>
-            )}
-          </>
-        ) : (
-          <Section title="后端配置">
-            <p className="mb-2 text-[11px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-              模型与推理、识别与断句、说话人识别、LLM 纪要等配置项都在这里，
-              但<strong>需要管理员身份</strong>才能查看和修改。当前未登录，所以暂时看不到。
-            </p>
-            <p className="mb-2 text-[11px] leading-relaxed" style={{ color: 'var(--text-tertiary)' }}>
-              未登录也可以正常开会转写；只有「改后端配置」这一步需要管理员。
-            </p>
-            <Link
-              to="/login"
-              onClick={onClose}
-              className="mt-1 inline-flex items-center gap-1.5 text-[12px] no-underline"
-              style={{ color: 'var(--accent-text)' }}
-            >
-              <ShieldCheck size={13} />
-              用管理员账号登录
-            </Link>
-          </Section>
-        )}
+        <SettingsBackendConfig
+          isAdminUser={isAdminUser}
+          cfg={cfg}
+          onClose={onClose}
+        />
 
         {/* ---- 关于 ---- */}
         <Section title="关于">
@@ -420,65 +324,6 @@ export function SettingsPanel({ open, onClose }: { open: boolean; onClose: () =>
           </Section>
         )}
       </aside>
-    </div>
-  )
-}
-
-/** 可折叠分组：设置抽屉里塞几十个配置项会太长，默认收起更清爽。 */
-function CollapsibleSection({
-  title,
-  count,
-  defaultOpen = false,
-  children,
-}: {
-  title: string
-  /** 字段数。显示出来是为了让用户一眼知道这组里有多少可调项。 */
-  count?: number
-  defaultOpen?: boolean
-  children: React.ReactNode
-}) {
-  const [open, setOpen] = useState(defaultOpen)
-  return (
-    <section className="mb-5">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-        className="mb-2 flex w-full items-center gap-1.5"
-      >
-        <ChevronRight
-          size={12}
-          style={{ transform: open ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }}
-        />
-        <span
-          className="text-[11px] font-medium tracking-wide"
-          style={{ color: 'var(--text-tertiary)' }}
-        >
-          {title}
-        </span>
-        {count !== undefined && (
-          <span
-            className="rounded-full px-1.5 text-[10px] tabular-nums"
-            style={{ background: 'var(--bg-subtle)', color: 'var(--text-tertiary)' }}
-          >
-            {count}
-          </span>
-        )}
-      </button>
-      {open && children}
-    </section>
-  )
-}
-
-function InlineMsg({ kind, children }: { kind: 'ok' | 'warn' | 'err'; children: React.ReactNode }) {
-  const palette = {
-    ok: { background: 'var(--accent-soft)', color: 'var(--accent-text)' },
-    warn: { background: 'var(--warn-soft)', color: 'var(--warn-text)' },
-    err: { background: 'var(--danger-soft)', color: 'var(--danger-text)' },
-  }[kind]
-  return (
-    <div className="mb-2 rounded-lg px-2.5 py-1.5 text-[11px]" style={palette}>
-      {children}
     </div>
   )
 }
@@ -595,28 +440,5 @@ function PrintRow({
         </button>
       </span>
     </li>
-  )
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="mb-5">
-      <h3
-        className="mb-2 text-[11px] font-medium uppercase tracking-wide"
-        style={{ color: 'var(--text-tertiary)' }}
-      >
-        {title}
-      </h3>
-      {children}
-    </section>
-  )
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between py-1 text-[12px]">
-      <span style={{ color: 'var(--text-secondary)' }}>{label}</span>
-      <span style={{ color: 'var(--text-primary)' }}>{value}</span>
-    </div>
   )
 }
