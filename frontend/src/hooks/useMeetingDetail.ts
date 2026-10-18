@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { meetingApi, voiceprintApi } from '../api/client'
 import type { ApiSegment, Minutes } from '../api/types'
+import { runExportJob } from '../lib/exportJob'
 import { useAuth } from '../store/auth'
 
 export function useMeetingDetail(
@@ -132,28 +133,18 @@ export function useMeetingDetail(
     setShowExport(false)
     setExportStatus('正在创建导出任务…')
     try {
-      let job = await meetingApi.createExportJob(meetingId, format)
-      for (let index = 0; index < 120; index++) {
-        if (job.status === 'failed') {
-          throw new Error(job.last_error || '导出失败')
-        }
-        if (job.status === 'succeeded') break
-        setExportStatus(
-          job.status === 'running' ? '正在生成导出文件…' : '等待导出任务…',
-        )
-        await new Promise((resolve) => window.setTimeout(resolve, 1000))
-        job = await meetingApi.exportJob(job.id)
-      }
-      if (job.status !== 'succeeded') {
-        throw new Error('导出超时，请稍后在后台任务中查看')
-      }
-      const blob = await meetingApi.downloadExportJob(job.id)
-      const url = URL.createObjectURL(blob)
-      const anchor = document.createElement('a')
-      anchor.href = url
-      anchor.download = job.download_name || `${data?.title || 'meeting'}.${format}`
-      anchor.click()
-      URL.revokeObjectURL(url)
+      await runExportJob({
+        createJob: () => meetingApi.createExportJob(meetingId, format),
+        getJob: meetingApi.exportJob,
+        downloadJob: meetingApi.downloadExportJob,
+        fallbackFilename: `${data?.title || 'meeting'}.${format}`,
+        timeoutMessage: '导出超时，请稍后在后台任务中查看',
+        onProgress: (job) => {
+          setExportStatus(
+            job.status === 'running' ? '正在生成导出文件…' : '等待导出任务…',
+          )
+        },
+      })
       setExportStatus(null)
     } catch (err) {
       setExportStatus(err instanceof Error ? err.message : '导出失败')

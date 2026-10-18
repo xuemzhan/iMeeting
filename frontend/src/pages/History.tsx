@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { meetingApi, ApiError } from '../api/client'
 import type { MeetingSearchResult } from '../api/types'
+import { runExportJob } from '../lib/exportJob'
 import { formatDuration } from '../store/session'
 import { useAuth } from '../store/auth'
 import { TopBar } from '../components/TopBar'
@@ -317,25 +318,15 @@ export default function History() {
     setBusy(true)
     try {
       setExportStatus('正在创建批量导出…')
-      let job = await meetingApi.createBulkExportJob(
-        [...selected],
-        exportFormat,
-      )
-      for (let i = 0; i < 180; i++) {
-        if (job.status === 'failed') throw new Error(job.last_error || '导出失败')
-        if (job.status === 'succeeded') break
-        setExportStatus('正在生成批量导出…')
-        await new Promise((resolve) => window.setTimeout(resolve, 1000))
-        job = await meetingApi.exportJob(job.id)
-      }
-      if (job.status !== 'succeeded') throw new Error('导出超时')
-      const blob = await meetingApi.downloadExportJob(job.id)
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = job.download_name || `meetings-${Date.now()}.zip`
-      a.click()
-      URL.revokeObjectURL(url)
+      await runExportJob({
+        createJob: () =>
+          meetingApi.createBulkExportJob([...selected], exportFormat),
+        getJob: meetingApi.exportJob,
+        downloadJob: meetingApi.downloadExportJob,
+        fallbackFilename: () => `meetings-${Date.now()}.zip`,
+        maxPolls: 180,
+        onProgress: () => setExportStatus('正在生成批量导出…'),
+      })
     } catch (e) {
       alert(e instanceof Error ? e.message : '导出失败')
     } finally {
