@@ -46,7 +46,7 @@
 
 ## 快速开始
 
-需要 Python 3.10+ 与 Node 18+。
+需要 Python 3.10+ 与 Node 20+。
 
 ### 1. 后端
 
@@ -106,7 +106,7 @@ npm run dev
 | 项 | 要求 |
 |---|---|
 | Python | 3.10+ |
-| Node | 18+ |
+| Node | 20+（Docker 镜像使用 Node 24 构建） |
 | 内存 | 建议 8GB+（模型常驻约 1.5GB） |
 | 浏览器 | Chrome/Edge 90+、Firefox 90+、Safari 15+ |
 | 麦克风 | 需 `https` 或 `localhost`（安全上下文限制） |
