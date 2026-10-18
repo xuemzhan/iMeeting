@@ -41,6 +41,7 @@ from .speaker import (
     extract_embedding,
     save_discovered,
 )
+from .speaker_context import SpeakerContext
 
 logger = logging.getLogger(__name__)
 
@@ -191,7 +192,7 @@ class StreamSession:
         self._stream_chunk_samples = self._resolve_chunk_samples()
 
         self._current: SegmentState | None = None
-        self._speaker_history: deque[tuple[str, str, int]] = deque(maxlen=8)
+        self._speaker_context = SpeakerContext()
         self._silence_samples = 0
         self._total_samples = 0
         self._seq = 0
@@ -1078,10 +1079,7 @@ class StreamSession:
         seg.speaker_key = resolved.key
         seg.speaker_score = round(resolved.score, 4)
         seg.speaker_source = resolved.source
-        if resolved.label and resolved.key:
-            self._speaker_history.append(
-                (resolved.label, resolved.key, seg.end_ms)
-            )
+        self._speaker_context.record(resolved.label, resolved.key, seg.end_ms)
 
     def _maybe_snapshot_speaker(self, seg: SegmentState) -> None:
         """每 N 段把匿名簇当前质心写回临时声纹。"""
@@ -1278,25 +1276,12 @@ class StreamSession:
         """短句/向量失败时，仅在最近上下文高度一致时沿用邻近说话人。"""
         if not bool(get_config("spk.context_fallback_enabled")):
             return None
-        if not self._speaker_history:
-            return None
         max_gap = int(get_config("spk.context_max_gap_ms") or 5000)
-        recent = [
-            item for item in list(self._speaker_history)[-5:]
-            if start_ms - item[2] <= max_gap
-        ]
-        if not recent:
-            return None
-        counts: dict[tuple[str, str], int] = {}
-        for label, key, _end in recent:
-            if label and key:
-                counts[(label, key)] = counts.get((label, key), 0) + 1
-        if not counts:
-            return None
-        (label, key), count = max(counts.items(), key=lambda item: item[1])
-        if count / len(recent) < 0.75:
-            return None
-        return SpeakerResolution(label, key, 0.0, source)
+        return self._speaker_context.resolve(
+            start_ms,
+            max_gap_ms=max_gap,
+            source=source,
+        )
 
     async def _emit_final(self, seg: SegmentState) -> None:
         """把定稿放进按 seq 排序的待发缓冲（真正发出在 _drain_finals）。"""

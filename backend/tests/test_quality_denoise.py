@@ -122,7 +122,7 @@ def test_accepted_fallback_runs_speaker_resolution(monkeypatch):
     assert seg.speaker_key == "vp_22"
     assert seg.speaker_score == 0.874
     assert seg.speaker_source == "enrolled"
-    assert list(session._speaker_history) == [("陈建峰", "vp_22", 6000)]
+    assert session._speaker_context.snapshot() == [("陈建峰", "vp_22", 6000)]
 
 
 def test_builtin_cyber_glossary_is_idempotent_and_applied(client):
