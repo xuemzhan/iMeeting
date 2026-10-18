@@ -47,6 +47,7 @@ src/imeeting/
 ├── api/
 │   ├── http/routes/         REST 路由（认证、会议、配置、管理）
 │   └── ws/stream.py         WebSocket 转写流
+├── application/             后台任务、导出工作流与共享访问逻辑
 ├── engine/                  FunASR 模型池、音频与流式会话
 ├── llm/                     OpenAI 兼容客户端与纪要生成
 ├── export/                  SRT / VTT / Markdown / Word / PDF
@@ -54,8 +55,7 @@ src/imeeting/
 ├── models.py / schemas.py   数据模型与请求响应 DTO
 ├── db.py                    数据库引擎、迁移与持久化
 ├── security.py              JWT / bcrypt / 配置加密
-├── session_registry.py      进程内活跃会话注册表
-└── jobs.py                  持久化后台任务
+└── session_registry.py      进程内活跃会话注册表
 ```
 
 ## 双路 ASR 设计

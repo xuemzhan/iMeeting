@@ -393,6 +393,7 @@ iMeeting/
 │   │   ├── api/
 │   │   │   ├── http/routes/     # REST 路由
 │   │   │   └── ws/stream.py     # WebSocket 转写流
+│   │   ├── application/         # 后台任务、导出工作流与共享访问逻辑
 │   │   ├── engine/              # FunASR 模型池、音频、流式会话
 │   │   ├── llm/                 # LLM 客户端与纪要生成
 │   │   ├── export/              # 字幕与文档导出
@@ -401,8 +402,7 @@ iMeeting/
 │   │   ├── models.py
 │   │   ├── schemas.py
 │   │   ├── security.py
-│   │   ├── session_registry.py
-│   │   └── jobs.py
+│   │   └── session_registry.py
 │   ├── migrations/
 │   ├── scripts/
 │   └── tests/

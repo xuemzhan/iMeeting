@@ -23,7 +23,7 @@ Scope: `iMeeting/backend` 实时转写、控制面与后台任务
 - FastAPI 单进程入口注册了 12 个 REST/WebSocket 路由，见 `../../backend/src/imeeting/main.py:220-231`；由 uvicorn 启动，见 `../../backend/src/imeeting/main.py:265`。
 - WebSocket 主循环同时承担鉴权、会议创建、音频接收、音频落盘、增量写库、心跳和收尾，见 `../../backend/src/imeeting/api/ws/stream.py:56`。
 - 模型在进程内以单例保存，推理通过线程池调用，见 `../../backend/src/imeeting/engine/pool.py:82` 和 `../../backend/src/imeeting/engine/pool.py:259-266`。
-- 后台任务目前是一个单协程 worker，见 `../../backend/src/imeeting/jobs.py:206-215`。
+- 后台任务目前是一个单协程 worker，见 `../../backend/src/imeeting/application/jobs.py:206-215`。
 
 ### 2.2 实测负载
 
@@ -53,7 +53,7 @@ Scope: `iMeeting/backend` 实时转写、控制面与后台任务
 2. **每个音频块一次数据库提交**：收到带序号的音频块后等待 `_record_audio_seq()` 完成再发 ack，见 `../../backend/src/imeeting/api/ws/stream.py:209-212`；该函数每次打开 Session 并 commit，见 `../../backend/src/imeeting/api/ws/stream.py:801`。
 3. **每个 final 单独提交一次**：`emit()` 对每条定稿先发前端，再在线程中写库，见 `../../backend/src/imeeting/api/ws/stream.py:89-99`。
 4. **线程预算可能超订**：自动推理线程数是 CPU 核数减一，见 `../../backend/src/imeeting/engine/pool.py:34-56`；同时每次 Torch 推理又使用 `asr.ncpu=4`，见 `../../backend/src/imeeting/settings.py:140-165`。在 16 逻辑核机器上，11 个执行线程与每次 4 个模型线程并存，存在超订风险。
-5. **后台任务串行**：长导出、重建索引、音频复核会阻塞同一 worker 队列，见 `../../backend/src/imeeting/jobs.py:185-215`。
+5. **后台任务串行**：长导出、重建索引、音频复核会阻塞同一 worker 队列，见 `../../backend/src/imeeting/application/jobs.py:185-215`。
 
 这些热点应在完整重写前先修掉，否则新架构会继承相同的延迟和队列问题。
 

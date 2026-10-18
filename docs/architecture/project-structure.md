@@ -9,6 +9,7 @@ iMeeting/
 │   │   ├── api/
 │   │   │   ├── http/routes/
 │   │   │   └── ws/
+│   │   ├── application/
 │   │   ├── engine/
 │   │   ├── export/
 │   │   ├── llm/
@@ -43,13 +44,15 @@ development.
 |---|---|
 | `api/http/routes` | HTTP request parsing, authentication dependencies, response DTOs |
 | `api/ws` | WebSocket protocol and connection lifecycle |
+| `application` | Background jobs, export workflows and shared meeting access use cases |
 | `engine` | FunASR model pool, audio I/O, streaming session state machine |
 | `llm` | OpenAI-compatible client and minute generation |
 | `export` | Subtitle and document rendering |
 | `settings`, `db`, `models`, `schemas` | Configuration, persistence and shared domain contracts |
 
 The HTTP and WebSocket adapters may call application modules, but application
-modules must not import `api.http.routes` or `api.ws`.
+modules must not import `api.http.routes` or `api.ws`. HTTP routes are composed
+once in `api/http/router.py`, not individually by the application entry point.
 
 ## Frontend
 
