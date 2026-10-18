@@ -10,8 +10,8 @@ from typing import Any
 
 from sqlmodel import Session, select
 
-from .db import engine, session_scope
-from .models import Job, utcnow
+from ..db import engine, session_scope
+from ..models import Job, utcnow
 
 logger = logging.getLogger(__name__)
 
@@ -120,15 +120,15 @@ def _fail(job: Job, error: str) -> None:
 
 
 async def _run_job(job: Job) -> None:
-    from .settings import get_config
+    from ..settings import get_config
 
     payload = json.loads(job.payload or "{}")
 
     if job.kind == "final_minutes" and job.meeting_id is not None:
-        from .engine.speaker_merge import merge_meeting_speakers
-        from .engine.speaker_reconcile import reconcile_meeting_speakers
-        from .llm.progressive import generate_final_minutes
-        from .meeting_meta import backfill_participants
+        from ..engine.speaker_merge import merge_meeting_speakers
+        from ..engine.speaker_reconcile import reconcile_meeting_speakers
+        from ..llm.progressive import generate_final_minutes
+        from ..meeting_meta import backfill_participants
 
         if bool(get_config("spk.global_merge_enabled")):
             await asyncio.to_thread(
@@ -159,7 +159,7 @@ async def _run_job(job: Job) -> None:
             min_chars=int(get_config("llm.final_min_chars") or 80),
         )
         if bool(get_config("privacy.auto_redact")):
-            from .privacy import apply_meeting_redaction
+            from ..privacy import apply_meeting_redaction
 
             await asyncio.to_thread(apply_meeting_redaction, job.meeting_id)
         if bool(get_config("review.auto_after_meeting")):
@@ -173,28 +173,28 @@ async def _run_job(job: Job) -> None:
         return
 
     if job.kind == "meeting_meta" and job.meeting_id is not None:
-        from .meeting_meta import capture_meeting_metadata
+        from ..meeting_meta import capture_meeting_metadata
 
         result = await capture_meeting_metadata(job.meeting_id)
         _finish(job, result={"metadata": result})
         return
 
     if job.kind in ("export_single", "export_bulk"):
-        from .export_service import run_export_job
+        from .exports import run_export_job
 
         path, name, result = await asyncio.to_thread(run_export_job, job, payload)
         _finish(job, result=result, result_path=str(path), download_name=name)
         return
 
     if job.kind == "audio_review" and job.meeting_id is not None:
-        from .audio_review import run_audio_review
+        from ..audio_review import run_audio_review
 
         result = await asyncio.to_thread(run_audio_review, job.meeting_id)
         _finish(job, result=result)
         return
 
     if job.kind == "embedding_reindex":
-        from .search_index import rebuild_index
+        from ..search_index import rebuild_index
 
         result = await asyncio.to_thread(rebuild_index, payload.get("meeting_id"))
         _finish(job, result=result)

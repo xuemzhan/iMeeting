@@ -6,7 +6,7 @@ import re
 from difflib import SequenceMatcher
 
 from .glossary import apply_terms
-from .llm.minutes import TranscriptLine
+from .llm.types import TranscriptLine
 
 _STOP = {
     "这个", "那个", "然后", "就是", "我们", "他们", "大家", "可以", "需要",

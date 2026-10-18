@@ -12,7 +12,7 @@ from sqlmodel import select
 from ..db import session_scope
 from ..glossary import load_terms
 from ..models import Meeting, Minutes
-from .minutes import TranscriptLine
+from .types import TranscriptLine
 
 _RULES = (
     "知识库校正规则（必须遵守）：\n"

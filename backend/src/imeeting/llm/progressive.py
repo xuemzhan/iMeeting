@@ -22,7 +22,8 @@ from ..db import session_scope
 from ..models import ActionItem, Minutes, Segment, utcnow
 from ..settings import get_config
 from .client import LLMClient, extract_json
-from .minutes import TranscriptLine, _finalize_minutes, generate_minutes
+from .minutes import _finalize_minutes, generate_minutes
+from .types import TranscriptLine
 
 logger = logging.getLogger(__name__)
 

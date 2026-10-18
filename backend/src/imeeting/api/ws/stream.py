@@ -348,7 +348,7 @@ async def stream_endpoint(websocket: WebSocket) -> None:
         # 短会/提前结束时补一次元信息提取（持久化任务，不阻塞收尾）
         if meeting_id is not None and final_status in ("finished", "abandoned"):
             try:
-                from ...jobs import enqueue_job
+                from ...application.jobs import enqueue_job
 
                 enqueue_job(
                     kind="meeting_meta",
@@ -367,7 +367,7 @@ async def stream_endpoint(websocket: WebSocket) -> None:
             and bool(get_config("llm.auto_final_on_stop"))
         ):
             try:
-                from ...jobs import enqueue_job
+                from ...application.jobs import enqueue_job
                 from ...llm.client import LLMClient
 
                 if LLMClient().configured:

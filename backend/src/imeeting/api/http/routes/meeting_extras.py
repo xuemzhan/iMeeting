@@ -24,7 +24,17 @@ from fastapi.responses import FileResponse
 from sqlalchemy import exists, func, or_, text
 from sqlmodel import Session, select
 
+from ....application.meeting_access import (
+    fts_meeting_ids as _fts_meeting_ids,
+)
+from ....application.meeting_access import (
+    minutes_to_out as _minutes_out,
+)
+from ....application.meeting_access import (
+    owned_meeting as _owned,
+)
 from ....db import get_session
+from ....json_utils import safe_json_list
 from ....models import (
     ActionItem,
     AuditLog,
@@ -57,12 +67,6 @@ from ....security import create_access_token, decode_access_token, hash_password
 from ....settings import BASE_DIR, get_config
 from ....share_throttle import check_allowed, clear_failures, record_failure
 from .deps import get_current_user_or_anonymous, require_admin
-from .meetings import (
-    _fts_meeting_ids,
-    _minutes_out,
-    _owned,
-    _safe_json,
-)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1", tags=["meeting-extras"])
@@ -75,7 +79,7 @@ def queue_audio_review(
     db: Session = Depends(get_session),
 ):
     _owned(meeting_id, user, db, write=True)
-    from ....jobs import enqueue_job
+    from ....application.jobs import enqueue_job
 
     job = enqueue_job(
         kind="audio_review",
@@ -281,11 +285,11 @@ def edit_minutes(
         if payload.summary is not None
         else source.summary,
         topics=json.dumps(
-            payload.topics if payload.topics is not None else _safe_json(source.topics),
+            payload.topics if payload.topics is not None else safe_json_list(source.topics),
             ensure_ascii=False,
         ),
         todos=json.dumps(
-            payload.todos if payload.todos is not None else _safe_json(source.todos),
+            payload.todos if payload.todos is not None else safe_json_list(source.todos),
             ensure_ascii=False,
         ),
         raw_markdown=source.raw_markdown,
@@ -752,7 +756,7 @@ def admin_dashboard(
             func.coalesce(func.sum(LLMUsage.cost_usd), 0.0),
         )
     ).one()
-    from ....jobs import job_stats
+    from ....application.jobs import job_stats
     from ....maintenance import drain_status
 
     metrics_dir = BASE_DIR / "data" / "metrics"
@@ -939,7 +943,7 @@ def knowledge_topics(
     rows = db.exec(stmt.order_by(Minutes.created_at.desc()).limit(1000)).all()
     counts: dict[str, dict] = {}
     for minutes, meeting in rows:
-        for topic in _safe_json(minutes.topics):
+        for topic in safe_json_list(minutes.topics):
             title = str(topic.get("title") or "").strip()
             if not title:
                 continue

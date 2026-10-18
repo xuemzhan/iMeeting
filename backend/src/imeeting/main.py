@@ -15,19 +15,8 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse, PlainTextResponse
 
-from .api.http.routes import (
-    admin_ops,
-    auth,
-    config,
-    export_jobs,
-    glossary,
-    meeting_extras,
-    meetings,
-    members,
-    minutes_templates,
-    system,
-    voiceprints,
-)
+from .api.http import api_router
+from .api.http.routes.system import VERSION
 from .api.ws import stream
 from .db import init_db
 from .settings import SERVER_CONFIG, get_config
@@ -125,7 +114,7 @@ async def lifespan(app: FastAPI):
 
     # 音频留存清理：启动时跑一次，之后每 6 小时一次
     cleanup_task = asyncio.create_task(_audio_cleanup_loop())
-    from .jobs import worker_loop
+    from .application.jobs import worker_loop
 
     job_stop = asyncio.Event()
     job_worker = asyncio.create_task(worker_loop(job_stop))
@@ -154,7 +143,7 @@ async def _audio_cleanup_loop(interval_seconds: int = 6 * 3600) -> None:
         try:
             # 清理是同步 IO，放到线程里避免阻塞事件循环
             await asyncio.to_thread(cleanup_expired)
-            from .export_service import cleanup_exports
+            from .application.exports import cleanup_exports
             from .meeting_cleanup import purge_retention_expired
 
             await asyncio.to_thread(cleanup_exports, 24)
@@ -166,7 +155,7 @@ async def _audio_cleanup_loop(interval_seconds: int = 6 * 3600) -> None:
 
 app = FastAPI(
     title="iMeeting API",
-    version=system.VERSION,
+    version=VERSION,
     description="基于 FunASR 的实时会议转写与纪要服务",
     default_response_class=ORJSONResponse,
     lifespan=lifespan,
@@ -217,23 +206,13 @@ async def _request_metrics(request: Request, call_next):
     )
     return response
 
-app.include_router(auth.router)
-app.include_router(admin_ops.router)
-app.include_router(config.router)
-app.include_router(export_jobs.router)
-app.include_router(members.router)
-app.include_router(glossary.router)
-app.include_router(meeting_extras.router)
-app.include_router(meetings.router)
-app.include_router(minutes_templates.router)
-app.include_router(system.router)
-app.include_router(voiceprints.router)
+app.include_router(api_router)
 app.include_router(stream.router)
 
 
 @app.get("/metrics", include_in_schema=False)
 def prometheus_metrics():
-    from .jobs import job_stats
+    from .application.jobs import job_stats
     from .ops import prometheus_text
     from .session_registry import active_session_count
 
@@ -252,7 +231,7 @@ def prometheus_metrics():
 def root():
     return {
         "name": SERVER_CONFIG["app_name"],
-        "version": system.VERSION,
+        "version": VERSION,
         "docs": "/docs",
         "health": "/api/v1/health",
     }

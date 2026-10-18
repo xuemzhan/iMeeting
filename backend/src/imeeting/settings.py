@@ -20,6 +20,8 @@ from typing import Any, Literal
 
 from dotenv import load_dotenv
 
+from . import config_events
+
 logger = logging.getLogger(__name__)
 
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -1329,16 +1331,9 @@ class ConfigStore:
 
 
 def _notify_config_changed(keys: Any) -> None:
-    """配置变更后通知依赖配置的模块失效各自的缓存。
-
-    这里用局部导入避免 settings 与 login_throttle 形成循环依赖
-    （login_throttle 顶部就 import 了 get_config）。
-    """
+    """Notify modules that cache effective configuration values."""
     try:
-        if any(str(k).startswith("auth.") for k in keys):
-            from . import login_throttle
-
-            login_throttle.reset_config_cache()
+        config_events.notify_changed(keys)
     except Exception:  # pragma: no cover - 通知失败不应影响配置写回
         logger.debug("配置变更通知失败", exc_info=True)
 

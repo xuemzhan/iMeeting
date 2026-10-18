@@ -25,7 +25,7 @@ def reindex_search(
     payload: dict | None = None,
     _: User = Depends(require_admin),
 ):
-    from ....jobs import enqueue_job
+    from ....application.jobs import enqueue_job
     from ....search_index import enabled
 
     if not enabled():

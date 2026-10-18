@@ -6,13 +6,11 @@ import time
 import zipfile
 from pathlib import Path
 
-from sqlmodel import select
-
-from .db import session_scope
-from .export import formats
-from .export.document_export import build_docx, build_pdf
-from .models import Job, Meeting, Minutes, Segment
-from .settings import SERVER_CONFIG, get_config
+from ..db import session_scope
+from ..export import formats
+from ..export.meeting_export import render_meeting_export
+from ..models import Job, Meeting
+from ..settings import SERVER_CONFIG, get_config
 
 
 def export_dir() -> Path:
@@ -22,28 +20,13 @@ def export_dir() -> Path:
 
 
 def _export_one(db, meeting: Meeting, fmt: str) -> bytes:
-    segments = db.exec(
-        select(Segment)
-        .where(Segment.meeting_id == meeting.id)
-        .order_by(Segment.start_ms, Segment.seq, Segment.id)
-    ).all()
-    minutes_row = db.exec(
-        select(Minutes)
-        .where(Minutes.meeting_id == meeting.id, Minutes.status == "ready")
-        .order_by(Minutes.version.desc())
-    ).first()
-    if fmt in ("docx", "pdf"):
-        builder = build_docx if fmt == "docx" else build_pdf
-        return builder(
-            meeting,
-            segments,
-            minutes_row,
-            company=str(get_config("export.company_name") or ""),
-            footer=str(get_config("export.footer_text") or ""),
-        )
-    from .api.http.routes.meetings import _export_body
-
-    return _export_body(db, meeting, fmt).encode("utf-8")
+    return render_meeting_export(
+        db,
+        meeting,
+        fmt,
+        company=str(get_config("export.company_name") or ""),
+        footer=str(get_config("export.footer_text") or ""),
+    )
 
 
 def run_export_job(job: Job, payload: dict) -> tuple[Path, str, dict]:

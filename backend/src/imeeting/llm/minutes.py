@@ -12,26 +12,15 @@ from __future__ import annotations
 import json
 import logging
 import re
-from dataclasses import dataclass, field
 
 from ..settings import get_config
 from .client import LLMClient, LLMError, extract_json
+from .types import TranscriptLine
 
 logger = logging.getLogger(__name__)
 
 # 单次调用能安全处理的字符数上限（约 4000 token 的中文）
 SINGLE_PASS_LIMIT = 8000
-
-
-@dataclass
-class TranscriptLine:
-    start_ms: int
-    speaker: str | None
-    text: str
-    #: 片段结束时间；用于「短停顿合并」判断。旧调用方可以不给。
-    end_ms: int | None = None
-    segment_id: str = ""
-    segment_ids: list[str] = field(default_factory=list)
 
 
 #: 这些词开头的片段通常是上一句的延续，而不是新话题

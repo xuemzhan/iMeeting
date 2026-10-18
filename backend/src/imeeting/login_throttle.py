@@ -25,6 +25,7 @@ import threading
 import time
 from dataclasses import dataclass
 
+from .config_events import subscribe
 from .settings import get_config
 
 logger = logging.getLogger(__name__)
@@ -118,6 +119,14 @@ def reset_config_cache() -> None:
     """配置变更后清缓存。由 settings 写配置时调用。"""
     global _cached_config
     _cached_config = None
+
+
+def _on_config_changed(keys: tuple[str, ...]) -> None:
+    if any(key.startswith("auth.") for key in keys):
+        reset_config_cache()
+
+
+subscribe(_on_config_changed)
 
 
 def reset_state() -> None:

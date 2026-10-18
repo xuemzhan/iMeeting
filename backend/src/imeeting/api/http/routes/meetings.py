@@ -11,20 +11,30 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import Response
 from sqlalchemy import delete as sa_delete
-from sqlalchemy import exists, or_, text
+from sqlalchemy import exists, or_
 from sqlmodel import Session, func, select
 
+from ....application.meeting_access import (
+    fts_meeting_ids as _fts_meeting_ids,
+)
+from ....application.meeting_access import (
+    minutes_to_out as _minutes_out,
+)
+from ....application.meeting_access import (
+    owned_meeting as _owned,
+)
 from ....db import get_session
 from ....export import formats
-from ....export.document_export import build_docx, build_pdf
+from ....export.meeting_export import render_meeting_export
+from ....json_utils import safe_json_list
 from ....llm.client import LLMError
-from ....llm.minutes import TranscriptLine, generate_minutes
+from ....llm.minutes import generate_minutes
+from ....llm.types import TranscriptLine
 from ....meeting_files import cleanup_meeting_files
 from ....models import (
     ActionItem,
     AuditLog,
     Meeting,
-    MeetingMember,
     MeetingSession,
     Minutes,
     MinutesTemplate,
@@ -56,38 +66,6 @@ from .deps import get_current_user_or_anonymous
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/meetings", tags=["meetings"])
-
-
-def _owned(
-    meeting_id: int,
-    user: User,
-    db: Session,
-    *,
-    include_deleted: bool = False,
-    write: bool = False,
-) -> Meeting:
-    """校验会议存在且当前用户有权访问。"""
-    meeting = db.get(Meeting, meeting_id)
-    if meeting is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="会议不存在")
-    if meeting.deleted_at is not None and not include_deleted:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="会议已在回收站")
-    if meeting.owner_id != user.id and user.role != "admin":
-        member = db.exec(
-            select(MeetingMember).where(
-                MeetingMember.meeting_id == meeting_id,
-                MeetingMember.user_id == user.id,
-            )
-        ).first()
-        allowed = member is not None and (
-            not write or member.role in ("editor", "owner")
-        )
-        if not allowed:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="无权访问或修改该会议",
-            )
-    return meeting
 
 
 def _meeting_filters(
@@ -160,29 +138,6 @@ def _meeting_filters(
         except ValueError as exc:
             raise HTTPException(status_code=400, detail="date_to 格式应为 YYYY-MM-DD") from exc
     return conditions
-
-
-def _fts_meeting_ids(db: Session, q: str) -> list[int] | None:
-    """FTS5 trigram 检索；短查询或 FTS 不可用时返回 None（回退 LIKE）。"""
-    term = q.strip()
-    if len(term) < 3:
-        return None
-    try:
-        phrase = '"' + term.replace('"', '""') + '"'
-        # SQLModel 的 Session.exec() 只接收语句对象，不能像 SQLAlchemy
-        # Session.execute() 那样把参数字典作为第二个位置参数。之前这里用错后
-        # 每次三字以上检索都会退回 LIKE，FTS5 索引实际上没有生效。
-        rows = db.execute(
-            text(
-                "SELECT DISTINCT meeting_id FROM segment_fts "
-                "WHERE segment_fts MATCH :q"
-            ),
-            {"q": phrase},
-        ).all()
-        return [int(row[0]) for row in rows]
-    except Exception:
-        logger.exception("FTS 检索失败，回退 LIKE")
-        return None
 
 
 @router.get("", response_model=list[MeetingOut])
@@ -555,6 +510,8 @@ def bulk_export(
             detail=f"不支持的导出格式 {fmt}，可用：{', '.join(allowed)}",
         )
     ext, _media_type = formats.EXPORTERS[fmt]
+    company = str(get_config("export.company_name") or "")
+    footer = str(get_config("export.footer_text") or "")
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
         for mid in dict.fromkeys(payload.ids):
@@ -568,30 +525,16 @@ def bulk_export(
             safe = "".join(
                 c if c not in '\\/:*?"<>|' else "_" for c in meeting.title
             )[:60]
-            if fmt in ("docx", "pdf"):
-                segments = db.exec(
-                    select(Segment)
-                    .where(Segment.meeting_id == mid)
-                    .order_by(Segment.start_ms, Segment.seq, Segment.id)
-                ).all()
-                minutes_row = db.exec(
-                    select(Minutes)
-                    .where(Minutes.meeting_id == mid, Minutes.status == "ready")
-                    .order_by(Minutes.version.desc())
-                ).first()
-                builder = build_docx if fmt == "docx" else build_pdf
-                body = builder(
+            archive.writestr(
+                f"{mid}-{safe}.{ext}",
+                render_meeting_export(
+                    db,
                     meeting,
-                    segments,
-                    minutes_row,
-                    company=str(get_config("export.company_name") or ""),
-                    footer=str(get_config("export.footer_text") or ""),
-                )
-                archive.writestr(f"{mid}-{safe}.{ext}", body)
-            else:
-                archive.writestr(
-                    f"{mid}-{safe}.{ext}", _export_body(db, meeting, fmt)
-                )
+                    fmt,
+                    company=company,
+                    footer=footer,
+                ),
+            )
     buffer.seek(0)
     return Response(
         content=buffer.read(),
@@ -755,8 +698,8 @@ def get_mindmap(
     if row is None:
         raise HTTPException(status_code=404, detail="该会议还没有纪要")
 
-    topics = _safe_json(row.topics)
-    todos = _safe_json(row.todos)
+    topics = safe_json_list(row.topics)
+    todos = safe_json_list(row.todos)
     children: list[dict] = []
     for i, topic in enumerate(topics):
         node = {
@@ -914,82 +857,6 @@ async def create_minutes(
     return _minutes_out(row)
 
 
-def _minutes_out(row: Minutes) -> MinutesOut:
-    def _load(raw: str) -> list:
-        try:
-            parsed = json.loads(raw or "[]")
-            return parsed if isinstance(parsed, list) else []
-        except json.JSONDecodeError:
-            return []
-
-    return MinutesOut(
-        id=row.id or 0,
-        meeting_id=row.meeting_id,
-        summary=row.summary,
-        topics=_load(row.topics),
-        todos=_load(row.todos),
-        raw_markdown=row.raw_markdown,
-        model_used=row.model_used,
-        status=row.status,
-        error=row.error,
-        version=row.version,
-        is_draft=row.is_draft,
-        edited=row.edited,
-        created_at=row.created_at,
-    )
-
-
-# ---------------------------------------------------------------------------
-# 导出
-# ---------------------------------------------------------------------------
-
-
-def _export_body(db: Session, meeting: Meeting, fmt: str) -> str:
-    segments = db.exec(
-        select(Segment)
-        .where(Segment.meeting_id == meeting.id)
-        .order_by(Segment.start_ms, Segment.seq, Segment.id)
-    ).all()
-    seg_dicts = [
-        {
-            "start_ms": s.start_ms,
-            "end_ms": s.end_ms,
-            "text": s.text,
-            "speaker": s.speaker,
-        }
-        for s in segments
-    ]
-    meeting_dict = {
-        "id": meeting.id,
-        "title": meeting.title,
-        "duration_ms": meeting.duration_ms,
-        "created_at": meeting.created_at.isoformat() if meeting.created_at else "",
-    }
-    if fmt == "srt":
-        return formats.to_srt(seg_dicts)
-    if fmt == "vtt":
-        return formats.to_vtt(seg_dicts)
-    if fmt == "txt":
-        return formats.to_text(seg_dicts)
-
-    minutes_row = db.exec(
-        select(Minutes)
-        .where(Minutes.meeting_id == meeting.id, Minutes.status == "ready")
-        .order_by(Minutes.version.desc())
-    ).first()
-    minutes_dict = None
-    if minutes_row is not None:
-        minutes_dict = {
-            "summary": minutes_row.summary,
-            "topics": _safe_json(minutes_row.topics),
-            "todos": _safe_json(minutes_row.todos),
-            "model": minutes_row.model_used,
-        }
-    if fmt == "md":
-        return formats.to_markdown(meeting_dict, seg_dicts, minutes_dict)
-    return formats.to_json(meeting_dict, seg_dicts, minutes_dict)
-
-
 @router.get("/{meeting_id}/export")
 def export_meeting(
     meeting_id: int,
@@ -1008,49 +875,21 @@ def export_meeting(
         )
 
     ext, media_type = formats.EXPORTERS[fmt]
-    if fmt in ("docx", "pdf"):
-        segments = db.exec(
-            select(Segment)
-            .where(Segment.meeting_id == meeting_id)
-            .order_by(Segment.start_ms, Segment.seq, Segment.id)
-        ).all()
-        minutes_row = db.exec(
-            select(Minutes)
-            .where(Minutes.meeting_id == meeting_id, Minutes.status == "ready")
-            .order_by(Minutes.version.desc())
-        ).first()
-        company = str(get_config("export.company_name") or "")
-        footer = str(get_config("export.footer_text") or "")
-        builder = build_docx if fmt == "docx" else build_pdf
-        payload = builder(
-            meeting,
-            segments,
-            minutes_row,
-            company=company,
-            footer=footer,
-        )
-        return Response(
-            content=payload,
-            media_type=media_type,
-            headers={
-                "Content-Disposition": (
-                    f'attachment; filename="meeting-{meeting_id}.{ext}"'
-                )
-            },
-        )
-    body = _export_body(db, meeting, fmt)
-
-    filename = f"meeting-{meeting_id}.{ext}"
-    return Response(
-        content=body.encode("utf-8"),
-        media_type=f"{media_type}; charset=utf-8",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    body = render_meeting_export(
+        db,
+        meeting,
+        fmt,
+        company=str(get_config("export.company_name") or ""),
+        footer=str(get_config("export.footer_text") or ""),
     )
 
-
-def _safe_json(raw: str) -> list:
-    try:
-        parsed = json.loads(raw or "[]")
-        return parsed if isinstance(parsed, list) else []
-    except json.JSONDecodeError:
-        return []
+    filename = f"meeting-{meeting_id}.{ext}"
+    if fmt in ("docx", "pdf"):
+        response_media_type = media_type
+    else:
+        response_media_type = f"{media_type}; charset=utf-8"
+    return Response(
+        content=body,
+        media_type=response_media_type,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
