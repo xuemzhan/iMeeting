@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>麦克风采集自检 · 参数矩阵</title>
+<style>
+  body { font-family: ui-monospace, Consolas, monospace; margin: 0; padding: 20px;
+         background: #f6f7f9; color: #1a1a1a; }
+  h1 { font-size: 16px; margin: 0 0 4px; }
+  p.sub { font-size: 12px; color: #666; margin: 0 0 16px; line-height: 1.6; }
+  #out { background: #fff; border: 1px solid #e3e5e8; border-radius: 8px; padding: 14px;
+         font-size: 12px; line-height: 1.7; white-space: pre-wrap; min-height: 200px;
+         max-height: 60vh; overflow-y: auto; }
+  .ok { color: #0a0a0a; font-weight: 700; }
+  .bad { color: #d92b2b; font-weight: 700; }
+  .warn { color: #525252; font-weight: 600; }
+  .dim { color: #888; }
+  button { font-size: 13px; padding: 8px 16px; margin: 0 8px 16px 0; border-radius: 6px;
+           border: 1px solid #ccc; background: #fff; cursor: pointer; }
+  button.primary { background: #d92b2b; color: #fff; border-color: #d92b2b; }
+  button:disabled { opacity: .5; cursor: default; }
+  .bar { height: 10px; background: #e3e5e8; border-radius: 5px; overflow: hidden; margin: 6px 0; }
+  .bar > i { display: block; height: 100%; background: #d92b2b; width: 0; transition: width .08s; }
+  table { border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+  th, td { border: 1px solid #e3e5e8; padding: 5px 9px; text-align: left; }
+  th { background: #f0f1f3; }
+</style>
+</head>
+<body>
+<h1>麦克风采集自检 · 参数矩阵</h1>
+<p class="sub">
+  自动遍历「设备 × 采集参数」的所有组合，找出<b>真正能采到声音</b>的那一种。<br>
+  用于定位「一直在识别中 / 一个字都不出」——尤其是麦克风有权限、波形也动，但送出去的音频全是 0 的情况。<br>
+  全程约 15~30 秒，<b>请在检测过程中对着麦克风说话</b>。
+</p>
+<button id="run" class="primary">开始自检</button>
+<div class="bar"><i id="lvl"></i></div>
+<pre id="out">点击「开始自检」。</pre>
+
+<script>
+const out = document.getElementById('out')
+const lvlBar = document.getElementById('lvl')
+const runBtn = document.getElementById('run')
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
+const log = (s, cls) => {
+  const span = cls ? '<span class="' + cls + '">' + s + '</span>' : s
+  out.innerHTML += '\n' + span
+  out.scrollTop = out.scrollHeight
+}
+const clear = () => { out.innerHTML = '' }
+
+/**
+ * 采集参数组合。
+ * 为什么需要多组：Windows 上「有权限但全是 0」最常见的两个原因——
+ *   1) 浏览器音频处理（回声消除/降噪/自动增益）在某些驱动上输出纯静音；
+ *   2) 强行指定 AudioContext 采样率（16k）时，硬件原生率→16k 的重采样
+ *      在个别驱动下直接产出全零。
+ * 这两点都与音质无关（worklet 自带降采样），所以逐组试过去即可。
+ */
+const PROFILES = [
+  { rate: null,  apm: false, channels: null, label: '原生格式 · 处理关' },
+  { rate: null,  apm: true,  channels: null, label: '原生格式 · 处理开' },
+  { rate: null,  apm: false, channels: 1,    label: '原生率 · 单声道 · 处理关' },
+  { rate: 16000, apm: true,  channels: 1,    label: '16k · 单声道 · 处理开' },
+]
+
+/** 打开一组「设备 + 参数」，测约 800ms 的峰值电平。 */
+async function probe(deviceId, profile) {
+  let stream = null, ctx = null
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        ...(deviceId ? { deviceId: { exact: deviceId } } : {}),
+        echoCancellation: profile.apm,
+        noiseSuppression: profile.apm,
+        autoGainControl: profile.apm,
+        // 不约束声道时整个键都不出现——写 undefined 有些实现仍当约束处理
+        ...(profile.channels !== null ? { channelCount: profile.channels } : {}),
+      },
+      video: false,
+    })
+    ctx = profile.rate
+      ? new AudioContext({ sampleRate: profile.rate })
+      : new AudioContext()
+    if (ctx.state === 'suspended') await ctx.resume()
+
+    const track = stream.getAudioTracks()[0]
+    const st = track.getSettings()
+
+    const src = ctx.createMediaStreamSource(stream)
+    const an = ctx.createAnalyser()
+    an.fftSize = 1024
+    src.connect(an)
+    // 必须挂到 destination，否则 Chromium 可能不调度这条链路
+    const g = ctx.createGain(); g.gain.value = 0
+    src.connect(g); g.connect(ctx.destination)
+
+    const buf = new Uint8Array(an.fftSize)
+    let peak = 0
+    const deadline = performance.now() + 800
+    while (performance.now() < deadline) {
+      an.getByteTimeDomainData(buf)
+      for (let i = 0; i < buf.length; i++) {
+        const v = Math.abs(buf[i] - 128) / 128
+        if (v > peak) peak = v
+      }
+      await sleep(40)
+    }
+    return {
+      ok: true, peak, ctxRate: ctx.sampleRate,
+      devRate: st.sampleRate, devCh: st.channelCount,
+    }
+  } catch (e) {
+    return { ok: false, error: e.name + ' - ' + e.message }
+  } finally {
+    stream?.getTracks().forEach((t) => t.stop())
+    if (ctx) await ctx.close().catch(() => {})
+  }
+}
+
+/** 用真实的 worklet 链路跑 3 秒，确认能拿到非零的 16k PCM。 */
+async function verify(deviceId, profile) {
+  let stream = null, ctx = null, live = false
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        ...(deviceId ? { deviceId: { exact: deviceId } } : {}),
+        echoCancellation: profile.apm,
+        noiseSuppression: profile.apm,
+        autoGainControl: profile.apm,
+        channelCount: 1,
+      }, video: false,
+    })
+    ctx = profile.rate ? new AudioContext({ sampleRate: profile.rate }) : new AudioContext()
+    if (ctx.state === 'suspended') await ctx.resume()
+    await ctx.audioWorklet.addModule('/pcm-worklet.js')
+
+    const src = ctx.createMediaStreamSource(stream)
+    const node = new AudioWorkletNode(ctx, 'pcm-chunker', {
+      numberOfInputs: 1, numberOfOutputs: 0, channelCount: 1,
+      channelCountMode: 'explicit', channelInterpretation: 'speakers',
+    })
+    let chunks = 0, peak = 0
+    node.port.onmessage = (ev) => {
+      if (ev.data.type !== 'chunk') return
+      chunks++
+      const pcm = new Float32Array(ev.data.pcm)
+      for (let i = 0; i < pcm.length; i++) { const v = Math.abs(pcm[i]); if (v > peak) peak = v }
+    }
+    src.connect(node)
+    const g = ctx.createGain(); g.gain.value = 0
+    src.connect(g); g.connect(ctx.destination)
+
+    const an = ctx.createAnalyser(); an.fftSize = 512
+    src.connect(an)
+    const buf = new Uint8Array(an.frequencyBinCount)
+    live = true
+    const meter = () => {
+      if (!live) return
+      an.getByteTimeDomainData(buf)
+      let s = 0
+      for (let i = 0; i < buf.length; i++) { const v = (buf[i] - 128) / 128; s += v * v }
+      lvlBar.style.width = Math.min(100, Math.sqrt(s / buf.length) * 320) + '%'
+      requestAnimationFrame(meter)
+    }
+    meter()
+
+    await sleep(3000)
+    live = false
+    lvlBar.style.width = '0%'
+    return { chunks, peak }
+  } catch (e) {
+    return { chunks: 0, peak: 0, error: e.name + ' - ' + e.message }
+  } finally {
+    live = false
+    stream?.getTracks().forEach((t) => t.stop())
+    if (ctx) await ctx.close().catch(() => {})
+  }
+}
+
+async function run() {
+  clear()
+  runBtn.disabled = true
+
+  log('=== 环境 ===')
+  log('secureContext : ' + window.isSecureContext +
+      (window.isSecureContext ? '  OK' : '  需要 https 或 localhost'),
+      window.isSecureContext ? 'ok' : 'bad')
+  log('AudioWorklet  : ' + (typeof AudioWorkletNode !== 'undefined' ? '支持  OK' : '不支持'),
+      typeof AudioWorkletNode !== 'undefined' ? 'ok' : 'bad')
+  log('getUserMedia  : ' + (navigator.mediaDevices?.getUserMedia ? '支持  OK' : '不支持'),
+      navigator.mediaDevices?.getUserMedia ? 'ok' : 'bad')
+
+  log('\n=== 1. 麦克风权限 ===')
+  try {
+    const s = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+    const t = s.getAudioTracks()[0]
+    log('已授权  OK', 'ok')
+    log('  默认设备 : ' + (t.label || '(未命名)'))
+    log('  enabled  : ' + t.enabled + (t.enabled ? '' : '  ← 音轨被禁用！'), t.enabled ? '' : 'bad')
+    log('  readyState: ' + t.readyState)
+    s.getTracks().forEach((x) => x.stop())
+  } catch (e) {
+    log('失败: ' + e.name + ' - ' + e.message, 'bad')
+    log('  NotAllowedError=权限被拒 / NotFoundError=无设备 / NotReadableError=被独占', 'warn')
+    runBtn.disabled = false
+    return
+  }
+
+  log('\n=== 2. 枚举输入设备 ===')
+  const all = await navigator.mediaDevices.enumerateDevices()
+  const ins = all.filter((d) => d.kind === 'audioinput')
+  const targets = [{ deviceId: '', label: '系统默认麦克风' }]
+    .concat(ins.map((d, i) => ({ deviceId: d.deviceId, label: d.label || ('麦克风 ' + (i + 1)) })))
+  log('共 ' + ins.length + ' 个输入设备', ins.length ? '' : 'bad')
+  targets.forEach((t, i) => log('  [' + i + '] ' + t.label, 'dim'))
+
+  log('\n=== 3. 参数矩阵（请对着麦克风说话）===')
+  log('峰值 > 0.005 视为「有信号」。')
+  const results = []
+  let native = null
+  for (const t of targets) {
+    for (const p of PROFILES) {
+      const r = await probe(t.deviceId || null, p)
+      if (r.ok && !native) native = r
+      results.push({ dev: t.label, devId: t.deviceId, prof: p.label, ...r })
+      const tag = !r.ok ? 'bad' : (r.peak > 0.005 ? 'ok' : 'warn')
+      const val = !r.ok
+        ? ('失败 ' + r.error)
+        : ('峰值 ' + r.peak.toFixed(5) + '  上下文 ' + r.ctxRate + 'Hz' +
+           '  设备 ' + (r.devRate ?? '?') + 'Hz/' + (r.devCh ?? '?') + 'ch')
+      log('  ' + t.label.slice(0, 22).padEnd(24) + '| ' + p.label.padEnd(20) + '| ' + val, tag)
+    }
+  }
+  if (native) {
+    log('\n  设备原生格式：' + (native.devRate ?? '?') + ' Hz / ' + (native.devCh ?? '?') + ' 声道',
+        'dim')
+    log('  （Windows 11 录音设备默认通常是 48000Hz / 32-bit / 2 声道；', 'dim')
+    log('    请求其它格式的客户端，可能被驱动的音频增强（APO）静音）', 'dim')
+  }
+
+  const good = results.filter((r) => r.ok && r.peak > 0.005)
+  log('\n=== 4. 结论 ===')
+  if (good.length === 0) {
+    log('所有组合都没有检测到声音。', 'bad')
+    log('按命中率从高到低排查：', 'warn')
+    log('  ①【最常见】关闭 Windows「音频增强」/「语音清晰度」：')
+    log('     设置 → 系统 → 声音 → 输入 → 选中麦克风 → 设备属性')
+    log('     → 把「音频增强」设为【关】，「设备效果」设为【关】。')
+    log('     Realtek / Intel 智音的 APO 会把「请求非原生格式」的应用静音，')
+    log('     而浏览器内部一律走 float32 —— 正好命中。关掉后通常立刻恢复。')
+    log('  ② 设置 → 隐私和安全性 → 麦克风 → 允许桌面应用访问')
+    log('  ③ 笔记本的物理静音键 / Fn 组合键')
+    log('  ④ 是否被会议软件（腾讯会议/钉钉/Zoom）独占麦克风')
+    log('  ⑤ 设备管理器里更新/回退声卡驱动（Realtek UAD / Intel SST）')
+    runBtn.disabled = false
+    return
+  }
+
+  good.sort((a, b) => b.peak - a.peak)
+  const best = good[0]
+  log('能采到声音的组合共 ' + good.length + ' 个，最佳：', 'ok')
+  log('  设备   : ' + best.dev)
+  log('  参数   : ' + best.prof + '（上下文 ' + best.ctxRate + 'Hz）')
+  log('  峰值   : ' + best.peak.toFixed(5))
+
+  log('\n=== 5. 端到端复核（真实 worklet 链路，3 秒，请说话）===')
+  const v = await verify(best.devId || null, PROFILES.find((p) => p.label === best.prof))
+  log('  收到块数 : ' + v.chunks + (v.chunks > 0 ? '  OK' : '  ← 一块都没收到'), v.chunks > 0 ? 'ok' : 'bad')
+  log('  16k 峰值 : ' + v.peak.toFixed(5) + (v.peak > 0 ? '  OK' : '  ← 全零'), v.peak > 0 ? 'ok' : 'bad')
+  if (v.error) log('  错误     : ' + v.error, 'bad')
+  log(v.peak > 0 ? '\n结论：该组合可正常工作，回到应用中选择此设备即可。'
+                 : '\n结论：仍为全零，请把以上矩阵结果反馈给开发者。',
+      v.peak > 0 ? 'ok' : 'bad')
+
+  runBtn.disabled = false
+}
+
+runBtn.onclick = run
+</script>
+</body>
+</html>

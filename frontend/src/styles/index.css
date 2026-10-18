@@ -1,0 +1,450 @@
+@import 'tailwindcss';
+
+/* ---------------------------------------------------------------------------
+   设计令牌
+   浅色为主，深色跟随系统。所有颜色以 CSS 变量暴露，便于主题切换。
+--------------------------------------------------------------------------- */
+
+@theme {
+  /* 色系：白 / 黑 / 灰 / 红。
+     红与黑只用于「重点内容点缀」——主行动、当前状态、强调文本；
+     其余一律白底、灰层次，避免全屏彩色导致重点被稀释。 */
+  --color-brand-50: #fdecec;
+  --color-brand-100: #f9c9c9;
+  --color-brand-200: #f09595;
+  --color-brand-400: #e04a4a;
+  --color-brand-500: #d92b2b;
+  --color-brand-600: #b81f1f;
+  --color-brand-800: #8a1414;
+  --color-brand-900: #5c0d0d;
+
+  /* 灰阶：中性层次 */
+  --color-mint-50: #f5f5f5;
+  --color-mint-100: #e0e0e0;
+  --color-mint-400: #8c8c8c;
+  --color-mint-600: #525252;
+  --color-mint-800: #1f1f1f;
+
+  --color-amber-soft: #f0f0f0;
+  --color-amber-mid: #525252;
+  --color-amber-deep: #1f1f1f;
+
+  --font-sans:
+    'Inter var', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
+
+  --radius-card: 12px;
+  --radius-control: 8px;
+}
+
+:root {
+  /* 白 */
+  --bg-page: #ffffff;
+  --bg-surface: #ffffff;
+  /* 灰 */
+  --bg-subtle: #f5f5f5;
+  --bg-hover: #ebebeb;
+
+  /* 黑 / 灰 文字层次 */
+  --text-primary: #0a0a0a;
+  --text-secondary: #525252;
+  --text-tertiary: #8c8c8c;
+
+  --border-subtle: rgba(0, 0, 0, 0.08);
+  --border-default: rgba(0, 0, 0, 0.16);
+  --border-strong: rgba(0, 0, 0, 0.28);
+
+  /* 红：主行动与强调点缀 */
+  --accent: #d92b2b;
+  --accent-soft: #fdecec;
+  --accent-text: #a01218;
+
+  /* 识别中：红点（录音语义，与强调红同源） */
+  --live: #d92b2b;
+  --live-soft: #fdecec;
+  --live-text: #a01218;
+
+  /* 暂停 / 提示：中性灰黑，不抢红的点缀地位 */
+  --warn: #525252;
+  --warn-soft: #f0f0f0;
+  --warn-text: #262626;
+
+  /* 异常：深红，比强调红更沉，避免与「识别中」混淆 */
+  --danger: #8a1414;
+  --danger-soft: #fbe9e9;
+  --danger-text: #7a0c0c;
+
+  --shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+.dark {
+  --bg-page: #0a0a0a;
+  --bg-surface: #141414;
+  --bg-subtle: #1f1f1f;
+  --bg-hover: #2a2a2a;
+
+  --text-primary: #fafafa;
+  --text-secondary: #a3a3a3;
+  --text-tertiary: #737373;
+
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-default: rgba(255, 255, 255, 0.16);
+  --border-strong: rgba(255, 255, 255, 0.28);
+
+  /* 深色下红色要提亮才够对比度 */
+  --accent: #ff4d4f;
+  --accent-soft: #2a1213;
+  --accent-text: #ff8a8a;
+
+  --live: #ff4d4f;
+  --live-soft: #2a1213;
+  --live-text: #ff8a8a;
+
+  --warn: #a3a3a3;
+  --warn-soft: #1f1f1f;
+  --warn-text: #d4d4d4;
+
+  --danger: #ff6b6b;
+  --danger-soft: #331414;
+  --danger-text: #ffb3b3;
+
+  --shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+@layer base {
+  * {
+    border-color: var(--border-subtle);
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg-page);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overscroll-behavior: none;
+  }
+
+  button {
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  input,
+  textarea,
+  select {
+    font-family: inherit;
+    font-size: 13px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--border-default);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--border-strong);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .panel {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-panel);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 12px;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: var(--radius-control);
+    border: 1px solid var(--border-default);
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    transition:
+      background 120ms ease,
+      border-color 120ms ease,
+      transform 120ms ease;
+  }
+
+  .btn:hover:not(:disabled) {
+    background: var(--bg-hover);
+    border-color: var(--border-strong);
+  }
+
+  .btn:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: var(--color-brand-500);
+    border-color: var(--color-brand-500);
+  }
+
+  .btn-ghost {
+    border-color: transparent;
+    background: transparent;
+  }
+
+  .btn-ghost:hover:not(:disabled) {
+    background: var(--bg-hover);
+  }
+
+  .input {
+    width: 100%;
+    height: 34px;
+    padding: 0 10px;
+    border-radius: var(--radius-control);
+    border: 1px solid var(--border-default);
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    transition: border-color 120ms ease;
+  }
+
+  .input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .input::placeholder {
+    color: var(--text-tertiary);
+  }
+
+  .label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 22px;
+    padding: 0 9px;
+    border-radius: 11px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 40px;
+    padding: 0 16px;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .panel-header h2 {
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .count-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 18px;
+    padding: 0 6px;
+    border-radius: 9px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    background: var(--bg-subtle);
+    color: var(--text-tertiary);
+  }
+
+  .separator-v {
+    width: 1px;
+    height: 24px;
+    background: var(--border-default);
+    flex-shrink: 0;
+  }
+
+  .kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border-radius: 4px;
+    border: 1px solid var(--border-default);
+    background: var(--bg-subtle);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+    line-height: 1;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+
+  /* range slider */
+  input[type='range'] {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  input[type='range']::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    border: 2px solid var(--bg-surface);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  }
+
+  input[type='range']::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    border: 2px solid var(--bg-surface);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  }
+}
+
+@layer utilities {
+  .text-secondary {
+    color: var(--text-secondary);
+  }
+  .text-tertiary {
+    color: var(--text-tertiary);
+  }
+  .bg-surface {
+    background: var(--bg-surface);
+  }
+  .bg-subtle {
+    background: var(--bg-subtle);
+  }
+  .border-subtle {
+    border-color: var(--border-subtle);
+  }
+
+  .animate-breathe {
+    animation: breathe 2s ease-in-out infinite;
+  }
+
+  .animate-rise {
+    animation: rise 200ms ease-out;
+  }
+
+  .animate-flash {
+    animation: flash 500ms ease-out;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   响应式：移动端标签切换时隐藏转写面板。
+   用媒体查询而非内联 display，是为了在 lg 以上不被覆盖，
+   保证桌面端两侧面板始终并排显示。
+--------------------------------------------------------------------------- */
+@media (max-width: 1023px) {
+  [data-hidden-mobile='true'] {
+    display: none;
+  }
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(0.82);
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes flash {
+  0% {
+    background: var(--accent-soft);
+  }
+  100% {
+    background: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

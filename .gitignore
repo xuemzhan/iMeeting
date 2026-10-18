@@ -1,0 +1,57 @@
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# Runtime data
+backend/data/
+data/
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+dist/
+build/
+
+# Node / frontend
+node_modules/
+frontend/dist/
+frontend/.tmp/
+*.tsbuildinfo
+vite.config.ts.timestamp-*
+vitest.config.ts.timestamp-*
+
+# Logs and temporary files
+*.log
+*.pid
+*.tmp
+
+# Benchmark artifacts
+benchmarks/**/audio/
+benchmarks/**/raw/
+benchmarks/**/results/
+benchmarks/**/models/
+benchmarks/**/*.wav
+benchmarks/**/*.flac
+benchmarks/**/*.gguf
+benchmarks/**/*.exe
+benchmarks/**/*.zip
+benchmarks/**/*.parquet
+
+# Editor / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+

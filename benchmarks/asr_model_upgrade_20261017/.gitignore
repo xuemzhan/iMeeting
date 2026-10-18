@@ -1,0 +1,7 @@
+audio/
+raw/
+tools/gguf/*.gguf
+tools/gguf/*.zip
+tools/gguf/bin/
+tools/gguf/out.txt
+tools/gguf/err.txt
