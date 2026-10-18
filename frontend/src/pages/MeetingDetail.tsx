@@ -1,33 +1,31 @@
-import { useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft,
+  CheckSquare,
   Download,
+  Info,
   Loader2,
   Share2,
-  Info,
-  CheckSquare,
   ShieldCheck,
   Users,
 } from 'lucide-react'
-import { meetingApi, voiceprintApi, ApiError } from '../api/client'
+
+import { ApiError } from '../api/client'
+import { useMeetingDetail } from '../hooks/useMeetingDetail'
 import { formatDuration } from '../store/session'
-import { useAuth } from '../store/auth'
-import { TopBar } from '../components/TopBar'
+import { ActionsPanel } from '../components/ActionsPanel'
 import { AudioPlayer } from '../components/AudioPlayer'
-import type { ApiSegment, Minutes } from '../api/types'
+import { CompliancePanel } from '../components/CompliancePanel'
+import { MeetingInfoEditor } from '../components/MeetingInfoEditor'
+import { MembersDialog } from '../components/MembersDialog'
+import { MinutesEditor } from '../components/MinutesEditor'
 import { MinutesMindMapPanel } from '../components/MinutesMindMapPanel'
 import { MinutesSidebar } from '../components/MinutesSidebar'
 import { MinutesVersionsPanel } from '../components/MinutesVersionsPanel'
-import { MeetingInfoEditor } from '../components/MeetingInfoEditor'
-import { ShareDialog } from '../components/ShareDialog'
-import { ActionsPanel } from '../components/ActionsPanel'
-import { MinutesEditor } from '../components/MinutesEditor'
-import { CompliancePanel } from '../components/CompliancePanel'
 import { ReviewPanel } from '../components/ReviewPanel'
-import { MembersDialog } from '../components/MembersDialog'
 import { SegmentEditDialog } from '../components/SegmentEditDialog'
+import { ShareDialog } from '../components/ShareDialog'
+import { TopBar } from '../components/TopBar'
 import { TranscriptPanel } from '../components/TranscriptPanel'
 
 const EXPORT_FORMATS = [
@@ -44,156 +42,47 @@ export default function MeetingDetail() {
   const { id } = useParams<{ id: string }>()
   const [searchParams] = useSearchParams()
   const meetingId = Number(id)
-  const qc = useQueryClient()
-  const hasToken = useAuth((s) => s.hasToken)
-
-  const [minutes, setMinutes] = useState<Minutes | null>(null)
-  const [generating, setGenerating] = useState(false)
-  const [showExport, setShowExport] = useState(false)
-  /** 生成失败的原因。之前没有 catch，后端 4xx 会变成未处理的 Promise 拒绝，
-   *  界面只是转圈停住、不给任何反馈，用户完全不知道发生了什么。 */
-  const [genError, setGenError] = useState<string | null>(null)
-  const [templateId, setTemplateId] = useState<number | null>(null)
-  const [showMindMap, setShowMindMap] = useState(false)
-  const [showShare, setShowShare] = useState(false)
-  const [showInfo, setShowInfo] = useState(false)
-  const [showVersions, setShowVersions] = useState(false)
-  const [editingMinutes, setEditingMinutes] = useState<Minutes | null>(null)
-  const [editingSegment, setEditingSegment] = useState<ApiSegment | null>(null)
-  const [exportStatus, setExportStatus] = useState<string | null>(null)
-  const [showCompliance, setShowCompliance] = useState(false)
-  const [showMembers, setShowMembers] = useState(false)
-  /** 把某个说话人标签改成真实姓名（声纹库 + 全部历史片段一起更新）。 */
-  const renameSpeaker = async (fromLabel: string, name: string) => {
-    try {
-      await voiceprintApi.relabel(meetingId, fromLabel, name)
-      await qc.invalidateQueries({ queryKey: ['meeting', meetingId] })
-      await qc.invalidateQueries({ queryKey: ['minutes', meetingId] })
-    } catch (err) {
-      setGenError(err instanceof Error ? err.message : '说话人改名失败')
-    }
-  }
-
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['meeting', meetingId],
-    queryFn: () => meetingApi.get(meetingId),
-    enabled: Number.isFinite(meetingId),
-  })
-
-  const { data: existingMinutes } = useQuery({
-    queryKey: ['minutes', meetingId],
-    queryFn: () => meetingApi.getMinutes(meetingId),
-    enabled: Number.isFinite(meetingId) && hasToken(),
-  })
-
-  const { data: versions } = useQuery({
-    queryKey: ['minutes-versions', meetingId],
-    queryFn: () => meetingApi.minutesVersions(meetingId),
-    enabled: showVersions && Number.isFinite(meetingId),
-  })
-
-  const activeMinutes = minutes ?? existingMinutes ?? null
-  const { data: mindmap, isLoading: mindmapLoading } = useQuery({
-    queryKey: ['mindmap', meetingId],
-    queryFn: () => meetingApi.mindmap(meetingId),
-    enabled: showMindMap,
-  })
-  useEffect(() => {
-    const seconds = Number(searchParams.get('t') || 0)
-    if (!data?.has_audio || !Number.isFinite(seconds) || seconds <= 0) return
-    const timer = window.setTimeout(() => {
-      window.dispatchEvent(
-        new CustomEvent('audio-player-seek', { detail: seconds * 1000 }),
-      )
-    }, 500)
-    return () => window.clearTimeout(timer)
-  }, [data?.has_audio, searchParams])
-
-  /**
-   * 是否有可用于生成纪要的转写内容。
-   *
-   * 麦克风静音或全零 PCM 的会议会落成 0 段，此时后端返回 400
-   * 「该会议还没有转写内容」。这是**预期状态**而不是故障，
-   * 所以按钮应直接禁用，而不是让用户点了再吃一个错误。
-   */
-  const hasTranscript = (data?.segment_count ?? 0) > 0
-  const saveSegment = async (segment: ApiSegment, text: string) => {
-    try {
-      await meetingApi.editSegment(meetingId, segment.segment_id, { text })
-      await qc.invalidateQueries({ queryKey: ['meeting', meetingId] })
-      setEditingSegment(null)
-    } catch (err) {
-      setGenError(err instanceof Error ? err.message : '转写修订失败')
-    }
-  }
-
-  const confirmSpeaker = async (segment: ApiSegment) => {
-    if (!segment.speaker) return
-    try {
-      await voiceprintApi.relabel(meetingId, segment.speaker, segment.speaker)
-      await qc.invalidateQueries({ queryKey: ['meeting', meetingId] })
-    } catch (err) {
-      setGenError(err instanceof Error ? err.message : '说话人确认失败')
-    }
-  }
-
-  const handleGenerate = async () => {
-    if (generating || !hasTranscript) return
-    setGenerating(true)
-    setGenError(null)
-    try {
-      const result = await meetingApi.generateMinutes(
-        meetingId,
-        Boolean(activeMinutes),
-        templateId,
-      )
-      setMinutes(result)
-      await qc.invalidateQueries({ queryKey: ['minutes', meetingId] })
-    } catch (err) {
-      // 必须 catch：否则 400/502 会变成 unhandled rejection，
-      // 界面只是「转圈停住」，用户既看不到原因也不知道该重试还是放弃。
-      setGenError(err instanceof Error ? err.message : '生成失败，请稍后重试')
-    } finally {
-      setGenerating(false)
-    }
-  }
-
-  const handleExport = async (format: string) => {
-    setShowExport(false)
-    setExportStatus('正在创建导出任务…')
-    try {
-      let job = await meetingApi.createExportJob(meetingId, format)
-      for (let i = 0; i < 120; i++) {
-        if (job.status === 'failed') {
-          throw new Error(job.last_error || '导出失败')
-        }
-        if (job.status === 'succeeded') break
-        setExportStatus(
-          job.status === 'running' ? '正在生成导出文件…' : '等待导出任务…',
-        )
-        await new Promise((resolve) => window.setTimeout(resolve, 1000))
-        job = await meetingApi.exportJob(job.id)
-      }
-      if (job.status !== 'succeeded') {
-        throw new Error('导出超时，请稍后在后台任务中查看')
-      }
-      const blob = await meetingApi.downloadExportJob(job.id)
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = job.download_name || `${data?.title || 'meeting'}.${format}`
-      a.click()
-      URL.revokeObjectURL(url)
-      setExportStatus(null)
-    } catch (e) {
-      setExportStatus(e instanceof Error ? e.message : '导出失败')
-    }
-  }
-
-  // 点击时间戳跳转音频
-  const handleSeek = (ms: number) => {
-    window.dispatchEvent(new CustomEvent('audio-player-seek', { detail: ms }))
-  }
+  const {
+    data,
+    isLoading,
+    error,
+    activeMinutes,
+    versions,
+    mindmap,
+    mindmapLoading,
+    generating,
+    genError,
+    templateId,
+    setTemplateId,
+    showExport,
+    setShowExport,
+    exportStatus,
+    showMindMap,
+    setShowMindMap,
+    showShare,
+    setShowShare,
+    showInfo,
+    setShowInfo,
+    showVersions,
+    setShowVersions,
+    editingMinutes,
+    setEditingMinutes,
+    editingSegment,
+    setEditingSegment,
+    showCompliance,
+    setShowCompliance,
+    showMembers,
+    setShowMembers,
+    hasTranscript,
+    renameSpeaker,
+    saveSegment,
+    confirmSpeaker,
+    handleGenerate,
+    handleExport,
+    handleSeek,
+    onMeetingSaved,
+    onMinutesSaved,
+  } = useMeetingDetail(meetingId, searchParams)
 
   if (isLoading) {
     return (
@@ -410,9 +299,7 @@ export default function MeetingDetail() {
       {showInfo && (
         <MeetingInfoEditor
           meeting={data}
-          onSaved={() => {
-            void qc.invalidateQueries({ queryKey: ['meeting', meetingId] })
-          }}
+          onSaved={onMeetingSaved}
           onClose={() => setShowInfo(false)}
         />
       )}
@@ -423,11 +310,7 @@ export default function MeetingDetail() {
         <MinutesEditor
           meetingId={meetingId}
           minutes={editingMinutes}
-          onSaved={(row) => {
-            setMinutes(row)
-            void qc.invalidateQueries({ queryKey: ['minutes', meetingId] })
-            void qc.invalidateQueries({ queryKey: ['minutes-versions', meetingId] })
-          }}
+          onSaved={onMinutesSaved}
           onClose={() => setEditingMinutes(null)}
         />
       )}
@@ -441,9 +324,7 @@ export default function MeetingDetail() {
       {showCompliance && (
         <CompliancePanel
           meeting={data}
-          onSaved={() => {
-            void qc.invalidateQueries({ queryKey: ['meeting', meetingId] })
-          }}
+          onSaved={onMeetingSaved}
           onClose={() => setShowCompliance(false)}
         />
       )}
