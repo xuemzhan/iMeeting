@@ -168,8 +168,8 @@ def test_generate_final_minutes_is_idempotent(client, monkeypatch):
 
 
 def test_api_returns_latest_final_after_draft(client, monkeypatch):
+    from imeeting.api.http.routes import meetings as meetings_router
     from imeeting.llm.progressive import save_generated_minutes
-    from imeeting.routers import meetings as meetings_router
 
     mid = _seed(client)
     save_generated_minutes(

@@ -7,15 +7,15 @@ import logging
 from fastapi import APIRouter, Depends, Request
 from sqlmodel import Session
 
-from ..db import get_session, persist_config
-from ..models import AuditLog, User
-from ..schemas import (
+from ....db import get_session, persist_config
+from ....models import AuditLog, User
+from ....schemas import (
     ConfigFieldOut,
     ConfigSchemaOut,
     ConfigUpdateRequest,
     ConfigUpdateResponse,
 )
-from ..settings import CONFIG_SCHEMA, get_config, validate_update
+from ....settings import CONFIG_SCHEMA, get_config, validate_update
 from .deps import get_current_user, require_admin
 
 logger = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ def read_config(user: User = Depends(get_current_user)):
     普通用户也能读，因为前端需要知道当前 VAD/标点/说话人是否开启，
     以便正确渲染界面状态。密钥类字段一律脱敏。
     """
-    from ..settings import config_store
+    from ....settings import config_store
 
     return config_store.snapshot(redact=True)
 
@@ -75,8 +75,8 @@ def update_config(
     values = dict(payload.values)
 
     # 掩码值表示前端未修改该密钥，跳过
-    from ..security import encrypt_value
-    from ..settings import SCHEMA_BY_KEY
+    from ....security import encrypt_value
+    from ....settings import SCHEMA_BY_KEY
 
     cleaned_input: dict = {}
     for key, value in values.items():
@@ -128,7 +128,7 @@ def update_config(
                 plain[key] = str(cleaned.get(key, ""))
             else:
                 plain[key] = value
-        from ..settings import config_store
+        from ....settings import config_store
 
         config_store.set_overrides(plain)
 

@@ -41,7 +41,7 @@ def _export_one(db, meeting: Meeting, fmt: str) -> bytes:
             company=str(get_config("export.company_name") or ""),
             footer=str(get_config("export.footer_text") or ""),
         )
-    from .routers.meetings import _export_body
+    from .api.http.routes.meetings import _export_body
 
     return _export_body(db, meeting, fmt).encode("utf-8")
 

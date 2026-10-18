@@ -14,13 +14,13 @@ from sqlalchemy import delete as sa_delete
 from sqlalchemy import exists, or_, text
 from sqlmodel import Session, func, select
 
-from ..db import get_session
-from ..export import formats
-from ..export.document_export import build_docx, build_pdf
-from ..llm.client import LLMError
-from ..llm.minutes import TranscriptLine, generate_minutes
-from ..meeting_files import cleanup_meeting_files
-from ..models import (
+from ....db import get_session
+from ....export import formats
+from ....export.document_export import build_docx, build_pdf
+from ....llm.client import LLMError
+from ....llm.minutes import TranscriptLine, generate_minutes
+from ....meeting_files import cleanup_meeting_files
+from ....models import (
     ActionItem,
     AuditLog,
     Meeting,
@@ -35,7 +35,7 @@ from ..models import (
     Voiceprint,
     utcnow,
 )
-from ..schemas import (
+from ....schemas import (
     MeetingBulkDeleteRequest,
     MeetingBulkDeleteResult,
     MeetingBulkExportRequest,
@@ -50,7 +50,7 @@ from ..schemas import (
     MinutesOut,
     SegmentOut,
 )
-from ..settings import get_config
+from ....settings import get_config
 from .deps import get_current_user_or_anonymous
 
 logger = logging.getLogger(__name__)
@@ -272,7 +272,7 @@ def _is_actively_recording(db: Session, meeting_id: int) -> bool:
     if not rows:
         return False
     try:
-        from ..session_registry import session_registry
+        from ....session_registry import session_registry
 
         if any(session_registry.contains(row.session_id) for row in rows):
             return True
@@ -813,7 +813,7 @@ def merge_speakers(
 ):
     """手动触发会后说话人合并（也用于修复历史会议）。"""
     _owned(meeting_id, user, db, write=True)
-    from ..engine.speaker_merge import merge_meeting_speakers
+    from ....engine.speaker_merge import merge_meeting_speakers
 
     return merge_meeting_speakers(
         meeting_id,
@@ -902,7 +902,7 @@ async def create_minutes(
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc)) from exc
 
     # 版本化写入：保留会中草稿，终稿另起一版，便于对比
-    from ..llm.progressive import save_generated_minutes
+    from ....llm.progressive import save_generated_minutes
 
     end_ms = max((line.end_ms or (line.start_ms + 1000)) for line in lines)
     row = save_generated_minutes(

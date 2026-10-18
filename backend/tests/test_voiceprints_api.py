@@ -43,7 +43,7 @@ def stub_embedding(monkeypatch):
     from imeeting.engine import speaker
 
     monkeypatch.setattr(speaker, "extract_embedding", fake_extract)
-    monkeypatch.setattr("imeeting.routers.voiceprints.speaker.extract_embedding", fake_extract)
+    monkeypatch.setattr("imeeting.api.http.routes.voiceprints.speaker.extract_embedding", fake_extract)
     return fake_extract
 
 

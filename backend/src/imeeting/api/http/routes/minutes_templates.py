@@ -10,10 +10,10 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, s
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
-from ..db import get_session
-from ..models import AuditLog, MinutesTemplate, User, utcnow
-from ..schemas import MinutesTemplateCreate, MinutesTemplateOut
-from ..settings import get_config
+from ....db import get_session
+from ....models import AuditLog, MinutesTemplate, User, utcnow
+from ....schemas import MinutesTemplateCreate, MinutesTemplateOut
+from ....settings import get_config
 from .deps import get_current_user_or_anonymous
 
 logger = logging.getLogger(__name__)

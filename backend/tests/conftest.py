@@ -20,10 +20,11 @@ import pytest
 
 # 保证 `import imeeting.*` 可用（pytest 从 tests/ 目录运行时 cwd 不一定是 backend/）
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
-if str(BACKEND_ROOT) not in sys.path:
-    sys.path.insert(0, str(BACKEND_ROOT))
+SRC_ROOT = BACKEND_ROOT / "src"
+if str(SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(SRC_ROOT))
 
-# 必须在导入 app 之前设定，保证 imeeting.db 读到的是临时路径
+# 必须在导入 imeeting 之前设定，保证 imeeting.db 读到的是临时路径
 _TMPDIR = tempfile.mkdtemp(prefix="meeting-test-")
 _TEST_DB = Path(_TMPDIR) / "test.db"
 os.environ["DATABASE_URL"] = f"sqlite:///{_TEST_DB.as_posix()}"
@@ -213,7 +214,7 @@ def clean_bootstrap_cache() -> Iterator[None]:
     远不到 30s。于是第一个用例缓存下的「口令仍是出厂默认」会被后面所有用例读到，
     表现为「明明改了密码，bootstrap 还回传旧口令」这种假失败。
     """
-    from imeeting.routers import auth as auth_router
+    from imeeting.api.http.routes import auth as auth_router
 
     auth_router._reset_bootstrap_cache()
     yield

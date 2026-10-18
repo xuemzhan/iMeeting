@@ -8,10 +8,10 @@ import io
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlmodel import Session, select
 
-from ..db import get_session
-from ..glossary import invalidate_cache
-from ..models import GlossaryTerm, User, utcnow
-from ..schemas import GlossaryTermCreate, GlossaryTermOut, GlossaryTermUpdate
+from ....db import get_session
+from ....glossary import invalidate_cache
+from ....models import GlossaryTerm, User, utcnow
+from ....schemas import GlossaryTermCreate, GlossaryTermOut, GlossaryTermUpdate
 from .deps import get_current_user_or_anonymous, require_admin
 
 router = APIRouter(prefix="/api/v1/glossary", tags=["glossary"])

@@ -10,11 +10,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import Response
 from sqlmodel import Session, select
 
-from ..audit import verify_audit_chain
-from ..db import engine, get_session
-from ..maintenance import drain_status, set_draining
-from ..models import AuditLog, Job, User, utcnow
-from ..schemas import JobOut
+from ....audit import verify_audit_chain
+from ....db import engine, get_session
+from ....maintenance import drain_status, set_draining
+from ....models import AuditLog, Job, User, utcnow
+from ....schemas import JobOut
 from .deps import require_admin
 
 router = APIRouter(prefix="/api/v1/admin", tags=["admin-ops"])
@@ -25,8 +25,8 @@ def reindex_search(
     payload: dict | None = None,
     _: User = Depends(require_admin),
 ):
-    from ..jobs import enqueue_job
-    from ..search_index import enabled
+    from ....jobs import enqueue_job
+    from ....search_index import enabled
 
     if not enabled():
         raise HTTPException(status_code=400, detail="语义检索未配置")
@@ -46,11 +46,11 @@ async def denoise_eval(
     payload: dict,
     _: User = Depends(require_admin),
 ):
-    from ..session_registry import active_session_count
+    from ....session_registry import active_session_count
 
     if active_session_count() > 0:
         raise HTTPException(status_code=409, detail="会议进行中，暂不执行离线去噪评估")
-    from ..denoise_eval import evaluate_denoise
+    from ....denoise_eval import evaluate_denoise
 
     meeting_id = int(payload.get("meeting_id") or 0)
     if meeting_id <= 0:
@@ -106,7 +106,7 @@ def retry_job(
 
 @router.get("/maintenance")
 def maintenance_status(_: User = Depends(require_admin)) -> dict:
-    from ..session_registry import active_session_count
+    from ....session_registry import active_session_count
 
     return {**drain_status(), "active_sessions": active_session_count()}
 
@@ -118,7 +118,7 @@ def start_drain(
 ) -> dict:
     reason = str((payload or {}).get("reason") or "release")[:500]
     set_draining(True, reason)
-    from ..session_registry import active_session_count
+    from ....session_registry import active_session_count
 
     return {
         "draining": True,

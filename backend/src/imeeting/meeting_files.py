@@ -6,6 +6,7 @@ import logging
 from pathlib import Path
 
 from .engine import audio as audio_module
+from .settings import BASE_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +32,7 @@ def cleanup_meeting_files(meeting_id: int, audio_path: str | None) -> None:
         for path in base.glob(pattern):
             remove_audio_file(str(path))
 
-    metrics_dir = Path(__file__).resolve().parents[1] / "data" / "metrics"
+    metrics_dir = BASE_DIR / "data" / "metrics"
     for path in metrics_dir.glob(f"meeting-{meeting_id}-*.json"):
         try:
             path.unlink(missing_ok=True)

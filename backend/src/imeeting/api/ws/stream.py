@@ -29,13 +29,13 @@ import numpy as np
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from sqlmodel import Session, func, select
 
-from ..db import engine as db_engine
-from ..engine.audio import AudioSink
-from ..engine.streaming import StreamSession, unregister_session
-from ..models import Meeting, MeetingSession, Segment, User
-from ..security import decode_access_token
-from ..session_registry import session_registry
-from ..settings import get_config
+from ...db import engine as db_engine
+from ...engine.audio import AudioSink
+from ...engine.streaming import StreamSession, unregister_session
+from ...models import Meeting, MeetingSession, Segment, User
+from ...security import decode_access_token
+from ...session_registry import session_registry
+from ...settings import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ _persist_lock = threading.Lock()
 async def stream_endpoint(websocket: WebSocket) -> None:
     await websocket.accept()
 
-    from ..maintenance import is_draining
+    from ...maintenance import is_draining
 
     if is_draining():
         await websocket.send_json(
@@ -170,7 +170,7 @@ async def stream_endpoint(websocket: WebSocket) -> None:
 
         # 会中渐进纪要：定时基于已落库转写生成阶段草稿
         try:
-            from ..llm.client import LLMClient
+            from ...llm.client import LLMClient
 
             if bool(get_config("llm.progressive_enabled")) and LLMClient().configured:
                 progressive_task = asyncio.create_task(
@@ -348,7 +348,7 @@ async def stream_endpoint(websocket: WebSocket) -> None:
         # 短会/提前结束时补一次元信息提取（持久化任务，不阻塞收尾）
         if meeting_id is not None and final_status in ("finished", "abandoned"):
             try:
-                from ..jobs import enqueue_job
+                from ...jobs import enqueue_job
 
                 enqueue_job(
                     kind="meeting_meta",
@@ -367,8 +367,8 @@ async def stream_endpoint(websocket: WebSocket) -> None:
             and bool(get_config("llm.auto_final_on_stop"))
         ):
             try:
-                from ..jobs import enqueue_job
-                from ..llm.client import LLMClient
+                from ...jobs import enqueue_job
+                from ...llm.client import LLMClient
 
                 if LLMClient().configured:
                     enqueue_job(
@@ -426,7 +426,7 @@ def _auth_required() -> bool:
 
 def _anonymous_identity() -> tuple[int | None, str]:
     """未开启鉴权时，把会话挂到 admin 名下，方便本地直接使用。"""
-    from ..models import User
+    from ...models import User
 
     with Session(db_engine) as db:
         admin = db.exec(select(User).where(User.role == "admin")).first()
@@ -579,7 +579,7 @@ def _persist_segments_locked(
 
 async def _auto_final_minutes(meeting_id: int) -> None:
     """会议结束后后台生成终稿；失败只记日志。"""
-    from ..llm.progressive import generate_final_minutes
+    from ...llm.progressive import generate_final_minutes
 
     try:
         await generate_final_minutes(
@@ -592,7 +592,7 @@ async def _auto_final_minutes(meeting_id: int) -> None:
 
 async def _metadata_capture_loop(meeting_id: int, session, minutes: int) -> None:
     """开场 N 分钟后提取会议主题/参会人/议程并推给前端。"""
-    from ..meeting_meta import capture_meeting_metadata
+    from ...meeting_meta import capture_meeting_metadata
 
     await asyncio.sleep(max(1, minutes) * 60)
     if session.is_closed:
@@ -608,7 +608,7 @@ async def _metadata_capture_loop(meeting_id: int, session, minutes: int) -> None
 
 
 async def _capture_meta_bg(meeting_id: int) -> None:
-    from ..meeting_meta import capture_meeting_metadata
+    from ...meeting_meta import capture_meeting_metadata
 
     try:
         await capture_meeting_metadata(meeting_id)
@@ -621,7 +621,7 @@ async def _progressive_minutes_loop(meeting_id: int, session) -> None:
 
     只读取已增量落库的片段；生成失败不影响转写，下一轮继续尝试。
     """
-    from ..llm.progressive import generate_progressive_draft, load_transcript_lines
+    from ...llm.progressive import generate_progressive_draft, load_transcript_lines
 
     interval_s = max(60, int(get_config("llm.progressive_interval_minutes") or 5) * 60)
     min_chars = int(get_config("llm.progressive_min_chars") or 300)

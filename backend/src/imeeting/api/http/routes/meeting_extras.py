@@ -24,8 +24,8 @@ from fastapi.responses import FileResponse
 from sqlalchemy import exists, func, or_, text
 from sqlmodel import Session, select
 
-from ..db import get_session
-from ..models import (
+from ....db import get_session
+from ....models import (
     ActionItem,
     AuditLog,
     LLMUsage,
@@ -36,7 +36,7 @@ from ..models import (
     User,
     utcnow,
 )
-from ..schemas import (
+from ....schemas import (
     ActionItemOut,
     ActionItemUpdate,
     MeetingMetadataUpdate,
@@ -53,9 +53,9 @@ from ..schemas import (
     ShareOut,
     TranscriptReviewOut,
 )
-from ..security import create_access_token, decode_access_token, hash_password, verify_password
-from ..settings import get_config
-from ..share_throttle import check_allowed, clear_failures, record_failure
+from ....security import create_access_token, decode_access_token, hash_password, verify_password
+from ....settings import BASE_DIR, get_config
+from ....share_throttle import check_allowed, clear_failures, record_failure
 from .deps import get_current_user_or_anonymous, require_admin
 from .meetings import (
     _fts_meeting_ids,
@@ -75,7 +75,7 @@ def queue_audio_review(
     db: Session = Depends(get_session),
 ):
     _owned(meeting_id, user, db, write=True)
-    from ..jobs import enqueue_job
+    from ....jobs import enqueue_job
 
     job = enqueue_job(
         kind="audio_review",
@@ -93,7 +93,7 @@ def list_reviews(
     user: User = Depends(get_current_user_or_anonymous),
     db: Session = Depends(get_session),
 ):
-    from ..models import TranscriptReview
+    from ....models import TranscriptReview
 
     _owned(meeting_id, user, db)
     stmt = select(TranscriptReview).where(TranscriptReview.meeting_id == meeting_id)
@@ -103,7 +103,7 @@ def list_reviews(
 
 
 def _review_action(review_id: int, action: str, user: User, db: Session):
-    from ..models import TranscriptReview
+    from ....models import TranscriptReview
 
     review = db.get(TranscriptReview, review_id)
     if review is None:
@@ -299,7 +299,7 @@ def edit_minutes(
     db.add(row)
     # 人工编辑的纪要同样要驱动待办闭环，否则页面上的待办状态永远停留在
     # 上一版自动终稿，用户改完纪要后会看到内容与待办不一致。
-    from ..llm.progressive import _sync_action_items
+    from ....llm.progressive import _sync_action_items
 
     _sync_action_items(db, meeting_id, row)
     db.add(
@@ -419,7 +419,7 @@ def _share_audit(
     action: str,
     request: Request,
 ) -> None:
-    from ..models import utcnow
+    from ....models import utcnow
 
     db.add(
         AuditLog(
@@ -452,7 +452,7 @@ def open_share(
     row = _share_meeting(db, token)
     if row.password_hash and not verify_password(payload.password, row.password_hash):
         record_failure(token, ip)
-        from ..models import utcnow as _now
+        from ....models import utcnow as _now
 
         db.add(
             AuditLog(
@@ -752,10 +752,10 @@ def admin_dashboard(
             func.coalesce(func.sum(LLMUsage.cost_usd), 0.0),
         )
     ).one()
-    from ..jobs import job_stats
-    from ..maintenance import drain_status
+    from ....jobs import job_stats
+    from ....maintenance import drain_status
 
-    metrics_dir = Path(__file__).resolve().parents[2] / "data" / "metrics"
+    metrics_dir = BASE_DIR / "data" / "metrics"
     latencies = []
     noise_warnings = 0
     for path in sorted(metrics_dir.glob("meeting-*.json"))[-500:]:
@@ -842,7 +842,7 @@ async def knowledge_search(
     matches: list[SearchMatchOut] = []
     if q.strip():
         like = f"%{q.strip()}%"
-        from ..search_index import semantic_matches
+        from ....search_index import semantic_matches
 
         semantic = await asyncio.to_thread(semantic_matches, q)
         fts_ids = (
@@ -966,7 +966,7 @@ def redact_meeting(
     db: Session = Depends(get_session),
 ):
     """对文本、纪要和待办执行可重复执行的敏感信息脱敏。"""
-    from ..privacy import redact_json, redact_text
+    from ....privacy import redact_json, redact_text
 
     meeting = _owned(meeting_id, user, db, write=True)
     dry_run = bool((payload or {}).get("dry_run") or False)
@@ -1055,7 +1055,7 @@ def engine_is_sqlite(db: Session) -> bool:
 
 def _canonical_topic(title: str) -> str:
     """用词表别名和企业术语归一主题，避免同一议题被拆成多个节点。"""
-    from ..glossary import load_terms
+    from ....glossary import load_terms
 
     text = re.sub(r"[\s，。；：、,.!?！？｜|/]+", "", title).strip()
     for term in load_terms():

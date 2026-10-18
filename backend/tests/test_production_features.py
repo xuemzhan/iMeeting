@@ -256,7 +256,7 @@ def test_share_password_throttle(client, auth_headers):
 
 
 def test_audio_chunk_sequence_is_monotonic(client):
-    from imeeting.ws.stream import _load_audio_seq, _record_audio_seq
+    from imeeting.api.ws.stream import _load_audio_seq, _record_audio_seq
 
     mid, _ = _seed("音频序号")
     assert _load_audio_seq(mid) == 0

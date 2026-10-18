@@ -13,7 +13,7 @@ from sqlmodel import Session, SQLModel, create_engine, select
 
 from .models import AppConfigRow, GlossaryTerm, MinutesTemplate, User, utcnow
 from .security import hash_password
-from .settings import SERVER_CONFIG, config_store
+from .settings import BASE_DIR, SERVER_CONFIG, config_store
 
 logger = logging.getLogger(__name__)
 
@@ -98,8 +98,6 @@ def _run_versioned_migrations() -> None:
     if os.getenv("MEETING_SKIP_ALEMBIC") == "1":
         return
     try:
-        from pathlib import Path
-
         try:
             from alembic import command
             from alembic.config import Config
@@ -109,9 +107,8 @@ def _run_versioned_migrations() -> None:
             )
             return
 
-        root = Path(__file__).resolve().parents[1]
-        cfg = Config(str(root / "alembic.ini"))
-        cfg.set_main_option("script_location", str(root / "migrations"))
+        cfg = Config(str(BASE_DIR / "alembic.ini"))
+        cfg.set_main_option("script_location", str(BASE_DIR / "migrations"))
         cfg.set_main_option("sqlalchemy.url", _db_url)
         command.upgrade(cfg, "head")
     except Exception:

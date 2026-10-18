@@ -159,7 +159,7 @@ def test_relabel_false_global_match_creates_new_identity(
         mid = meeting.id
         old_id = old.id
 
-    import imeeting.routers.voiceprints as vp_router
+    import imeeting.api.http.routes.voiceprints as vp_router
 
     monkeypatch.setattr(
         vp_router,
@@ -215,7 +215,7 @@ def test_rebuild_voiceprint_identity_from_meeting(client, auth_headers, monkeypa
         )
         db.commit()
         mid = meeting.id
-    import imeeting.routers.voiceprints as vp_router
+    import imeeting.api.http.routes.voiceprints as vp_router
 
     monkeypatch.setattr(
         vp_router, "_meeting_speaker_vector", lambda *_a, **_k: vector.copy()

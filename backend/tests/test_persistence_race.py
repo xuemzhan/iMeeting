@@ -9,9 +9,9 @@ from sqlmodel import Session, select
 
 def test_concurrent_persist_keeps_single_row(client):
     """同一 segment_id 被并发写多次，只能有一条记录。"""
+    from imeeting.api.ws.stream import _persist_segments
     from imeeting.db import engine
     from imeeting.models import Meeting, Segment, User
-    from imeeting.ws.stream import _persist_segments
 
     with Session(engine) as db:
         user = db.exec(select(User)).first()

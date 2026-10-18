@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from ..engine import pool
-from ..schemas import HealthOut, ModelStatusOut
-from ..settings import get_config
+from ....engine import pool
+from ....schemas import HealthOut, ModelStatusOut
+from ....settings import get_config
 
 router = APIRouter(tags=["system"])
 
@@ -28,7 +28,7 @@ def health() -> HealthOut:
     若沿用「全加载完才 ok」的判据，健康检查会永远停在 ``loading``，
     让监控误以为服务一直在启动中。
     """
-    from ..session_registry import active_session_count
+    from ....session_registry import active_session_count
 
     status = pool.get_status()
     models = {name: ModelStatusOut(**info) for name, info in status.items()}
@@ -70,8 +70,8 @@ def liveness() -> dict:
 @router.get("/api/v1/ready", include_in_schema=False)
 def readiness() -> dict:
     """编排系统使用：排空中或模型降级时不应再接收新流量。"""
-    from ..maintenance import drain_status
-    from ..session_registry import active_session_count
+    from ....maintenance import drain_status
+    from ....session_registry import active_session_count
 
     health_value = health()
     drain = drain_status()

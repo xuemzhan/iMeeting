@@ -606,7 +606,7 @@ def _latency_wav_name() -> str:
 def _latency_wav():
     """定位用于延迟测量的真实语音文件。
 
-    脚本位于 ``iMeeting/backend/scripts/``，仓库根的 ``runtime/funasr_api/``
+    脚本位于 ``backend/scripts/``，样例音频在不同部署形态下位置不一，
     在不同部署形态下位置不一，因此逐级向上探测，也支持 ``STRESS_WAV`` 覆盖。
     """
     env = os.getenv("STRESS_WAV", "").strip()

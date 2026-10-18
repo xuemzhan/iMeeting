@@ -17,9 +17,9 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, s
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
-from ..db import get_session
-from ..engine import speaker
-from ..models import AuditLog, Segment, User, Voiceprint, utcnow
+from ....db import get_session
+from ....engine import speaker
+from ....models import AuditLog, Segment, User, Voiceprint, utcnow
 from .deps import get_current_user_or_anonymous
 
 logger = logging.getLogger(__name__)
@@ -310,13 +310,13 @@ def _meeting_speaker_vector(
     db: Session, meeting_id: int, from_label: str, speaker_key: str | None
 ) -> np.ndarray | None:
     """从活跃会话或会议录音中恢复当前说话人的真实质心。"""
-    from ..engine import streaming
+    from ....engine import streaming
 
     if speaker_key:
         active = streaming.active_speaker_vector(meeting_id, speaker_key)
         if active is not None:
             return active
-    from ..models import Meeting
+    from ....models import Meeting
 
     meeting = db.get(Meeting, meeting_id)
     if meeting is None or not meeting.audio_path:
@@ -556,7 +556,7 @@ def relabel_speaker(
 
     # 同步运行中的会话（标签 + speaker_update 推送）
     try:
-        from ..engine import streaming
+        from ....engine import streaming
 
         streaming.rename_active_speaker(meeting_id, from_label, to_name)
     except Exception:
@@ -623,7 +623,7 @@ def merge_voiceprints(
     speaker.invalidate_cache()
     if scoped_meeting is not None:
         try:
-            from ..engine import streaming
+            from ....engine import streaming
 
             streaming.rename_active_speaker(scoped_meeting, from_label, to_name)
         except Exception:
@@ -685,7 +685,7 @@ def rename_voiceprint(
     speaker.invalidate_cache()
     if row.meeting_id is not None and old_name != name:
         try:
-            from ..engine import streaming
+            from ....engine import streaming
 
             streaming.rename_active_speaker(row.meeting_id, old_name, name)
         except Exception:

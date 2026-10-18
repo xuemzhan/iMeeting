@@ -6,8 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
-from ..db import get_session
-from ..models import AuditLog, Meeting, MeetingMember, User, utcnow
+from ....db import get_session
+from ....models import AuditLog, Meeting, MeetingMember, User, utcnow
 from .deps import get_current_user_or_anonymous
 
 router = APIRouter(prefix="/api/v1/meetings/{meeting_id}/members", tags=["members"])

@@ -91,7 +91,7 @@ def test_builtin_template_cannot_be_deleted(client):
 
 
 def test_generate_minutes_uses_selected_template(client, monkeypatch):
-    from imeeting.routers import meetings as meetings_router
+    from imeeting.api.http.routes import meetings as meetings_router
 
     mid = _seed_meeting_with_minutes()
     created = client.post(

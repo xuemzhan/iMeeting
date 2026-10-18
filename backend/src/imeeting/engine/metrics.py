@@ -25,6 +25,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from ..settings import BASE_DIR
+
 logger = logging.getLogger(__name__)
 
 
@@ -33,8 +35,7 @@ def metrics_dir() -> Path:
     override = os.getenv("MEETING_METRICS_DIR")
     if override:
         return Path(override)
-    # imeeting/engine/metrics.py → parents[0]=engine, [1]=app, [2]=backend
-    return Path(__file__).resolve().parents[2] / "data" / "metrics"
+    return BASE_DIR / "data" / "metrics"
 
 
 def _percentile(values: list[float], q: float) -> float:

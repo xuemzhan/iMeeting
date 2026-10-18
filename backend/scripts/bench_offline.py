@@ -9,21 +9,26 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import time
 from pathlib import Path
 
 import torch
 
-ROOT = Path(__file__).resolve().parents[3]  # repo root (scripts → backend → iMeeting → FunASR-main)
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--wav", default=str(ROOT / "runtime/funasr_api/asr_example.wav"))
+    ap.add_argument("--wav", default=os.getenv("BENCH_WAV", ""))
     ap.add_argument("--ncpu", type=int, default=4)
-    ap.add_argument("--out", default=str(ROOT / "iMeeting/backend/.bench-offline.json"))
+    ap.add_argument(
+        "--out", default=str(REPO_ROOT / "backend" / ".bench-offline.json")
+    )
     args = ap.parse_args()
+    if not args.wav:
+        ap.error("--wav or BENCH_WAV is required")
 
     torch.set_num_threads(args.ncpu)
 

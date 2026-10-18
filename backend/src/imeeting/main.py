@@ -15,8 +15,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse, PlainTextResponse
 
-from .db import init_db
-from .routers import (
+from .api.http.routes import (
     admin_ops,
     auth,
     config,
@@ -29,8 +28,9 @@ from .routers import (
     system,
     voiceprints,
 )
+from .api.ws import stream
+from .db import init_db
 from .settings import SERVER_CONFIG, get_config
-from .ws import stream
 
 _LOG_FORMAT = "%(asctime)s %(levelname)-7s %(name)s: %(message)s"
 

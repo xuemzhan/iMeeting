@@ -42,31 +42,20 @@ python -m imeeting.main
 ## 架构
 
 ```
-imeeting/
-├── main.py           FastAPI 入口 + 生命周期
-├── settings.py       三级配置解析（环境变量 > 数据库 > 默认值）
-├── models.py         SQLModel 数据模型
-├── db.py             引擎、建表、配置持久化
-├── session_registry.py 进程内活跃会话注册表
-├── security.py       JWT / bcrypt / 配置加密
-├── login_throttle.py 登录防爆破（指数退避 + 账号/IP 双维度）
-├── schemas.py        请求响应 DTO
-├── engine/
-│   ├── pool.py       FunASR 模型池（单例复用 + 线程隔离）
-│   ├── audio.py      WAV 落盘（增量写 + 表头回填 + 过期清理）
-│   └── streaming.py  双路 ASR 会话状态机
-├── llm/
-│   ├── client.py     OpenAI 兼容客户端
-│   └── minutes.py    map-reduce 纪要生成
-├── routers/
-│   ├── auth.py       登录注册（含限流闸门）
-│   ├── config.py     配置读写
-│   ├── meetings.py   会议 CRUD + 纪要 + 导出 + 音频回放
-│   └── system.py     健康检查
-├── ws/
-│   └── stream.py     WebSocket 转写流
-└── export/
-    └── formats.py    SRT / VTT / MD / TXT / JSON
+src/imeeting/
+├── main.py                  FastAPI 应用装配 + 生命周期
+├── api/
+│   ├── http/routes/         REST 路由（认证、会议、配置、管理）
+│   └── ws/stream.py         WebSocket 转写流
+├── engine/                  FunASR 模型池、音频与流式会话
+├── llm/                     OpenAI 兼容客户端与纪要生成
+├── export/                  SRT / VTT / Markdown / Word / PDF
+├── settings.py              环境变量 > 数据库 > 默认值
+├── models.py / schemas.py   数据模型与请求响应 DTO
+├── db.py                    数据库引擎、迁移与持久化
+├── security.py              JWT / bcrypt / 配置加密
+├── session_registry.py      进程内活跃会话注册表
+└── jobs.py                  持久化后台任务
 ```
 
 ## 双路 ASR 设计

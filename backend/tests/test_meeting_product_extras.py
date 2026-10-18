@@ -341,10 +341,10 @@ def test_spoken_metadata_heuristic_and_manual_capture_guard(client):
 
 
 def test_resume_meeting_rejects_other_owner():
+    from imeeting.api.ws.stream import _resolve_meeting
     from imeeting.db import engine
     from imeeting.models import Meeting, User, utcnow
     from imeeting.security import hash_password
-    from imeeting.ws.stream import _resolve_meeting
 
     with Session(engine) as db:
         admin = db.exec(select(User).where(User.username == "admin")).one()
