@@ -22,7 +22,6 @@ import logging
 import threading
 import time
 import uuid
-from collections import deque
 from dataclasses import dataclass, field
 from typing import Awaitable, Callable
 
@@ -35,6 +34,7 @@ from .adaptive import AdaptiveMeetingController
 from .audio_enhance import AgcProcessor, normalize_segment, spectral_denoise
 from .final_orderer import FinalOrderer, PendingFinal
 from .metrics import MeetingMetrics
+from .noise_floor import NoiseFloorTracker
 from .speaker import (
     SpeakerResolution,
     SpeakerResolver,
@@ -232,18 +232,14 @@ class StreamSession:
         _min_speech = get_config("vad.min_speech_ms")
         self._min_speech_ms = 300.0 if _min_speech is None else float(_min_speech)
         # 噪声底与判据阈值（自适应，见 _update_noise_floor）
-        self._noise_floor = 0.0015
-        self._start_threshold = self._base_threshold
-        self._continue_threshold = self._base_threshold * 0.6
+        self._noise_tracker = NoiseFloorTracker(self._base_threshold)
+        self._noise_floor = self._noise_tracker.noise_floor
+        self._start_threshold = self._noise_tracker.start_threshold
+        self._continue_threshold = self._noise_tracker.continue_threshold
         #: 当前段是否已经进入语音（迟滞：起始阈值高于持续阈值）
         self._in_speech = False
         #: 近 ~13 秒的块能量，用于估计环境噪声底与 SNR
-        self._energy_hist: deque[float] = deque(maxlen=64)
-        self._noise_warned = False
-        self._low_snr_seconds = 0.0
         self._noise_warning_pending = False
-        self._last_snr_db = 0.0
-        self._noise_metric_tick = 0
         self._spk_enabled = get_config("spk.enabled")
         # 判定说话人的最短有效语音时长（ms）。短于此值不抽声纹，
         # 显示为「未知」——详见 _assign_speaker 的说明。
@@ -590,7 +586,7 @@ class StreamSession:
             seg.adaptive_gain = profile.gain
             seg.profile_version = profile.version
             seg.noise_floor = profile.noise_floor or self._noise_floor
-            seg.snr_db = profile.snr_db or self._last_snr_db
+            seg.snr_db = profile.snr_db or self._noise_tracker.last_snr_db
         if self._noise_warning_pending:
             self._noise_warning_pending = False
             await self._emit(
@@ -600,7 +596,7 @@ class StreamSession:
                         "环境噪声偏高，识别质量可能下降。"
                         "建议关闭风扇/空调直吹、靠近麦克风或使用定向麦克风。"
                     ),
-                    "snr_db": round(self._last_snr_db, 1),
+                    "snr_db": round(self._noise_tracker.last_snr_db, 1),
                 }
             )
 
@@ -689,60 +685,21 @@ class StreamSession:
         )
 
     def _update_noise_floor(self, energy: float, seconds: float) -> None:
-        """用近 ~13 秒能量的 20 分位数估计环境噪声底。
+        """用近 ~13 秒能量的 10 分位数估计环境噪声底。
 
         旧实现只让噪声底下降、从不上升：空调/风扇变响后阈值仍停在旧值，
         低电平噪声会被当成语音，反复触发片段。这里改为滚动分位数 + 慢 EMA，
         既能跟随环境变化，又不会被一段讲话瞬间拉高。
         """
-        if energy <= 0:
+        update = self._noise_tracker.update(energy, seconds)
+        if update is None:
             return
-        self._energy_hist.append(energy)
-        if len(self._energy_hist) < 8:
-            self._noise_floor = min(self._noise_floor, energy)
-            return
-
-        # 10 分位比 20 分位更不容易被“说话占多数”的窗口抬起来
-        measured = float(np.percentile(self._energy_hist, 10))
-        target = min(measured, self._max_threshold / 3)
-        self._noise_floor = 0.92 * self._noise_floor + 0.08 * target
-        self._noise_floor = max(
-            min(self._noise_floor, self._max_threshold / 2), 1e-5
-        )
-        self._start_threshold = min(
-            max(self._noise_floor * 3.5, 0.005), self._max_threshold
-        )
-        self._continue_threshold = min(
-            max(self._noise_floor * 2.0, 0.003), self._max_threshold
-        )
-
-        speech = float(np.percentile(self._energy_hist, 90))
-        # 窗口里有明显语音动态时，给阈值加一个“语音电平上限”，
-        # 避免噪声底抬高后把正常说话一起滤掉；上限仍保持在噪声底之上，
-        # 纯噪声窗口不会被放宽。
-        dynamic = speech / (self._noise_floor + 1e-6)
-        if dynamic >= 2.0:
-            self._start_threshold = min(
-                self._start_threshold,
-                max(speech * 0.45, self._noise_floor * 1.6),
-            )
-            self._continue_threshold = min(
-                self._continue_threshold,
-                max(speech * 0.30, self._noise_floor * 1.2),
-            )
-        self._last_snr_db = float(
-            20 * np.log10((speech + 1e-9) / (self._noise_floor + 1e-9))
-        )
-        self._noise_metric_tick += 1
-        if self._noise_metric_tick % 5 == 0:
-            self.metrics.note_noise(self._noise_floor, self._last_snr_db)
-
-        if self._last_snr_db < 12.0:
-            self._low_snr_seconds += seconds
-        elif self._last_snr_db > 15.0:
-            self._low_snr_seconds = 0.0
-        if self._low_snr_seconds >= 5.0 and not self._noise_warned:
-            self._noise_warned = True
+        self._noise_floor = update.noise_floor
+        self._start_threshold = update.start_threshold
+        self._continue_threshold = update.continue_threshold
+        if update.metric_due:
+            self.metrics.note_noise(update.noise_floor, update.snr_db)
+        if update.warning_due:
             self._noise_warning_pending = True
             self.metrics.note_noise_warning()
 
