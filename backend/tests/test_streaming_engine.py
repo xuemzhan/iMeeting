@@ -573,7 +573,7 @@ class TestDualPath:
             )
             seg.end_perf = time.perf_counter()
             seg.finalize_reason = "silence"
-            s._final_ready[1] = {
+            s._final_order.submit(1, {
                 "type": "final",
                 "segment_id": "s-x-1",
                 "text": "后到先发",
@@ -582,7 +582,7 @@ class TestDualPath:
                 "speaker": "说话人 1",
                 "speaker_key": None,
                 "seq": 1,
-            }
+            }, time.perf_counter() - 5)
             s._metric_pending[1] = (seg, time.perf_counter() - 5)
             await s._drain_finals()
             return c, s

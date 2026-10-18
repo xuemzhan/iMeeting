@@ -28,5 +28,6 @@ def test_application_workflows_are_separated_from_transport() -> None:
     assert importlib.import_module("imeeting.application.bootstrap").initialize_app_database
     assert importlib.import_module("imeeting.application.meeting_sessions").persist_segments
     assert importlib.import_module("imeeting.application.seeds").ensure_builtin_glossary_terms
+    assert importlib.import_module("imeeting.engine.final_orderer").FinalOrderer
     assert importlib.import_module("imeeting.export.meeting_export").render_meeting_export
 

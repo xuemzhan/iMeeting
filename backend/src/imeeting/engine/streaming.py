@@ -33,6 +33,7 @@ from ..speaker_policy import is_low_confidence
 from . import pool
 from .adaptive import AdaptiveMeetingController
 from .audio_enhance import AgcProcessor, normalize_segment, spectral_denoise
+from .final_orderer import FinalOrderer, PendingFinal
 from .metrics import MeetingMetrics
 from .speaker import (
     SpeakerResolution,
@@ -270,11 +271,7 @@ class StreamSession:
         )
         self._speaker_snapshot_count = 0
         self._speaker_snapshot_tasks: set[asyncio.Task] = set()
-        # 定稿按 seq 有序发出的缓冲与游标（见 _offline_and_emit 的说明）
-        self._final_ready: dict[int, dict | None] = {}
-        self._emit_seq = 0
-        self._emitted_seqs: set[int] = set()
-        self._reorder_timeout = (
+        self._final_order = FinalOrderer(
             max(0, int(get_config("asr.reorder_timeout_ms") or 0)) / 1000.0
         )
         # "normal" 走真实模型；"echo" 回显占位文本用于联调；"off" 不出字
@@ -1303,7 +1300,8 @@ class StreamSession:
 
     async def _emit_final(self, seg: SegmentState) -> None:
         """把定稿放进按 seq 排序的待发缓冲（真正发出在 _drain_finals）。"""
-        self._final_ready[seg.seq] = {
+        ready_at = time.perf_counter()
+        payload = {
             "type": "final",
             "session_id": self.session_id,
             "segment_id": seg.segment_id,
@@ -1331,17 +1329,17 @@ class StreamSession:
             "profile_version": seg.profile_version,
             "seq": seg.seq,
         }
-        self._metric_pending[seg.seq] = (seg, time.perf_counter())
+        self._final_order.submit(seg.seq, payload, ready_at)
+        self._metric_pending[seg.seq] = (seg, ready_at)
 
     async def _resolve_seq(self, seq: int) -> None:
         """标记某个 seq 已处理完（可能没有定稿），然后按序发出可发的部分。"""
-        self._final_ready.setdefault(seq, None)
+        self._final_order.resolve(seq)
         await self._drain_finals()
 
-    async def _emit_ready(self, seq: int) -> None:
-        payload = self._final_ready.pop(seq)
+    async def _emit_ready(self, seq: int, item: PendingFinal) -> None:
+        payload = item.payload
         metric = self._metric_pending.pop(seq, None)
-        self._emitted_seqs.add(seq)
         if payload is None:
             return
         if metric is not None:
@@ -1385,26 +1383,13 @@ class StreamSession:
         start_ms 插入，观感仍然按时间轴排列。
         """
         while True:
-            if self._emit_seq in self._final_ready:
-                await self._emit_ready(self._emit_seq)
-                self._emit_seq += 1
-                while self._emit_seq in self._emitted_seqs:
-                    self._emit_seq += 1
-                continue
-
-            if self._reorder_timeout > 0 and self._final_ready:
-                oldest = min(self._final_ready)
-                metric = self._metric_pending.get(oldest)
-                ready_at = metric[1] if metric is not None else 0.0
-                if ready_at and (
-                    time.perf_counter() - ready_at >= self._reorder_timeout
-                ):
-                    await self._emit_ready(oldest)
-                    self.metrics.note_out_of_order()
-                    while self._emit_seq in self._emitted_seqs:
-                        self._emit_seq += 1
-                    continue
-            break
+            result = self._final_order.take_next(time.perf_counter())
+            if result is None:
+                break
+            seq, item, out_of_order = result
+            await self._emit_ready(seq, item)
+            if out_of_order:
+                self.metrics.note_out_of_order()
 
     # ------------------------------------------------------------------
     # 工具
