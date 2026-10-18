@@ -1,36 +1,19 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import {
-  X,
-  Sun,
-  Moon,
-  Monitor,
-  Mic,
-  RefreshCw,
-  ExternalLink,
-  ShieldCheck,
-} from 'lucide-react'
+import { X } from 'lucide-react'
 import { useSettings } from '../store/settings'
-import type { ThemeMode } from '../store/settings'
 import { useSession } from '../store/session'
 import { useAuth } from '../store/auth'
 import { useConfigEditor } from '../hooks/useConfigEditor'
 import { useSettingsVoiceprints } from '../hooks/useSettingsVoiceprints'
 import { SettingsBackendConfig } from './SettingsBackendConfig'
-import { SettingsRow as Row, SettingsSection as Section } from './SettingsPanelParts'
+import {
+  SettingsAboutSection,
+  SettingsAdminSection,
+  SettingsAppearanceSection,
+  SettingsMicrophoneSection,
+  type SettingsHealth,
+} from './SettingsPreferenceSections'
 import { SettingsVoiceprintSection } from './SettingsVoiceprintSection'
-
-const THEMES: { key: ThemeMode; label: string; icon: typeof Sun }[] = [
-  { key: 'light', label: '浅色', icon: Sun },
-  { key: 'dark', label: '深色', icon: Moon },
-  { key: 'system', label: '跟随系统', icon: Monitor },
-]
-
-interface Health {
-  status: string
-  version: string
-  models: Record<string, { loaded: boolean }>
-}
 
 export function SettingsPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
   const theme = useSettings((s) => s.theme)
@@ -44,7 +27,7 @@ export function SettingsPanel({ open, onClose }: { open: boolean; onClose: () =>
   const refreshDevices = useSession((s) => s.refreshDevices)
   const selectDevice = useSession((s) => s.selectDevice)
 
-  const [health, setHealth] = useState<Health | null>(null)
+  const [health, setHealth] = useState<SettingsHealth | null>(null)
 
   // ---- 后端配置（模型/LLM）----
   const cfg = useConfigEditor({ enabled: open && isAdminUser })
@@ -57,7 +40,7 @@ export function SettingsPanel({ open, onClose }: { open: boolean; onClose: () =>
     // 版本与模型状态直接问后端，比写死在前端可靠
     fetch('/api/v1/health')
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => setHealth(d as Health | null))
+      .then((d) => setHealth(d as SettingsHealth | null))
       .catch(() => setHealth(null))
   }, [open, refreshDevices])
 
@@ -104,77 +87,15 @@ export function SettingsPanel({ open, onClose }: { open: boolean; onClose: () =>
         </div>
 
         {/* ---- 外观 ---- */}
-        <Section title="外观">
-          <div className="grid grid-cols-3 gap-2">
-            {THEMES.map(({ key, label, icon: Icon }) => {
-              const active = theme === key
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setTheme(key)}
-                  className="flex flex-col items-center gap-1.5 rounded-lg py-2.5 text-[11px] transition-colors"
-                  style={{
-                    background: active ? 'var(--accent-soft)' : 'var(--bg-subtle)',
-                    color: active ? 'var(--accent-text)' : 'var(--text-secondary)',
-                    border: `1px solid ${active ? 'var(--accent)' : 'transparent'}`,
-                  }}
-                >
-                  <Icon size={15} />
-                  {label}
-                </button>
-              )
-            })}
-          </div>
-        </Section>
+        <SettingsAppearanceSection theme={theme} onThemeChange={setTheme} />
 
         {/* ---- 麦克风 ---- */}
-        <Section title="麦克风">
-          <div className="mb-2 flex items-center gap-1.5">
-            <select
-              value={activeDeviceId ?? ''}
-              onChange={(e) => void selectDevice(e.target.value || null)}
-              className="flex-1 rounded-lg px-2.5 py-1.5 text-[12px] outline-none"
-              style={{
-                background: 'var(--bg-subtle)',
-                color: 'var(--text-primary)',
-                border: '1px solid var(--border-subtle)',
-              }}
-              aria-label="输入设备"
-            >
-              <option value="">系统默认麦克风</option>
-              {devices.map((d) => (
-                <option key={d.deviceId} value={d.deviceId}>
-                  {d.label}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={() => void refreshDevices()}
-              className="btn btn-ghost"
-              style={{ height: 30, width: 30, padding: 0 }}
-              title="重新检测设备"
-            >
-              <RefreshCw size={13} />
-            </button>
-          </div>
-
-          <a
-            href="/mic-check.html"
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-1.5 text-[12px] no-underline"
-            style={{ color: 'var(--accent-text)' }}
-          >
-            <Mic size={13} />
-            打开麦克风采集自检
-            <ExternalLink size={11} />
-          </a>
-          <p className="mt-1.5 text-[11px] leading-relaxed" style={{ color: 'var(--text-tertiary)' }}>
-            若转写一直没有字幕，自检页会逐项测出是权限、设备还是系统「音频增强」的问题。
-          </p>
-        </Section>
+        <SettingsMicrophoneSection
+          devices={devices}
+          activeDeviceId={activeDeviceId}
+          onSelectDevice={(deviceId) => void selectDevice(deviceId)}
+          onRefreshDevices={() => void refreshDevices()}
+        />
 
         {/* ---- 声纹 ---- */}
         <SettingsVoiceprintSection
@@ -191,33 +112,9 @@ export function SettingsPanel({ open, onClose }: { open: boolean; onClose: () =>
         />
 
         {/* ---- 关于 ---- */}
-        <Section title="关于">
-          <Row label="名称" value="iMeeting" />
-          <Row label="副标题" value="您的硅基伙伴" />
-          <Row label="版本" value={health?.version ?? '—'} />
-          <Row
-            label="服务状态"
-            value={
-              health
-                ? `${health.status === 'ok' ? '正常' : health.status}${modelsOk ? ' · 模型已就绪' : modelsOk === false ? ' · 模型加载中' : ''}`
-                : '未连接'
-            }
-          />
-        </Section>
+        <SettingsAboutSection health={health} modelsOk={modelsOk} />
 
-        {isAdminUser && (
-          <Section title="管理">
-            <Link
-              to="/admin"
-              onClick={onClose}
-              className="flex items-center gap-1.5 text-[12px] no-underline"
-              style={{ color: 'var(--accent-text)' }}
-            >
-              <ShieldCheck size={13} />
-              后台配置（全部参数）
-            </Link>
-          </Section>
-        )}
+        {isAdminUser && <SettingsAdminSection onClose={onClose} />}
       </aside>
     </div>
   )
