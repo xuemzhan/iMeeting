@@ -33,6 +33,7 @@ from . import pool
 from .adaptive import AdaptiveMeetingController
 from .audio_analysis import is_silent, rms, speech_duration_ms, trim_silence
 from .audio_enhance import AgcProcessor, normalize_segment, spectral_denoise
+from .boundary_decider import BoundaryDecider
 from .final_orderer import FinalOrderer, PendingFinal
 from .metrics import MeetingMetrics
 from .noise_floor import NoiseFloorTracker
@@ -184,7 +185,6 @@ class StreamSession:
         self._adaptive = AdaptiveMeetingController(adaptive_profile)
         self._adaptive_gain = self._adaptive.profile.gain
         self._max_segment_ms = self._adaptive.profile.max_segment_ms
-        self._over_max_ms = 0.0
         self._last_profile_save = time.monotonic()
 
         # 流式模型的会话级 cache —— 必须隔离
@@ -194,7 +194,6 @@ class StreamSession:
 
         self._current: SegmentState | None = None
         self._speaker_context = SpeakerContext()
-        self._silence_samples = 0
         self._total_samples = 0
         self._seq = 0
         self._closed = False
@@ -238,7 +237,7 @@ class StreamSession:
         self._start_threshold = self._noise_tracker.start_threshold
         self._continue_threshold = self._noise_tracker.continue_threshold
         #: 当前段是否已经进入语音（迟滞：起始阈值高于持续阈值）
-        self._in_speech = False
+        self._boundary = BoundaryDecider()
         #: 近 ~13 秒的块能量，用于估计环境噪声底与 SNR
         self._noise_warning_pending = False
         self._spk_enabled = get_config("spk.enabled")
@@ -574,7 +573,7 @@ class StreamSession:
         self._update_noise_floor(energy, len(pcm) / SAMPLE_RATE)
         profile = self._adaptive.observe_energy(
             energy,
-            in_speech=self._in_speech,
+            in_speech=self._boundary.in_speech,
             chunk_seconds=len(pcm) / SAMPLE_RATE,
         )
         if self._adaptive.enabled and profile.updated_blocks > 0:
@@ -601,53 +600,24 @@ class StreamSession:
                 }
             )
 
-        # 迟滞：进入语音用较高阈值，已经开口后改用较低阈值，
-        # 避免句尾轻声被噪声底误判、也避免低电平噪声反复触发新句。
-        if energy >= self._start_threshold:
-            self._in_speech = True
-            seg.had_speech = True
-        threshold = (
-            self._continue_threshold if self._in_speech else self._start_threshold
+        decision = self._boundary.observe(
+            energy,
+            chunk_seconds=len(pcm) / SAMPLE_RATE,
+            segment_duration_ms=seg.duration_ms,
+            start_threshold=self._start_threshold,
+            continue_threshold=self._continue_threshold,
+            silence_limit=self._silence_limit,
+            short_merge_ms=self._short_merge_ms,
+            soft_segment_ms=self._soft_segment_ms,
+            short_silence_samples=self._short_silence_samples,
+            max_segment_ms=self._max_segment_ms,
+            noise_floor=self._noise_floor,
+            sample_rate=SAMPLE_RATE,
         )
-
-        if energy < threshold:
-            self._silence_samples += len(pcm)
-        else:
-            self._silence_samples = 0
-
-        # 静音足够长 → 一句话结束
-        effective_silence = self._silence_limit
-        if self._short_merge_ms > 0 and seg.duration_ms < self._short_merge_ms:
-            effective_silence = max(
-                effective_silence,
-                int(1.5 * SAMPLE_RATE),
-            )
-        if self._silence_samples >= effective_silence and seg.buffer:
-            await self._finalize_current(reason="silence")
-
-        # 软切分：已经足够长，且出现一次短停顿 → 在自然停顿处定稿
-        elif (
-            self._soft_segment_ms > 0
-            and seg.duration_ms >= self._soft_segment_ms
-            and self._silence_samples >= self._short_silence_samples
-            and seg.buffer
-        ):
-            await self._finalize_current(reason="adaptive_silence")
-
-        # 单段超长保护：到达上限后先等最多 1.5 秒，优先在局部低能量点切分；
-        # 若一直连续说话才强制切，避免把词切成两半。
-        elif seg.duration_ms >= self._max_segment_ms:
-            self._over_max_ms += len(pcm) / SAMPLE_RATE * 1000
-            local_valley = energy < max(
-                self._continue_threshold * 1.35,
-                self._noise_floor * 1.5,
-            )
-            if local_valley or self._over_max_ms >= 1500:
-                await self._finalize_current(
-                    reason="max_duration_valley"
-                    if local_valley
-                    else "max_duration"
-                )
+        if decision.started_speech:
+            seg.had_speech = True
+        if decision.reason is not None and seg.buffer:
+            await self._finalize_current(reason=decision.reason)
 
     @staticmethod
     def _rms(pcm: np.ndarray) -> float:
@@ -716,9 +686,7 @@ class StreamSession:
         if not seg.had_speech and not seg.text:
             seg.buffer.clear()
             self._current = None
-            self._over_max_ms = 0.0
-            self._in_speech = False
-            self._silence_samples = 0
+            self._boundary.reset()
             self.metrics.note_drop("no_speech")
             return
 
@@ -726,9 +694,7 @@ class StreamSession:
         seg.end_ms = self._elapsed_ms()
         seg.end_perf = time.perf_counter()
         seg.finalize_reason = reason
-        self._over_max_ms = 0.0
-        self._in_speech = False
-        self._silence_samples = 0
+        self._boundary.reset()
 
         self._current = None
 

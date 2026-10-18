@@ -30,6 +30,7 @@ def test_application_workflows_are_separated_from_transport() -> None:
     assert importlib.import_module("imeeting.application.seeds").ensure_builtin_glossary_terms
     assert importlib.import_module("imeeting.engine.final_orderer").FinalOrderer
     assert importlib.import_module("imeeting.engine.audio_analysis").rms
+    assert importlib.import_module("imeeting.engine.boundary_decider").BoundaryDecider
     assert importlib.import_module("imeeting.engine.noise_floor").NoiseFloorTracker
     assert importlib.import_module("imeeting.engine.speaker_context").SpeakerContext
     assert importlib.import_module("imeeting.export.meeting_export").render_meeting_export
