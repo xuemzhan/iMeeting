@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -6,7 +6,6 @@ import {
   Download,
   Sparkles,
   Loader2,
-  FileText,
   Lightbulb,
   CheckSquare,
   Network,
@@ -18,12 +17,11 @@ import {
   Users,
 } from 'lucide-react'
 import { meetingApi, voiceprintApi, ApiError } from '../api/client'
-import { formatDuration, formatTimestamp, speakerLabel } from '../store/session'
+import { formatDuration, formatTimestamp } from '../store/session'
 import { useAuth } from '../store/auth'
 import { TopBar } from '../components/TopBar'
 import { AudioPlayer } from '../components/AudioPlayer'
 import type { ApiSegment, Minutes } from '../api/types'
-import { groupParagraphs } from '../store/paragraphs'
 import { TemplatePicker } from '../components/TemplatePicker'
 import { MindMap } from '../components/MindMap'
 import { MeetingInfoEditor } from '../components/MeetingInfoEditor'
@@ -34,6 +32,7 @@ import { CompliancePanel } from '../components/CompliancePanel'
 import { ReviewPanel } from '../components/ReviewPanel'
 import { MembersDialog } from '../components/MembersDialog'
 import { SegmentEditDialog } from '../components/SegmentEditDialog'
+import { TranscriptPanel } from '../components/TranscriptPanel'
 
 const EXPORT_FORMATS = [
   { key: 'srt', label: 'SRT 字幕' },
@@ -44,14 +43,6 @@ const EXPORT_FORMATS = [
   { key: 'docx', label: 'Word 文档' },
   { key: 'pdf', label: 'PDF 文档' },
 ]
-
-/** 段落内最低的有效说话人相似度；manual 已人工确认，不参与提示。 */
-function paragraphLowScore(items: ApiSegment[]): number | null {
-  const scores = items
-    .filter((item) => Boolean(item.speaker) && item.speaker_low_confidence)
-    .map((item) => item.speaker_score as number)
-  return scores.length ? Math.min(...scores) : null
-}
 
 export default function MeetingDetail() {
   const { id } = useParams<{ id: string }>()
@@ -66,9 +57,6 @@ export default function MeetingDetail() {
   /** 生成失败的原因。之前没有 catch，后端 4xx 会变成未处理的 Promise 拒绝，
    *  界面只是转圈停住、不给任何反馈，用户完全不知道发生了什么。 */
   const [genError, setGenError] = useState<string | null>(null)
-  /** 正在就地改名的片段 id 与草稿 */
-  const [renaming, setRenaming] = useState<string | null>(null)
-  const [renameDraft, setRenameDraft] = useState('')
   const [templateId, setTemplateId] = useState<number | null>(null)
   const [showMindMap, setShowMindMap] = useState(false)
   const [showShare, setShowShare] = useState(false)
@@ -76,19 +64,13 @@ export default function MeetingDetail() {
   const [showVersions, setShowVersions] = useState(false)
   const [editingMinutes, setEditingMinutes] = useState<Minutes | null>(null)
   const [editingSegment, setEditingSegment] = useState<ApiSegment | null>(null)
-  const [expandedParagraphs, setExpandedParagraphs] = useState<Set<string>>(new Set())
   const [compareA, setCompareA] = useState<number | null>(null)
   const [compareB, setCompareB] = useState<number | null>(null)
   const [exportStatus, setExportStatus] = useState<string | null>(null)
   const [showCompliance, setShowCompliance] = useState(false)
   const [showMembers, setShowMembers] = useState(false)
-  const [visibleParagraphCount, setVisibleParagraphCount] = useState(200)
-
   /** 把某个说话人标签改成真实姓名（声纹库 + 全部历史片段一起更新）。 */
-  const commitRename = async (fromLabel: string) => {
-    const name = renameDraft.trim()
-    setRenaming(null)
-    if (!name || name === speakerLabel(fromLabel)) return
+  const renameSpeaker = async (fromLabel: string, name: string) => {
     try {
       await voiceprintApi.relabel(meetingId, fromLabel, name)
       await qc.invalidateQueries({ queryKey: ['meeting', meetingId] })
@@ -122,11 +104,6 @@ export default function MeetingDetail() {
     queryFn: () => meetingApi.mindmap(meetingId),
     enabled: showMindMap,
   })
-  const paragraphs = useMemo(
-    () => groupParagraphs(data?.segments ?? []),
-    [data?.segments],
-  )
-  const visibleParagraphs = paragraphs.slice(0, visibleParagraphCount)
   useEffect(() => {
     const seconds = Number(searchParams.get('t') || 0)
     if (!data?.has_audio || !Number.isFinite(seconds) || seconds <= 0) return
@@ -172,15 +149,6 @@ export default function MeetingDetail() {
     } catch (err) {
       setGenError(err instanceof Error ? err.message : '说话人确认失败')
     }
-  }
-
-  const toggleParagraph = (key: string) => {
-    setExpandedParagraphs((previous) => {
-      const next = new Set(previous)
-      if (next.has(key)) next.delete(key)
-      else next.add(key)
-      return next
-    })
   }
 
   const handleGenerate = async () => {
@@ -394,211 +362,14 @@ export default function MeetingDetail() {
           )}
 
           <div className="grid gap-3 lg:grid-cols-[1fr_320px]">
-            {/* 转写全文 */}
-            <section className="panel overflow-hidden">
-              <div className="panel-header">
-                <FileText size={14} style={{ color: 'var(--text-tertiary)' }} />
-                <h2>完整转写</h2>
-              </div>
-              <div className="space-y-3 p-4">
-                {data.segments.length === 0 && (
-                  <p className="py-8 text-center text-[12px] text-tertiary">没有转写内容</p>
-                )}
-                {visibleParagraphs.map((p) => {
-                  const lowScore = paragraphLowScore(p.items)
-                  const hasLowConfidence = lowScore != null
-                  return (
-                  <div
-                    key={p.key}
-                    className="flex gap-3"
-                    style={{
-                      contentVisibility: 'auto',
-                      containIntrinsicSize: '150px',
-                    }}
-                  >
-                    {data.has_audio ? (
-                      <button
-                        type="button"
-                        onClick={() => handleSeek(p.startMs)}
-                        className="w-12 shrink-0 pt-0.5 font-mono text-[11px] tabular-nums text-tertiary transition-colors hover:text-[var(--accent)]"
-                        title="跳转到此位置"
-                      >
-                        {formatTimestamp(p.startMs)}
-                      </button>
-                    ) : (
-                      <span className="w-12 shrink-0 pt-0.5 font-mono text-[11px] tabular-nums text-tertiary">
-                        {formatTimestamp(p.startMs)}
-                      </span>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      {p.speaker && renaming === p.segmentId && (
-                        <input
-                          autoFocus
-                          value={renameDraft}
-                          onChange={(e) => setRenameDraft(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') void commitRename(p.speaker ?? '')
-                            if (e.key === 'Escape') setRenaming(null)
-                          }}
-                          onBlur={() => void commitRename(p.speaker ?? '')}
-                          maxLength={32}
-                          placeholder="输入姓名"
-                          aria-label="说话人姓名"
-                          className="mb-1 w-[140px] rounded px-1.5 py-0.5 text-[11px] outline-none"
-                          style={{
-                            background: 'var(--bg-surface)',
-                            color: 'var(--text-primary)',
-                            border: '1px solid var(--accent)',
-                          }}
-                        />
-                      )}
-                      {p.speaker && renaming !== p.segmentId && (
-                        // 用 speakerLabel 兼容旧数据（裸下标 "0"）与新数据
-                        // （"说话人 1" 或姓名），否则会显示成「说话人 说话人 1」。
-                        // 点击可改成真实姓名，并回溯更新该说话人的全部片段。
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setRenaming(p.segmentId)
-                            setRenameDraft(speakerLabel(p.speaker) ?? '')
-                          }}
-                          title="点击可改为真实姓名"
-                          className="mb-0.5 inline-block rounded text-[11px] font-medium transition-colors"
-                          style={{
-                            color: 'var(--accent-text)',
-                            padding: '0 3px',
-                            margin: '0 -3px 2px',
-                            background: 'transparent',
-                            border: '1px dashed transparent',
-                          }}
-                        >
-                          {speakerLabel(p.speaker)}
-                        </button>
-                      )}
-                      {hasLowConfidence && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setExpandedParagraphs((previous) => {
-                              const next = new Set(previous)
-                              next.add(p.key)
-                              return next
-                            })
-                          }
-                          className="chip mb-0.5 ml-1.5 inline-block align-middle"
-                          style={{
-                            height: 18,
-                            background: 'var(--warn-soft)',
-                            color: 'var(--warn-text)',
-                          }}
-                          title="该段包含低置信说话人，点击展开原始句确认"
-                        >
-                          低置信 {Math.round((lowScore ?? 0) * 100)}%
-                        </button>
-                      )}
-                      <p className="text-[13px] leading-relaxed">{p.text}</p>
-                      <button
-                        type="button"
-                        onClick={() => toggleParagraph(p.key)}
-                        className="mt-1 inline-flex items-center gap-1 rounded px-1 py-0.5 text-[10px] text-tertiary transition-colors hover:bg-[var(--bg-hover)] hover:text-secondary"
-                      >
-                        <PencilLine size={10} />
-                        {expandedParagraphs.has(p.key) ? '收起原始句' : '按句修订文字'}
-                      </button>
-                      {expandedParagraphs.has(p.key) && (
-                        <div
-                          className="mt-1.5 space-y-1 rounded-lg p-2"
-                          style={{ background: 'var(--bg-subtle)' }}
-                        >
-                          {p.items.map((segment) => (
-                            <div
-                              key={segment.segment_id}
-                              className="flex items-start gap-2 border-b py-1.5 last:border-b-0"
-                              style={{ borderColor: 'var(--border-subtle)' }}
-                            >
-                              <span className="shrink-0 pt-0.5 font-mono text-[10px] text-tertiary">
-                                {formatTimestamp(segment.start_ms)}
-                              </span>
-                              <p className="min-w-0 flex-1 text-[11px] leading-relaxed text-secondary">
-                                {segment.text}
-                              </p>
-                              {segment.edited_at && (
-                                <span className="chip shrink-0" style={{ height: 18 }}>
-                                  已修订
-                                </span>
-                              )}
-                              {(segment.speaker_source || segment.asr_source) && (
-                                <span
-                                  className="shrink-0 text-[9px] text-tertiary"
-                                  title={[
-                                    segment.speaker_source &&
-                                      `声纹来源 ${segment.speaker_source}`,
-                                    segment.speaker_score != null &&
-                                      segment.speaker_score > 0 &&
-                                      `相似度 ${Math.round(segment.speaker_score * 100)}%`,
-                                    segment.asr_source && `ASR ${segment.asr_source}`,
-                                    segment.snr_db != null &&
-                                      `SNR ${segment.snr_db.toFixed(1)} dB`,
-                                    segment.adaptive_gain != null &&
-                                      `增益 ${segment.adaptive_gain.toFixed(2)}x`,
-                                  ]
-                                    .filter(Boolean)
-                                    .join(' · ')}
-                                >
-                                  {segment.asr_source === 'streaming_fallback'
-                                    ? '草稿兜底'
-                                    : segment.speaker_source?.startsWith('context')
-                                      ? '上下文说话人'
-                                      : ''}
-                                </span>
-                              )}
-                              {segment.speaker &&
-                                segment.speaker_low_confidence && (
-                                  <button
-                                    type="button"
-                                    onClick={() => void confirmSpeaker(segment)}
-                                    className="chip shrink-0"
-                                    style={{
-                                      height: 18,
-                                      background: 'var(--warn-soft)',
-                                      color: 'var(--warn-text)',
-                                    }}
-                                    title="确认当前姓名正确"
-                                  >
-                                    确认 {Math.round((segment.speaker_score ?? 0) * 100)}%
-                                  </button>
-                                )}
-                              <button
-                                type="button"
-                                onClick={() => setEditingSegment(segment)}
-                                className="shrink-0 rounded px-1.5 py-0.5 text-[10px] transition-colors hover:bg-[var(--bg-hover)]"
-                                style={{ color: 'var(--accent-text)' }}
-                              >
-                                修订
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  )
-                })}
-                {paragraphs.length > visibleParagraphCount && (
-                  <div className="flex justify-center pt-1">
-                    <button
-                      type="button"
-                      className="btn text-[12px]"
-                      onClick={() =>
-                        setVisibleParagraphCount((value) => value + 200)
-                      }
-                    >
-                      加载更多（剩余 {paragraphs.length - visibleParagraphCount} 段）
-                    </button>
-                  </div>
-                )}
-              </div>
-            </section>
+            <TranscriptPanel
+              segments={data.segments}
+              hasAudio={data.has_audio}
+              onSeek={handleSeek}
+              onRenameSpeaker={renameSpeaker}
+              onConfirmSpeaker={confirmSpeaker}
+              onEditSegment={setEditingSegment}
+            />
 
             {/* 纪要 */}
             <aside className="panel overflow-hidden">
