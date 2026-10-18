@@ -9,10 +9,13 @@ import threading
 import time
 from collections import defaultdict
 
+_DURATION_BUCKETS = (0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0)
+
 _lock = threading.Lock()
 _requests: dict[tuple[str, str, str], int] = defaultdict(int)
 _duration_sum: dict[tuple[str, str], float] = defaultdict(float)
 _duration_count: dict[tuple[str, str], int] = defaultdict(int)
+_duration_buckets: dict[tuple[str, str], list[int]] = {}
 _started = time.time()
 
 
@@ -24,6 +27,22 @@ def observe_request(method: str, path: str, status: int, seconds: float) -> None
         _requests[(method, normalized, str(status))] += 1
         _duration_sum[(method, normalized)] += seconds
         _duration_count[(method, normalized)] += 1
+        bucket_counts = _duration_buckets.setdefault(
+            (method, normalized),
+            [0] * len(_DURATION_BUCKETS),
+        )
+        for index, upper_bound in enumerate(_DURATION_BUCKETS):
+            if seconds <= upper_bound:
+                bucket_counts[index] += 1
+
+
+def reset_metrics() -> None:
+    """Clear in-process metrics; intended for tests and process shutdown."""
+    with _lock:
+        _requests.clear()
+        _duration_sum.clear()
+        _duration_count.clear()
+        _duration_buckets.clear()
 
 
 def prometheus_text(extra: dict[str, dict[str, int]] | None = None) -> str:
@@ -45,14 +64,26 @@ def prometheus_text(extra: dict[str, dict[str, int]] | None = None) -> str:
             )
         lines.extend(
             [
-                "# HELP meeting_http_request_duration_seconds_sum Total request duration.",
-                "# TYPE meeting_http_request_duration_seconds_sum counter",
-                "# HELP meeting_http_request_duration_seconds_count Request count.",
-                "# TYPE meeting_http_request_duration_seconds_count counter",
+                "# HELP meeting_http_request_duration_seconds HTTP request duration.",
+                "# TYPE meeting_http_request_duration_seconds histogram",
             ]
         )
         for (method, path), total in sorted(_duration_sum.items()):
             count = _duration_count[(method, path)]
+            for upper_bound, bucket_count in zip(
+                _DURATION_BUCKETS,
+                _duration_buckets[(method, path)],
+                strict=True,
+            ):
+                lines.append(
+                    "meeting_http_request_duration_seconds_bucket"
+                    f'{{method="{method}",path="{path}",le="{upper_bound:g}"}} '
+                    f"{bucket_count}"
+                )
+            lines.append(
+                "meeting_http_request_duration_seconds_bucket"
+                f'{{method="{method}",path="{path}",le="+Inf"}} {count}'
+            )
             lines.append(
                 f'meeting_http_request_duration_seconds_sum{{method="{method}",path="{path}"}} {total:.6f}'
             )

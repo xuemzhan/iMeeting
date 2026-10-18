@@ -57,6 +57,15 @@ def _seed(title="生产验收") -> tuple[int, int]:
         return meeting.id, user.id
 
 
+def test_request_id_header_is_generated_and_preserved(client):
+    generated = client.get("/")
+    assert generated.status_code == 200
+    assert len(generated.headers["X-Request-ID"]) == 32
+
+    preserved = client.get("/", headers={"X-Request-ID": "client-request-123"})
+    assert preserved.headers["X-Request-ID"] == "client-request-123"
+
+
 def test_durable_export_job_and_file(client, auth_headers):
     mid, _ = _seed("异步导出")
     response = client.post(

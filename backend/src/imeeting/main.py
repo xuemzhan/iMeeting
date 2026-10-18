@@ -5,7 +5,9 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import re
 import time
+import uuid
 from contextlib import asynccontextmanager
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
@@ -22,6 +24,7 @@ from .application.bootstrap import initialize_app_database
 from .settings import SERVER_CONFIG, get_config
 
 _LOG_FORMAT = "%(asctime)s %(levelname)-7s %(name)s: %(message)s"
+_REQUEST_ID_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{8,128}$")
 
 
 def _log_path() -> Path:
@@ -196,6 +199,13 @@ async def _request_metrics(request: Request, call_next):
         response.status_code,
         time.perf_counter() - started,
     )
+    incoming_request_id = request.headers.get("X-Request-ID", "").strip()
+    request_id = (
+        incoming_request_id
+        if _REQUEST_ID_PATTERN.fullmatch(incoming_request_id)
+        else uuid.uuid4().hex
+    )
+    response.headers["X-Request-ID"] = request_id
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("X-Frame-Options", "DENY")
     response.headers.setdefault("Referrer-Policy", "same-origin")
