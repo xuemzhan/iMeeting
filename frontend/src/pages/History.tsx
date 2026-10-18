@@ -11,21 +11,19 @@ import {
 } from 'lucide-react'
 import { meetingApi, ApiError } from '../api/client'
 import type { MeetingSearchResult } from '../api/types'
-import { runExportJob } from '../lib/exportJob'
+import { useHistoryBulkActions } from '../hooks/useHistoryBulkActions'
 import { useAuth } from '../store/auth'
 import { TopBar } from '../components/TopBar'
 import { HistoryFilters } from './HistoryFilters'
 import { HistoryBulkActions } from './HistoryBulkActions'
 import { HistoryMeetingRow } from './HistoryMeetingRow'
 import { HistoryPagination } from './HistoryPagination'
-import { parseHistoryTags } from './historyTags'
 
 export default function History() {
   const navigate = useNavigate()
   const qc = useQueryClient()
   const [view, setView] = useState<'active' | 'trash'>('active')
   const [deleting, setDeleting] = useState<number | null>(null)
-  const [busy, setBusy] = useState(false)
   const [q, setQ] = useState('')
   const [debouncedQ, setDebouncedQ] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
@@ -35,20 +33,63 @@ export default function History() {
   const [page, setPage] = useState(0)
   const [pageSize, setPageSize] = useState(20)
   const [selected, setSelected] = useState<Set<number>>(new Set())
-  const [action, setAction] = useState<'none' | 'rename' | 'tag'>('none')
-  const [renameFind, setRenameFind] = useState('')
-  const [renameReplace, setRenameReplace] = useState('')
-  const [renamePrefix, setRenamePrefix] = useState('')
-  const [renameSuffix, setRenameSuffix] = useState('')
-  const [tagInput, setTagInput] = useState('')
-  const [exportFormat, setExportFormat] = useState('md')
-  const [exportStatus, setExportStatus] = useState<string | null>(null)
   const [opNotice, setOpNotice] = useState<string | null>(null)
 
   const user = useAuth((s) => s.user)
   const hasToken = useAuth((s) => s.hasToken)
   const needsLogin = !hasToken()
   void user
+
+  const refresh = async () => {
+    setSelected(new Set())
+    await qc.invalidateQueries({ queryKey: ['meetings'] })
+  }
+
+  const removeFromCaches = (ids: number[]) => {
+    const removed = new Set(ids)
+    qc.setQueriesData<MeetingSearchResult>(
+      { queryKey: ['meetings'] },
+      (previous) =>
+        previous
+          ? {
+              ...previous,
+              items: previous.items.filter((item) => !removed.has(item.id)),
+              total: Math.max(0, previous.total - removed.size),
+            }
+          : previous,
+    )
+  }
+
+  const {
+    busy,
+    action,
+    setAction,
+    renameFind,
+    setRenameFind,
+    renameReplace,
+    setRenameReplace,
+    renamePrefix,
+    setRenamePrefix,
+    renameSuffix,
+    setRenameSuffix,
+    tagInput,
+    setTagInput,
+    exportFormat,
+    setExportFormat,
+    exportStatus,
+    handleBulkTrash,
+    handleBulkRestore,
+    handleBulkPurge,
+    handleArchive,
+    applyRename,
+    applyTags,
+    exportSelected,
+  } = useHistoryBulkActions({
+    selected,
+    refresh,
+    removeFromCaches,
+    setOpNotice,
+  })
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedQ(q.trim()), 300)
@@ -131,26 +172,6 @@ export default function History() {
     })
   }
 
-  const refresh = async () => {
-    setSelected(new Set())
-    await qc.invalidateQueries({ queryKey: ['meetings'] })
-  }
-
-  const removeFromCaches = (ids: number[]) => {
-    const removed = new Set(ids)
-    qc.setQueriesData<MeetingSearchResult>(
-      { queryKey: ['meetings'] },
-      (previous) =>
-        previous
-          ? {
-              ...previous,
-              items: previous.items.filter((item) => !removed.has(item.id)),
-              total: Math.max(0, previous.total - removed.size),
-            }
-          : previous,
-    )
-  }
-
   const handleDelete = async (id: number, e: React.MouseEvent) => {
     e.stopPropagation()
     if (!confirm('将这场会议移入回收站？30 天内可以恢复。')) return
@@ -174,129 +195,6 @@ export default function History() {
     e.stopPropagation()
     await meetingApi.bulkRestore([id])
     await refresh()
-  }
-
-  const handleBulkTrash = async () => {
-    if (!selected.size) return
-    if (!confirm(`将选中的 ${selected.size} 场会议移入回收站？`)) return
-    setBusy(true)
-    try {
-      const result = await meetingApi.bulkRemove([...selected])
-      removeFromCaches(result.deleted_ids)
-      await refresh()
-      setOpNotice(
-        result.skipped.length > 0
-          ? `已移入回收站 ${result.deleted} 场；${result.skipped.length} 场被跳过（正在录音、已删除或无权限）。`
-          : `已移入回收站 ${result.deleted} 场。`,
-      )
-    } catch (e) {
-      alert(e instanceof Error ? e.message : '操作失败')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const handleBulkRestore = async () => {
-    if (!selected.size) return
-    setBusy(true)
-    try {
-      await meetingApi.bulkRestore([...selected])
-      await refresh()
-    } catch (e) {
-      alert(e instanceof Error ? e.message : '恢复失败')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const handleBulkPurge = async () => {
-    if (!selected.size) return
-    if (
-      !confirm(
-        `彻底删除选中的 ${selected.size} 场会议？转写、纪要、音频都会删除，且不可恢复。`,
-      )
-    ) {
-      return
-    }
-    setBusy(true)
-    try {
-      await meetingApi.bulkPurge([...selected])
-      await refresh()
-    } catch (e) {
-      alert(e instanceof Error ? e.message : '彻底删除失败')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const handleArchive = async (archived: boolean) => {
-    if (!selected.size) return
-    setBusy(true)
-    try {
-      await meetingApi.bulkUpdate([...selected], { archived })
-      await refresh()
-    } catch (e) {
-      alert(e instanceof Error ? e.message : '操作失败')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const applyRename = async () => {
-    if (!selected.size) return
-    setBusy(true)
-    try {
-      await meetingApi.bulkRename([...selected], {
-        find: renameFind,
-        replace: renameReplace,
-        prefix: renamePrefix,
-        suffix: renameSuffix,
-      })
-      setAction('none')
-      await refresh()
-    } catch (e) {
-      alert(e instanceof Error ? e.message : '重命名失败')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const applyTags = async () => {
-    const tags = parseHistoryTags(tagInput)
-    if (!selected.size || tags.length === 0) return
-    setBusy(true)
-    try {
-      await meetingApi.bulkUpdate([...selected], { tagsAdd: tags })
-      setTagInput('')
-      setAction('none')
-      await refresh()
-    } catch (e) {
-      alert(e instanceof Error ? e.message : '打标签失败')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const exportSelected = async () => {
-    if (!selected.size) return
-    setBusy(true)
-    try {
-      setExportStatus('正在创建批量导出…')
-      await runExportJob({
-        createJob: () =>
-          meetingApi.createBulkExportJob([...selected], exportFormat),
-        getJob: meetingApi.exportJob,
-        downloadJob: meetingApi.downloadExportJob,
-        fallbackFilename: () => `meetings-${Date.now()}.zip`,
-        maxPolls: 180,
-        onProgress: () => setExportStatus('正在生成批量导出…'),
-      })
-    } catch (e) {
-      alert(e instanceof Error ? e.message : '导出失败')
-    } finally {
-      setExportStatus(null)
-      setBusy(false)
-    }
   }
 
   const handleOpen = (id: number) => {
