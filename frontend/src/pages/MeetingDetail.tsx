@@ -4,26 +4,22 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft,
   Download,
-  Sparkles,
   Loader2,
-  Lightbulb,
-  CheckSquare,
-  Network,
   Share2,
   Info,
-  PencilLine,
-  History,
+  CheckSquare,
   ShieldCheck,
   Users,
 } from 'lucide-react'
 import { meetingApi, voiceprintApi, ApiError } from '../api/client'
-import { formatDuration, formatTimestamp } from '../store/session'
+import { formatDuration } from '../store/session'
 import { useAuth } from '../store/auth'
 import { TopBar } from '../components/TopBar'
 import { AudioPlayer } from '../components/AudioPlayer'
 import type { ApiSegment, Minutes } from '../api/types'
-import { TemplatePicker } from '../components/TemplatePicker'
-import { MindMap } from '../components/MindMap'
+import { MinutesMindMapPanel } from '../components/MinutesMindMapPanel'
+import { MinutesSidebar } from '../components/MinutesSidebar'
+import { MinutesVersionsPanel } from '../components/MinutesVersionsPanel'
 import { MeetingInfoEditor } from '../components/MeetingInfoEditor'
 import { ShareDialog } from '../components/ShareDialog'
 import { ActionsPanel } from '../components/ActionsPanel'
@@ -64,8 +60,6 @@ export default function MeetingDetail() {
   const [showVersions, setShowVersions] = useState(false)
   const [editingMinutes, setEditingMinutes] = useState<Minutes | null>(null)
   const [editingSegment, setEditingSegment] = useState<ApiSegment | null>(null)
-  const [compareA, setCompareA] = useState<number | null>(null)
-  const [compareB, setCompareB] = useState<number | null>(null)
   const [exportStatus, setExportStatus] = useState<string | null>(null)
   const [showCompliance, setShowCompliance] = useState(false)
   const [showMembers, setShowMembers] = useState(false)
@@ -123,14 +117,6 @@ export default function MeetingDetail() {
    * 所以按钮应直接禁用，而不是让用户点了再吃一个错误。
    */
   const hasTranscript = (data?.segment_count ?? 0) > 0
-  const versionRows = versions ?? []
-  const versionA = versionRows.find(
-    (item) => item.version === (compareA ?? versionRows[0]?.version),
-  )
-  const versionB = versionRows.find(
-    (item) => item.version === (compareB ?? versionRows[1]?.version),
-  )
-
   const saveSegment = async (segment: ApiSegment, text: string) => {
     try {
       await meetingApi.editSegment(meetingId, segment.segment_id, { text })
@@ -371,196 +357,23 @@ export default function MeetingDetail() {
               onEditSegment={setEditingSegment}
             />
 
-            {/* 纪要 */}
-            <aside className="panel overflow-hidden">
-              <div className="panel-header">
-                <Sparkles size={14} style={{ color: 'var(--text-tertiary)' }} />
-                <h2>会议纪要</h2>
-                {activeMinutes && (
-                  <button
-                    type="button"
-                    onClick={() => setEditingMinutes(activeMinutes)}
-                    className="btn btn-ghost px-1.5 text-[11px]"
-                    title="人工修订并生成新版本"
-                  >
-                    <PencilLine size={12} /> 修订
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setShowVersions((value) => !value)}
-                  className="btn btn-ghost px-1.5 text-[11px]"
-                  title="查看纪要历史版本"
-                >
-                  <History size={12} /> {showVersions ? '收起版本' : '版本'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowMindMap((value) => !value)}
-                  className="btn btn-ghost px-1.5 text-[11px]"
-                  title="用思维导图查看纪要"
-                >
-                  <Network size={12} />
-                  {showMindMap ? '收起导图' : '思维导图'}
-                </button>
-              </div>
-
-              <div className="p-4">
-                {generating ? (
-                  <div className="flex flex-col items-center gap-2 py-8">
-                    <Loader2 size={16} className="animate-spin" style={{ color: 'var(--accent)' }} />
-                    <p className="text-[12px] text-tertiary">正在分析…</p>
-                  </div>
-                ) : activeMinutes ? (
-                  <div className="space-y-3">
-                    {activeMinutes.is_draft && (
-                      <p
-                        className="rounded px-2 py-1 text-[11px]"
-                        style={{
-                          background: 'var(--accent-soft)',
-                          color: 'var(--accent-text)',
-                        }}
-                      >
-                        实时草稿 · 第 {activeMinutes.version} 版
-                      </p>
-                    )}
-                    {activeMinutes.edited && (
-                      <p
-                        className="rounded px-2 py-1 text-[11px]"
-                        style={{
-                          background: 'var(--bg-subtle)',
-                          color: 'var(--text-secondary)',
-                        }}
-                      >
-                        人工修订版 · v{activeMinutes.version} · 原始自动版本仍保留
-                      </p>
-                    )}
-                    {activeMinutes.summary && (
-                      <p className="text-[12px] leading-relaxed text-secondary">
-                        {activeMinutes.summary}
-                      </p>
-                    )}
-
-                    {activeMinutes.topics.map((t, i) => (
-                      <div
-                        key={i}
-                        className="rounded-lg px-3 py-2"
-                        style={{ background: 'var(--accent-soft)' }}
-                      >
-                        <p
-                          className="text-[12px] font-medium"
-                          style={{ color: 'var(--accent-text)' }}
-                        >
-                          {t.title}
-                        </p>
-                        {t.conclusion && (
-                          <p
-                            className="mt-1 border-l-2 pl-2 text-[11px]"
-                            style={{ borderColor: 'var(--accent)', color: 'var(--accent-text)' }}
-                          >
-                            {t.conclusion}
-                          </p>
-                        )}
-                        {t.evidence && t.evidence.length > 0 && (
-                          <div className="mt-1 flex flex-wrap gap-1">
-                            {t.evidence.slice(0, 3).map((evidence) => (
-                              <button
-                                key={`${evidence.segment_id}-${evidence.start_ms}`}
-                                type="button"
-                                onClick={() => handleSeek(evidence.start_ms)}
-                                className="rounded px-1 py-0.5 font-mono text-[10px]"
-                                style={{
-                                  background: 'var(--bg-surface)',
-                                  color: 'var(--accent-text)',
-                                }}
-                                title={evidence.text}
-                              >
-                                原话 {formatTimestamp(evidence.start_ms)}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-
-                    {activeMinutes.todos.length > 0 && (
-                      <div>
-                        <p className="mb-1.5 flex items-center gap-1 text-[11px] font-medium text-tertiary">
-                          <CheckSquare size={11} />
-                          待办事项
-                        </p>
-                        {activeMinutes.todos.map((t, i) => (
-                          <div
-                            key={i}
-                            className="mb-1 rounded-lg px-2.5 py-1.5 text-[11px]"
-                            style={{ background: 'var(--warn-soft)', color: 'var(--warn-text)' }}
-                          >
-                            {t.task}
-                            {t.owner && <span className="opacity-75"> · {t.owner}</span>}
-                            {t.evidence?.[0] && (
-                              <button
-                                type="button"
-                                onClick={() => handleSeek(t.evidence![0].start_ms)}
-                                className="ml-1 font-mono text-[10px] underline-offset-2 hover:underline"
-                              >
-                                {formatTimestamp(t.evidence[0].start_ms)}
-                              </button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center gap-2 py-8 text-center">
-                    <Lightbulb size={18} style={{ color: 'var(--text-tertiary)' }} />
-                    <p className="text-[12px] text-tertiary">还没有生成纪要</p>
-                  </div>
-                )}
-
-                {genError && (
-                  <div
-                    className="mb-2 rounded-lg px-3 py-2 text-[11px]"
-                    style={{ background: 'var(--danger-soft)', color: 'var(--danger-text)' }}
-                  >
-                    {genError}
-                  </div>
-                )}
-
-                <TemplatePicker value={templateId} onChange={setTemplateId} />
-
-                <button
-                  type="button"
-                  onClick={() => void handleGenerate()}
-                  disabled={generating || !hasTranscript}
-                  title={hasTranscript ? undefined : '该会议还没有转写内容，无法生成纪要'}
-                  className="btn btn-primary mt-4 w-full"
-                  style={{ height: 34, opacity: hasTranscript ? undefined : 0.5 }}
-                >
-                  {generating ? (
-                    <>
-                      <Loader2 size={13} className="animate-spin" />
-                      生成中…
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles size={13} />
-                      {activeMinutes
-                        ? activeMinutes.is_draft
-                          ? '生成终稿'
-                          : '重新生成'
-                        : '生成纪要'}
-                    </>
-                  )}
-                </button>
-
-                {!hasTranscript && (
-                  <p className="mt-2 text-center text-[11px] text-tertiary">
-                    该会议没有转写内容（可能全程未采集到声音），无法生成纪要
-                  </p>
-                )}
-              </div>
-            </aside>
+            <MinutesSidebar
+              minutes={activeMinutes}
+              generating={generating}
+              error={genError}
+              hasTranscript={hasTranscript}
+              templateId={templateId}
+              onTemplateChange={setTemplateId}
+              showVersions={showVersions}
+              onToggleVersions={() => setShowVersions((value) => !value)}
+              showMindMap={showMindMap}
+              onToggleMindMap={() => setShowMindMap((value) => !value)}
+              onEdit={() => {
+                if (activeMinutes) setEditingMinutes(activeMinutes)
+              }}
+              onGenerate={() => void handleGenerate()}
+              onSeek={handleSeek}
+            />
           </div>
 
           <section className="panel mt-3 overflow-hidden">
@@ -577,150 +390,19 @@ export default function MeetingDetail() {
           <ReviewPanel meetingId={meetingId} onSeek={handleSeek} />
 
           {showVersions && (
-            <section className="panel mt-3 overflow-hidden">
-              <div className="panel-header">
-                <History size={14} style={{ color: 'var(--text-tertiary)' }} />
-                <h2>纪要版本与对比</h2>
-                <span className="ml-auto text-[11px] text-tertiary">
-                  自动草稿、终稿与人工修订均保留
-                </span>
-              </div>
-              <div className="grid gap-3 p-4 lg:grid-cols-[280px_1fr]">
-                <div className="space-y-1.5">
-                  {versionRows.length === 0 && (
-                    <p className="py-6 text-center text-[11px] text-tertiary">
-                      还没有纪要版本
-                    </p>
-                  )}
-                  {versionRows.map((row) => (
-                    <div
-                      key={row.id}
-                      className="rounded-lg px-2.5 py-2"
-                      style={{ background: 'var(--bg-subtle)' }}
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[11px] font-medium">v{row.version}</span>
-                        <span className="chip" style={{ height: 18 }}>
-                          {row.edited ? '人工修订' : row.is_draft ? '会中草稿' : '自动终稿'}
-                        </span>
-                        <span className="ml-auto text-[10px] text-tertiary">
-                          {new Date(row.created_at).toLocaleTimeString('zh-CN', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </span>
-                      </div>
-                      <p className="mt-1 line-clamp-2 text-[10px] leading-relaxed text-tertiary">
-                        {row.summary || '无摘要'}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setEditingMinutes(row)}
-                        className="mt-1 text-[10px] underline-offset-2 hover:underline"
-                        style={{ color: 'var(--accent-text)' }}
-                      >
-                        基于此版修订
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                <div>
-                  {versionRows.length >= 2 ? (
-                    <>
-                      <div className="mb-2 flex items-center gap-2 text-[11px] text-tertiary">
-                        <select
-                          value={versionA?.version ?? ''}
-                          onChange={(e) => setCompareA(Number(e.target.value))}
-                          className="rounded px-1.5 py-1"
-                          style={{
-                            background: 'var(--bg-surface)',
-                            border: '1px solid var(--border-subtle)',
-                          }}
-                        >
-                          {versionRows.map((row) => (
-                            <option key={row.id} value={row.version}>
-                              v{row.version} · {row.edited ? '人工' : row.is_draft ? '草稿' : '终稿'}
-                            </option>
-                          ))}
-                        </select>
-                        <span>对比</span>
-                        <select
-                          value={versionB?.version ?? ''}
-                          onChange={(e) => setCompareB(Number(e.target.value))}
-                          className="rounded px-1.5 py-1"
-                          style={{
-                            background: 'var(--bg-surface)',
-                            border: '1px solid var(--border-subtle)',
-                          }}
-                        >
-                          {versionRows.map((row) => (
-                            <option key={row.id} value={row.version}>
-                              v{row.version} · {row.edited ? '人工' : row.is_draft ? '草稿' : '终稿'}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        {[versionA, versionB].map((row, index) => (
-                          <div
-                            key={index}
-                            className="max-h-[320px] overflow-y-auto rounded-lg p-3"
-                            style={{ background: 'var(--bg-subtle)' }}
-                          >
-                            <p className="mb-2 text-[11px] font-medium">
-                              v{row?.version ?? '—'} · {row?.edited ? '人工修订' : row?.is_draft ? '草稿' : '终稿'}
-                            </p>
-                            <p className="whitespace-pre-wrap text-[11px] leading-relaxed text-secondary">
-                              {row?.summary || '无摘要'}
-                            </p>
-                            {row?.topics.map((topic, topicIndex) => (
-                              <p key={topicIndex} className="mt-2 text-[11px] text-tertiary">
-                                · {topic.title}
-                                {topic.conclusion ? `：${topic.conclusion}` : ''}
-                              </p>
-                            ))}
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  ) : (
-                    <p className="py-8 text-center text-[11px] text-tertiary">
-                      至少需要两个版本才能对比
-                    </p>
-                  )}
-                </div>
-              </div>
-            </section>
+            <MinutesVersionsPanel
+              versions={versions ?? []}
+              onEdit={setEditingMinutes}
+            />
           )}
 
           {showMindMap && (
-            <section className="panel mt-3 overflow-hidden">
-              <div className="panel-header">
-                <Network size={14} style={{ color: 'var(--text-tertiary)' }} />
-                <h2>纪要思维导图</h2>
-                <button
-                  type="button"
-                  onClick={() => setShowMindMap(false)}
-                  className="btn btn-ghost ml-auto px-1.5 text-[11px]"
-                >
-                  收起
-                </button>
-              </div>
-              <div style={{ height: 420 }}>
-                {mindmapLoading ? (
-                  <div className="flex h-full items-center justify-center gap-2 text-[12px] text-tertiary">
-                    <Loader2 size={14} className="animate-spin" />
-                    正在生成导图…
-                  </div>
-                ) : mindmap ? (
-                  <MindMap data={mindmap} onSeek={handleSeek} />
-                ) : (
-                  <p className="py-10 text-center text-[12px] text-tertiary">
-                    还没有可用的纪要
-                  </p>
-                )}
-              </div>
-            </section>
+            <MinutesMindMapPanel
+              data={mindmap}
+              loading={mindmapLoading}
+              onSeek={handleSeek}
+              onClose={() => setShowMindMap(false)}
+            />
           )}
         </div>
       </main>
