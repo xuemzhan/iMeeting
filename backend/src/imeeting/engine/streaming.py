@@ -31,6 +31,7 @@ from ..settings import get_config
 from ..speaker_policy import is_low_confidence
 from . import pool
 from .adaptive import AdaptiveMeetingController
+from .audio_analysis import is_silent, rms, speech_duration_ms, trim_silence
 from .audio_enhance import AgcProcessor, normalize_segment, spectral_denoise
 from .final_orderer import FinalOrderer, PendingFinal
 from .metrics import MeetingMetrics
@@ -650,9 +651,7 @@ class StreamSession:
 
     @staticmethod
     def _rms(pcm: np.ndarray) -> float:
-        if len(pcm) == 0:
-            return 0.0
-        return float(np.sqrt(np.mean(pcm.astype(np.float32) ** 2)))
+        return rms(pcm)
 
     async def _warn_if_no_signal(self) -> None:
         """会话进行中连续收到全零 PCM 时，主动推一条提醒给前端。
@@ -809,9 +808,8 @@ class StreamSession:
         默认使用会话当前的**自适应阈值**，与断句判据保持一致；
         若两处用不同阈值，会出现「按 A 判据断句、按 B 判据丢弃」的矛盾。
         """
-        if len(audio) == 0:
-            return True
-        return self._rms(audio) < (
+        return is_silent(
+            audio,
             self._continue_threshold if threshold is None else threshold
         )
 
@@ -821,20 +819,8 @@ class StreamSession:
         按 20ms 一帧计算帧能量，只有帧能量过线才计入语音时长。
         这比整段 RMS 更能反映「真的有人说话」。
         """
-        if len(audio) == 0:
-            return 0.0
         thr = self._continue_threshold if threshold is None else threshold
-        frame = int(SAMPLE_RATE * 0.02)  # 20ms
-        total_frames = len(audio) // frame
-        if total_frames == 0:
-            # 不足一帧，用整体能量近似
-            return (len(audio) / SAMPLE_RATE * 1000) if not self._is_silent(
-                audio, thr
-            ) else 0.0
-        trimmed = audio[: total_frames * frame].reshape(total_frames, frame)
-        frame_rms = np.sqrt(np.mean(trimmed.astype(np.float32) ** 2, axis=1))
-        voiced = int(np.count_nonzero(frame_rms >= thr))
-        return voiced * 20.0
+        return speech_duration_ms(audio, thr, sample_rate=SAMPLE_RATE)
 
     def _trim_silence_for_asr(self, audio: np.ndarray) -> np.ndarray:
         """只裁剪送 ASR/声纹的首尾静音，保留可配置余量。
@@ -845,21 +831,14 @@ class StreamSession:
         """
         if not self._trim_silence_enabled or len(audio) == 0:
             return audio
-        frame = int(SAMPLE_RATE * 0.02)
-        total = len(audio) // frame
-        if total < 8:
+        trimmed = trim_silence(
+            audio,
+            self._continue_threshold,
+            margin_ms=self._trim_margin_ms,
+            sample_rate=SAMPLE_RATE,
+        )
+        if len(trimmed) == len(audio):
             return audio
-        frames = audio[: total * frame].reshape(total, frame).astype(np.float32)
-        energy = np.sqrt(np.mean(frames**2, axis=1))
-        voiced = np.flatnonzero(energy >= self._continue_threshold)
-        if voiced.size == 0:
-            return audio
-        margin = int(self._trim_margin_ms / 1000 * SAMPLE_RATE)
-        start = max(0, int(voiced[0]) * frame - margin)
-        end = min(len(audio), (int(voiced[-1]) + 1) * frame + margin)
-        if end - start >= len(audio) * 0.9:
-            return audio
-        trimmed = np.ascontiguousarray(audio[start:end])
         self.metrics.note_trim(
             len(audio) / SAMPLE_RATE * 1000,
             len(trimmed) / SAMPLE_RATE * 1000,
