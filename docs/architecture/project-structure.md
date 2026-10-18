@@ -44,7 +44,7 @@ development.
 |---|---|
 | `api/http/routes` | HTTP request parsing, authentication dependencies, response DTOs |
 | `api/ws` | WebSocket protocol and connection lifecycle |
-| `application` | Startup bootstrap, seed data, background jobs, exports and shared meeting access |
+| `application` | Startup, seed data, session persistence, background jobs, exports and meeting access |
 | `engine` | FunASR model pool, audio I/O, streaming session state machine |
 | `llm` | OpenAI-compatible client and minute generation |
 | `export` | Subtitle and document rendering |

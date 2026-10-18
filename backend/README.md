@@ -47,7 +47,7 @@ src/imeeting/
 ├── api/
 │   ├── http/routes/         REST 路由（认证、会议、配置、管理）
 │   └── ws/stream.py         WebSocket 转写流
-├── application/             启动编排、种子数据、后台任务与导出工作流
+├── application/             启动编排、种子数据、会话持久化与后台工作流
 ├── engine/                  FunASR 模型池、音频与流式会话
 ├── llm/                     OpenAI 兼容客户端与纪要生成
 ├── export/                  SRT / VTT / Markdown / Word / PDF
