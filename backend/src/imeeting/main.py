@@ -90,6 +90,9 @@ def _orjson_dumps(content, *, default=None) -> bytes:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """启动：建库、加载配置、预热模型。"""
+    from .runtime_checks import validate_production_settings
+
+    validate_production_settings()
     logger.info("=== %s 启动中 ===", SERVER_CONFIG["app_name"])
     initialize_app_database()
     # init_db 内的 Alembic fileConfig 会重置根 logger；必须在迁移之后重装，

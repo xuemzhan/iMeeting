@@ -39,6 +39,18 @@ python -m imeeting.main
 | `LLM_API_KEY` | 纪要 LLM 密钥 | 空 |
 | `SKIP_MODEL_WARMUP` | 设为 1 跳过启动预热 | `0` |
 
+## 生产启动守卫
+
+设置 `APP_ENV=production` 后，服务会在建库和加载模型前检查配置，并在以下
+情况拒绝启动：
+
+- `SECRET_KEY` 缺失或短于 32 字节；
+- `ADMIN_PASSWORD` 缺失或仍为出厂默认值；
+- `REQUIRE_AUTH` 不是 `1`；
+- `CORS_ORIGINS` 包含通配符 `*`。
+
+开发环境保持零配置启动，不受这些检查影响。
+
 ## 架构
 
 ```
