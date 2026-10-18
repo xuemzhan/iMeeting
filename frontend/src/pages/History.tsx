@@ -3,64 +3,24 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft,
-  ArrowRight,
-  Clock,
   Download,
   FileText,
   Loader2,
   LogIn,
   RotateCcw,
-  Search,
   Tag,
   Trash2,
-  X,
 } from 'lucide-react'
 import { meetingApi, ApiError } from '../api/client'
 import type { MeetingSearchResult } from '../api/types'
 import { runExportJob } from '../lib/exportJob'
-import { formatDuration } from '../store/session'
 import { useAuth } from '../store/auth'
 import { TopBar } from '../components/TopBar'
-
-function statusLabel(status: string): string {
-  switch (status) {
-    case 'scheduled':
-      return '已预约'
-    case 'finished':
-      return '已完成'
-    case 'abandoned':
-      return '已中断'
-    case 'failed':
-      return '异常'
-    default:
-      return '进行中'
-  }
-}
-
-function statusStyle(status: string): React.CSSProperties {
-  switch (status) {
-    case 'scheduled':
-      return { background: 'var(--accent-soft)', color: 'var(--accent-text)' }
-    case 'finished':
-      return { background: 'var(--live-soft)', color: 'var(--live-text)' }
-    case 'abandoned':
-      return { background: 'var(--warn-soft)', color: 'var(--warn-text)' }
-    case 'failed':
-      return {
-        background: 'var(--danger-soft, var(--warn-soft))',
-        color: 'var(--danger-text, var(--warn-text))',
-      }
-    default:
-      return { background: 'var(--warn-soft)', color: 'var(--warn-text)' }
-  }
-}
-
-function tagsOf(raw: string): string[] {
-  return (raw || '')
-    .split(',')
-    .map((tag) => tag.trim())
-    .filter(Boolean)
-}
+import { HistoryFilters } from './HistoryFilters'
+import { HistoryMeetingRow } from './HistoryMeetingRow'
+import { HistoryPagination } from './HistoryPagination'
+import { historySelectStyle } from './historyStyles'
+import { parseHistoryTags } from './historyTags'
 
 export default function History() {
   const navigate = useNavigate()
@@ -212,6 +172,12 @@ export default function History() {
     }
   }
 
+  const handleRestore = async (id: number, e: React.MouseEvent) => {
+    e.stopPropagation()
+    await meetingApi.bulkRestore([id])
+    await refresh()
+  }
+
   const handleBulkTrash = async () => {
     if (!selected.size) return
     if (!confirm(`将选中的 ${selected.size} 场会议移入回收站？`)) return
@@ -298,7 +264,7 @@ export default function History() {
   }
 
   const applyTags = async () => {
-    const tags = tagsOf(tagInput)
+    const tags = parseHistoryTags(tagInput)
     if (!selected.size || tags.length === 0) return
     setBusy(true)
     try {
@@ -391,81 +357,18 @@ export default function History() {
           </div>
 
           {!needsLogin && view === 'active' && (
-            <div className="mb-3 flex flex-wrap items-center gap-2">
-              <div className="relative min-w-[200px] flex-1">
-                <Search
-                  size={13}
-                  className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2"
-                  style={{ color: 'var(--text-tertiary)' }}
-                />
-                <input
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                  placeholder="搜索标题或转写内容…"
-                  aria-label="搜索会议"
-                  className="w-full rounded-lg py-2 pl-8 pr-8 text-[12px] outline-none"
-                  style={{
-                    background: 'var(--bg-surface)',
-                    border: '1px solid var(--border-subtle)',
-                    color: 'var(--text-primary)',
-                  }}
-                />
-                {q && (
-                  <button
-                    type="button"
-                    onClick={() => setQ('')}
-                    aria-label="清空搜索"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-tertiary hover:text-secondary"
-                  >
-                    <X size={13} />
-                  </button>
-                )}
-              </div>
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                aria-label="按状态筛选"
-                className="rounded-lg px-2 py-2 text-[12px] outline-none"
-                style={selectStyle}
-              >
-                <option value="">全部状态</option>
-                <option value="scheduled">已预约</option>
-                <option value="finished">已完成</option>
-                <option value="abandoned">已中断</option>
-                <option value="failed">异常</option>
-                <option value="recording">进行中</option>
-              </select>
-              <select
-                value={archivedFilter}
-                onChange={(e) => setArchivedFilter(e.target.value)}
-                aria-label="归档状态"
-                className="rounded-lg px-2 py-2 text-[12px] outline-none"
-                style={selectStyle}
-              >
-                <option value="false">未归档</option>
-                <option value="true">已归档</option>
-                <option value="all">全部</option>
-              </select>
-              <select
-                value={range}
-                onChange={(e) => setRange(e.target.value)}
-                aria-label="按时间筛选"
-                className="rounded-lg px-2 py-2 text-[12px] outline-none"
-                style={selectStyle}
-              >
-                <option value="all">全部时间</option>
-                <option value="7d">近 7 天</option>
-                <option value="30d">近 30 天</option>
-              </select>
-              <input
-                value={tagFilter}
-                onChange={(e) => setTagFilter(e.target.value)}
-                placeholder="标签筛选"
-                aria-label="标签筛选"
-                className="w-[110px] rounded-lg px-2 py-2 text-[12px] outline-none"
-                style={selectStyle}
-              />
-            </div>
+            <HistoryFilters
+              q={q}
+              status={statusFilter}
+              archived={archivedFilter}
+              range={range}
+              tag={tagFilter}
+              onQChange={setQ}
+              onStatusChange={setStatusFilter}
+              onArchivedChange={setArchivedFilter}
+              onRangeChange={setRange}
+              onTagChange={setTagFilter}
+            />
           )}
 
           {selected.size > 0 && (
@@ -489,7 +392,7 @@ export default function History() {
                       onChange={(e) => setExportFormat(e.target.value)}
                       aria-label="导出格式"
                       className="rounded px-1.5 py-1 text-[11px]"
-                      style={selectStyle}
+                      style={historySelectStyle}
                     >
                       <option value="md">Markdown</option>
                       <option value="txt">纯文本</option>
@@ -532,10 +435,10 @@ export default function History() {
               </div>
               {action === 'rename' && view === 'active' && (
                 <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                  <input value={renameFind} onChange={(e) => setRenameFind(e.target.value)} placeholder="查找" className="w-[110px] rounded px-1.5 py-1 text-[11px]" style={selectStyle} />
-                  <input value={renameReplace} onChange={(e) => setRenameReplace(e.target.value)} placeholder="替换为" className="w-[110px] rounded px-1.5 py-1 text-[11px]" style={selectStyle} />
-                  <input value={renamePrefix} onChange={(e) => setRenamePrefix(e.target.value)} placeholder="前缀" className="w-[90px] rounded px-1.5 py-1 text-[11px]" style={selectStyle} />
-                  <input value={renameSuffix} onChange={(e) => setRenameSuffix(e.target.value)} placeholder="后缀" className="w-[90px] rounded px-1.5 py-1 text-[11px]" style={selectStyle} />
+                  <input value={renameFind} onChange={(e) => setRenameFind(e.target.value)} placeholder="查找" className="w-[110px] rounded px-1.5 py-1 text-[11px]" style={historySelectStyle} />
+                  <input value={renameReplace} onChange={(e) => setRenameReplace(e.target.value)} placeholder="替换为" className="w-[110px] rounded px-1.5 py-1 text-[11px]" style={historySelectStyle} />
+                  <input value={renamePrefix} onChange={(e) => setRenamePrefix(e.target.value)} placeholder="前缀" className="w-[90px] rounded px-1.5 py-1 text-[11px]" style={historySelectStyle} />
+                  <input value={renameSuffix} onChange={(e) => setRenameSuffix(e.target.value)} placeholder="后缀" className="w-[90px] rounded px-1.5 py-1 text-[11px]" style={historySelectStyle} />
                   <button type="button" onClick={() => void applyRename()} disabled={busy} className="btn btn-primary text-[11px]" style={{ height: 26 }}>
                     应用
                   </button>
@@ -543,7 +446,7 @@ export default function History() {
               )}
               {action === 'tag' && view === 'active' && (
                 <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                  <input value={tagInput} onChange={(e) => setTagInput(e.target.value)} placeholder="标签，多个用逗号分隔" className="w-[220px] rounded px-1.5 py-1 text-[11px]" style={selectStyle} />
+                  <input value={tagInput} onChange={(e) => setTagInput(e.target.value)} placeholder="标签，多个用逗号分隔" className="w-[220px] rounded px-1.5 py-1 text-[11px]" style={historySelectStyle} />
                   <button type="button" onClick={() => void applyTags()} disabled={busy} className="btn btn-primary text-[11px]" style={{ height: 26 }}>
                     添加标签
                   </button>
@@ -613,112 +516,35 @@ export default function History() {
                 <input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="全选当前页" style={{ accentColor: 'var(--accent)' }} />
                 全选当前页
               </label>
-              {meetings.map((m) => {
-                const tags = tagsOf(m.tags)
-                return (
-                  <div
-                    key={m.id}
-                    role={view === 'active' ? 'button' : undefined}
-                    tabIndex={view === 'active' ? 0 : undefined}
-                    onClick={() => handleOpen(m.id)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleOpen(m.id)}
-                    className={`panel flex items-center gap-3 px-4 py-3 ${
-                      view === 'active' ? 'cursor-pointer transition-colors hover:bg-[var(--bg-hover)]' : ''
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selected.has(m.id)}
-                      onClick={(e) => e.stopPropagation()}
-                      onChange={() => toggleOne(m.id)}
-                      aria-label={`选择 ${m.title}`}
-                      style={{ accentColor: 'var(--accent)' }}
-                    />
-                    <span className="flex size-8 shrink-0 items-center justify-center rounded-lg" style={{ background: 'var(--accent-soft)', color: 'var(--accent-text)' }}>
-                      <FileText size={15} />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <p className="truncate text-[13px] font-medium">
-                          {m.title}
-                          <span className="ml-1.5 font-mono text-[10px] font-normal text-tertiary">
-                            #{m.id}
-                          </span>
-                        </p>
-                        {m.archived && <span className="chip shrink-0" style={{ background: 'var(--bg-subtle)', color: 'var(--text-tertiary)' }}>已归档</span>}
-                      </div>
-                      <p className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-tertiary">
-                        <span>{new Date(m.created_at).toLocaleString('zh-CN')}</span>
-                        {m.duration_ms > 0 && (
-                          <>
-                            <span aria-hidden>·</span>
-                            <span className="inline-flex items-center gap-1"><Clock size={10} />{formatDuration(m.duration_ms)}</span>
-                          </>
-                        )}
-                        <span aria-hidden>·</span>
-                        <span>{m.segment_count} 段</span>
-                        {tags.slice(0, 3).map((tag) => (
-                          <span key={tag} className="chip" style={{ background: 'var(--bg-subtle)', color: 'var(--text-secondary)' }}>{tag}</span>
-                        ))}
-                        {tags.length > 3 && <span>+{tags.length - 3}</span>}
-                      </p>
-                    </div>
-                    <span className="chip shrink-0" style={statusStyle(m.status)}>{statusLabel(m.status)}</span>
-                    {view === 'active' ? (
-                      <button
-                        type="button"
-                        onClick={(e) => void handleDelete(m.id, e)}
-                        disabled={deleting === m.id}
-                        className="btn btn-ghost shrink-0"
-                        style={{ width: 28, padding: 0, height: 28 }}
-                        title="移入回收站"
-                      >
-                        {deleting === m.id ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={async (e) => {
-                          e.stopPropagation()
-                          await meetingApi.bulkRestore([m.id])
-                          await refresh()
-                        }}
-                        className="btn btn-ghost shrink-0 text-[11px]"
-                        title="恢复会议"
-                      >
-                        <RotateCcw size={13} /> 恢复
-                      </button>
-                    )}
-                    {view === 'active' && <ArrowRight size={14} style={{ color: 'var(--text-tertiary)' }} />}
-                  </div>
-                )
-              })}
-              <div className="flex flex-wrap items-center justify-end gap-2 pt-2 text-[11px] text-tertiary">
-                <button type="button" className="btn btn-ghost text-[11px]" disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))}>
-                  上一页
-                </button>
-                <span>第 {page + 1} / {totalPages} 页</span>
-                <button type="button" className="btn btn-ghost text-[11px]" disabled={page + 1 >= totalPages} onClick={() => setPage((p) => p + 1)}>
-                  下一页
-                </button>
-                <select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setPage(0) }} aria-label="每页数量" className="rounded px-1.5 py-1 text-[11px]" style={selectStyle}>
-                  <option value={20}>20 / 页</option>
-                  <option value={50}>50 / 页</option>
-                  <option value={100}>100 / 页</option>
-                </select>
-              </div>
+              {meetings.map((meeting) => (
+                <HistoryMeetingRow
+                  key={meeting.id}
+                  meeting={meeting}
+                  trashView={view === 'trash'}
+                  selected={selected.has(meeting.id)}
+                  deleting={deleting === meeting.id}
+                  onOpen={() => handleOpen(meeting.id)}
+                  onToggle={() => toggleOne(meeting.id)}
+                  onDelete={(event) => void handleDelete(meeting.id, event)}
+                  onRestore={(event) => void handleRestore(meeting.id, event)}
+                />
+              ))}
+              <HistoryPagination
+                page={page}
+                totalPages={totalPages}
+                pageSize={pageSize}
+                onPageChange={setPage}
+                onPageSizeChange={(size) => {
+                  setPageSize(size)
+                  setPage(0)
+                }}
+              />
             </div>
           )}
         </div>
       </main>
     </div>
   )
-}
-
-const selectStyle: React.CSSProperties = {
-  background: 'var(--bg-surface)',
-  border: '1px solid var(--border-subtle)',
-  color: 'var(--text-secondary)',
 }
 
 function LoadError({ error }: { error: unknown }) {
