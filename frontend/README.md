@@ -25,7 +25,11 @@ npm run preview    # 本地预览产物
 
 ```
 src/
-├── main.tsx                    入口 + 路由
+├── main.tsx                    渲染入口
+├── app/
+│   ├── App.tsx                 全局 Provider、路由与守卫装配
+│   ├── guards.tsx              登录与管理员权限守卫
+│   └── queryClient.ts          TanStack Query 配置
 ├── api/
 │   ├── client.ts               REST 客户端（鉴权注入、错误处理）
 │   ├── ws.ts                   WebSocket 客户端（重连、backlog 补发）
