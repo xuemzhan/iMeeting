@@ -381,75 +381,51 @@ class AuditLog(SQLModel, table=True):
 
 ```
 iMeeting/
-├── DESIGN.md                    # 本文档
+├── .github/workflows/ci.yml
+├── DESIGN.md
+├── OPTIMIZATION.md
 ├── README.md
 ├── backend/
 │   ├── pyproject.toml
 │   ├── .env.example
-│   ├── imeeting/
-│   │   ├── main.py              # FastAPI 入口
-│   │   ├── settings.py          # 三级配置解析
-│   │   ├── db.py                # SQLModel 引擎与会话
-│   │   ├── models.py            # 数据模型
-│   │   ├── schemas.py           # 请求/响应 DTO
-│   │   ├── security.py          # JWT + bcrypt + 配置加密
-│   │   ├── deps.py              # 依赖注入
-│   │   ├── engine/
-│   │   │   ├── pool.py          # AutoModel 单例池 + 线程池
-│   │   │   ├── streaming.py     # 流式 ASR 双路调度
-│   │   │   ├── segmenter.py     # VAD 缓冲与断句
-│   │   │   └── diarize.py       # 说话人聚类
-│   │   ├── llm/
-│   │   │   ├── client.py        # OpenAI 兼容客户端
-│   │   │   └── minutes.py       # map-reduce 纪要生成
-│   │   ├── routers/
-│   │   │   ├── auth.py
-│   │   │   ├── meetings.py
-│   │   │   ├── config.py
-│   │   │   └── export.py
-│   │   ├── ws/
-│   │   │   └── stream.py        # WebSocket 处理器
-│   │   └── export/
-│   │       ├── srt.py
-│   │       └── markdown.py
+│   ├── src/imeeting/
+│   │   ├── main.py              # 应用装配 + 生命周期
+│   │   ├── api/
+│   │   │   ├── http/routes/     # REST 路由
+│   │   │   └── ws/stream.py     # WebSocket 转写流
+│   │   ├── engine/              # FunASR 模型池、音频、流式会话
+│   │   ├── llm/                 # LLM 客户端与纪要生成
+│   │   ├── export/              # 字幕与文档导出
+│   │   ├── settings.py
+│   │   ├── db.py
+│   │   ├── models.py
+│   │   ├── schemas.py
+│   │   ├── security.py
+│   │   ├── session_registry.py
+│   │   └── jobs.py
+│   ├── migrations/
+│   ├── scripts/
 │   └── tests/
 ├── frontend/
-│   ├── package.json
-│   ├── vite.config.ts
-│   ├── tsconfig.json
-│   ├── index.html
 │   └── src/
-│       ├── main.tsx
-│       ├── App.tsx
+│       ├── main.tsx             # 渲染入口
+│       ├── app/                 # Provider、路由、守卫
 │       ├── api/
-│       │   ├── client.ts        # fetch 封装 + JWT 注入
-│       │   └── ws.ts            # WebSocket 客户端 + 重连
+│       │   ├── client.ts
+│       │   ├── ws.ts
+│       │   └── types.ts
 │       ├── audio/
-│       │   ├── recorder.ts      # AudioWorklet 驱动
-│       │   └── worklet.ts       # 重采样 + 分块
+│       │   ├── recorder.ts
+│       │   └── pcm-worklet.js
 │       ├── store/
-│       │   ├── session.ts       # 转录会话状态
+│       │   ├── session.ts
 │       │   └── auth.ts
 │       ├── pages/
-│       │   ├── Start.tsx        # 起始页
-│       │   ├── Meeting.tsx      # 会议主界面
-│       │   ├── History.tsx      # 历史会议
-│       │   └── admin/
-│       │       ├── Admin.tsx    # 后台首页
-│       │       ├── ModelConfig.tsx
-│       │       ├── LLMConfig.tsx
-│       │       └── Users.tsx
 │       ├── components/
-│       │   ├── TranscriptStream.tsx   # 虚拟滚动字幕流
-│       │   ├── SegmentCard.tsx
-│       │   ├── MinutesPanel.tsx
-│       │   ├── SpeakerStats.tsx
-│       │   ├── Waveform.tsx
-│       │   └── StatusPill.tsx
 │       └── styles/
-│           └── index.css
-└── docs/
-    └── api.md
+├── benchmarks/
+├── docs/
+└── scripts/
 ```
 
 ---

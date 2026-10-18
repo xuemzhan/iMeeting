@@ -20,10 +20,10 @@ Scope: `iMeeting/backend` 实时转写、控制面与后台任务
 
 ### 2.1 运行形态
 
-- FastAPI 单进程入口注册了 12 个 REST/WebSocket 路由，见 `../../backend/imeeting/main.py:220-231`；由 uvicorn 启动，见 `../../backend/imeeting/main.py:265`。
-- WebSocket 主循环同时承担鉴权、会议创建、音频接收、音频落盘、增量写库、心跳和收尾，见 `../../backend/imeeting/ws/stream.py:56`。
-- 模型在进程内以单例保存，推理通过线程池调用，见 `../../backend/imeeting/engine/pool.py:82` 和 `../../backend/imeeting/engine/pool.py:259-266`。
-- 后台任务目前是一个单协程 worker，见 `../../backend/imeeting/jobs.py:206-215`。
+- FastAPI 单进程入口注册了 12 个 REST/WebSocket 路由，见 `../../backend/src/imeeting/main.py:220-231`；由 uvicorn 启动，见 `../../backend/src/imeeting/main.py:265`。
+- WebSocket 主循环同时承担鉴权、会议创建、音频接收、音频落盘、增量写库、心跳和收尾，见 `../../backend/src/imeeting/api/ws/stream.py:56`。
+- 模型在进程内以单例保存，推理通过线程池调用，见 `../../backend/src/imeeting/engine/pool.py:82` 和 `../../backend/src/imeeting/engine/pool.py:259-266`。
+- 后台任务目前是一个单协程 worker，见 `../../backend/src/imeeting/jobs.py:206-215`。
 
 ### 2.2 实测负载
 
@@ -38,7 +38,7 @@ Scope: `iMeeting/backend` 实时转写、控制面与后台任务
 | 端到端定稿 P95 | 4.15–4.80 s | 4.43 s |
 | 常驻内存 | 约 3.5 GB | 约 3.5 GB |
 
-原始数据见 `../../backend/data/metrics/meeting-229-b3c1b6acf1ab.json` 至 `meeting-233-5084a1e8c5fb.json`。指标字段由 `../../backend/imeeting/engine/metrics.py:214-276` 输出。
+原始数据见 `../../backend/data/metrics/meeting-229-b3c1b6acf1ab.json` 至 `meeting-233-5084a1e8c5fb.json`。指标字段由 `../../backend/src/imeeting/engine/metrics.py:214-276` 输出。
 
 已有基准还表明：
 
@@ -49,11 +49,11 @@ Scope: `iMeeting/backend` 实时转写、控制面与后台任务
 
 ### 2.3 当前非模型热点
 
-1. **事件循环内的同步音频写盘**：每个音频块在 `sink.push(pcm)` 中执行 NumPy 转换和文件写入，见 `../../backend/imeeting/ws/stream.py:205`、`../../backend/imeeting/engine/audio.py:106-119`。
-2. **每个音频块一次数据库提交**：收到带序号的音频块后等待 `_record_audio_seq()` 完成再发 ack，见 `../../backend/imeeting/ws/stream.py:209-212`；该函数每次打开 Session 并 commit，见 `../../backend/imeeting/ws/stream.py:801`。
-3. **每个 final 单独提交一次**：`emit()` 对每条定稿先发前端，再在线程中写库，见 `../../backend/imeeting/ws/stream.py:89-99`。
-4. **线程预算可能超订**：自动推理线程数是 CPU 核数减一，见 `../../backend/imeeting/engine/pool.py:34-56`；同时每次 Torch 推理又使用 `asr.ncpu=4`，见 `../../backend/imeeting/settings.py:140-165`。在 16 逻辑核机器上，11 个执行线程与每次 4 个模型线程并存，存在超订风险。
-5. **后台任务串行**：长导出、重建索引、音频复核会阻塞同一 worker 队列，见 `../../backend/imeeting/jobs.py:185-215`。
+1. **事件循环内的同步音频写盘**：每个音频块在 `sink.push(pcm)` 中执行 NumPy 转换和文件写入，见 `../../backend/src/imeeting/api/ws/stream.py:205`、`../../backend/src/imeeting/engine/audio.py:106-119`。
+2. **每个音频块一次数据库提交**：收到带序号的音频块后等待 `_record_audio_seq()` 完成再发 ack，见 `../../backend/src/imeeting/api/ws/stream.py:209-212`；该函数每次打开 Session 并 commit，见 `../../backend/src/imeeting/api/ws/stream.py:801`。
+3. **每个 final 单独提交一次**：`emit()` 对每条定稿先发前端，再在线程中写库，见 `../../backend/src/imeeting/api/ws/stream.py:89-99`。
+4. **线程预算可能超订**：自动推理线程数是 CPU 核数减一，见 `../../backend/src/imeeting/engine/pool.py:34-56`；同时每次 Torch 推理又使用 `asr.ncpu=4`，见 `../../backend/src/imeeting/settings.py:140-165`。在 16 逻辑核机器上，11 个执行线程与每次 4 个模型线程并存，存在超订风险。
+5. **后台任务串行**：长导出、重建索引、音频复核会阻塞同一 worker 队列，见 `../../backend/src/imeeting/jobs.py:185-215`。
 
 这些热点应在完整重写前先修掉，否则新架构会继承相同的延迟和队列问题。
 
@@ -139,7 +139,7 @@ EngineEvent  { partial | final | speaker | warning | error | stats }
 
 - `final` 先进入 Go 的持久化队列，批量每 200 ms 或 8 条提交一次。
 - `audio_chunk_seq` 不再每 600 ms 写库；每 2–5 秒 checkpoint，断线时以最后 checkpoint 为恢复点。
-- WAV 写入使用独立 I/O 线程和顺序缓冲写；音频留存默认 7 天，见 `../../backend/imeeting/settings.py:1071-1078`。
+- WAV 写入使用独立 I/O 线程和顺序缓冲写；音频留存默认 7 天，见 `../../backend/src/imeeting/settings.py:1071-1078`。
 - SQLite 继续使用 WAL；多实例部署后迁移 PostgreSQL。任务领取使用 `FOR UPDATE SKIP LOCKED` 或等价机制。
 
 ### 4.4 线程模型

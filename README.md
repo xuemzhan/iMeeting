@@ -96,6 +96,7 @@ npm run dev
 ## 文档
 
 - [设计方案](./DESIGN.md) —— 架构、数据模型、接口契约、实施路线
+- [项目结构](./docs/architecture/project-structure.md) —— 前后端目录边界与验证方式
 - [后端说明](./backend/README.md) —— 环境变量、WebSocket 协议、性能调优
 - [前端说明](./frontend/README.md) —— 音频链路、字幕渲染、主题
 
@@ -111,7 +112,7 @@ npm run dev
 
 ## 自测
 
-### 一、后端单元 / 接口测试（473 项，不依赖模型，约 5 分钟）
+### 一、后端单元 / 接口测试（475 项，不依赖模型，约 5 分钟）
 
 ```bash
 cd backend
