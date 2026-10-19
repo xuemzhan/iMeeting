@@ -126,13 +126,23 @@ jobs:
         run: |
           docker run --rm \
             -v /var/run/docker.sock:/var/run/docker.sock \
-            -v "$PWD:/work" \
             -e TRIVY_CACHE_DIR=/tmp/trivy \
             aquasec/trivy:0.59.1 image \
             --scanners vuln \
             --severity CRITICAL,HIGH \
             --ignore-unfixed \
             --exit-code 1 \
+            --format table \
+            imeeting-frontend:ci
+      - name: Generate frontend SBOM
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$PWD:/work" \
+            -e TRIVY_CACHE_DIR=/tmp/trivy \
+            aquasec/trivy:0.59.1 image \
+            --scanners vuln \
+            --exit-code 0 \
             --format cyclonedx \
             --output /work/imeeting-frontend.cdx.json \
             imeeting-frontend:ci
