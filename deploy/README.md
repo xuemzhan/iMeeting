@@ -70,8 +70,25 @@ docker compose --env-file deploy/production.env -f deploy/compose.yaml up -d --b
 
 ## HTTPS
 
-Compose 默认暴露 HTTP `8080`。公网部署应在前面增加支持 TLS 的反向代理或负载均衡器，
-并将 `PUBLIC_ORIGIN` 改成实际的 `https://` 地址。
+默认情况下前端只绑定 `127.0.0.1:8080`，可通过 SSH 隧道或本机访问，避免绕过 HTTPS
+直接暴露容器端口。
+
+启用内置 Caddy TLS 网关：
+
+```sh
+PUBLIC_ORIGIN=https://meeting.example.com
+SITE_ADDRESS=meeting.example.com
+```
+
+然后：
+
+```sh
+docker compose --env-file deploy/production.env -f deploy/compose.yaml \
+  --profile tls up -d --build
+```
+
+Caddy 会自动申请和续期证书，并将 HTTP/WebSocket 请求代理到前端容器。生产环境必须
+使用真实 DNS 名称；`localhost` 仅用于本机验证。
 
 ## 安全注意事项
 

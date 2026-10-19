@@ -46,10 +46,30 @@ services:
       backend:
         condition: service_healthy
     ports:
-      - "${HTTP_PORT:-8080}:8080"
+      - "${HTTP_BIND:-127.0.0.1}:${HTTP_PORT:-8080}:8080"
     environment:
       BACKEND_UPSTREAM: backend:8000
+
+  tls:
+    image: caddy:2.8-alpine
+    profiles: ["tls"]
+    restart: unless-stopped
+    depends_on:
+      frontend:
+        condition: service_healthy
+    ports:
+      - "${CADDY_HTTP_PORT:-80}:80"
+      - "${CADDY_HTTPS_PORT:-443}:443"
+      - "${CADDY_HTTPS_PORT:-443}:443/udp"
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - imeeting-caddy-data:/data
+      - imeeting-caddy-config:/config
 
 volumes:
   imeeting-data:
   imeeting-models:
+  imeeting-caddy-data:
+  imeeting-caddy-config:

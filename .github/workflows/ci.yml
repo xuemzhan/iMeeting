@@ -63,10 +63,19 @@ jobs:
             --env-file deploy/production.env.example \
             -f deploy/compose.yaml \
             config
+          docker compose \
+            --env-file deploy/production.env.example \
+            -f deploy/compose.yaml \
+            --profile tls config
       - name: Validate deployment scripts
         run: |
           sh -n deploy/backup_sqlite.sh
           docker build --check -f deploy/backend.Dockerfile .
+          docker run --rm \
+            -e SITE_ADDRESS=localhost \
+            -v "$PWD/deploy/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            caddy:2.8-alpine \
+            caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
       - name: Build frontend image
         run: docker build -f deploy/frontend.Dockerfile -t imeeting-frontend:ci .
 
