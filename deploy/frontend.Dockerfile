@@ -12,6 +12,9 @@ FROM nginx:1.30.6-alpine3.24
 
 ENV BACKEND_UPSTREAM=backend:8000
 
+# Pick up fixed Alpine packages available after the base image tag was built.
+RUN apk upgrade --no-cache
+
 COPY deploy/nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist /usr/share/nginx/html
 
