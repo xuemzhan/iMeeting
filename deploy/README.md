@@ -58,6 +58,16 @@ sh deploy/backup_sqlite.sh
 
 备份写入 `/data/backups/meeting-<UTC时间>.db`。生产环境应再同步到异机或对象存储。
 
+恢复必须在停写状态下进行，脚本会先保存一份 `pre-restore-*.db` 安全副本：
+
+```sh
+CONFIRM_RESTORE=yes sh deploy/restore_sqlite.sh meeting-20261019T010203Z.db
+```
+
+恢复完成后脚本会自动重新启动后端并等待 `/api/v1/ready`，恢复失败时也会尽力重启，
+避免服务停留在停止状态。若当前数据库已损坏，脚本会保留
+`pre-restore-<UTC时间>.corrupt.db` 原始文件，不会因无法校验旧库而拒绝恢复。
+
 ## 升级与回滚
 
 升级：

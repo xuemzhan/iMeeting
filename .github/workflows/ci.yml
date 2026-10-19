@@ -70,6 +70,7 @@ jobs:
       - name: Validate deployment scripts
         run: |
           sh -n deploy/backup_sqlite.sh
+          sh -n deploy/restore_sqlite.sh
           docker build --check -f deploy/backend.Dockerfile .
           docker run --rm \
             -e SITE_ADDRESS=localhost \
