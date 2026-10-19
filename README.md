@@ -6,6 +6,10 @@
 
 简约、有科技感、傻瓜式操作。点击「开始会议」即可，所有技术参数收进后台。
 
+> **当前发布边界**：面向单机、单 backend 实例生产部署。P0 与单机 P1
+> 已完成；多实例、PostgreSQL/Redis 和跨机灾备属于 P2，详见
+> [生产可用性清单](./docs/production-readiness.md)。
+
 ---
 
 ## 功能
@@ -20,10 +24,13 @@
 - **可追溯编辑**：逐句修订转写并保留原始识别，纪要修订生成新版本，支持版本对比
 - **待办闭环**：自动同步责任人、截止时间与 open/doing/done 状态
 - **企业检索与归档**：FTS5 全文检索、分页、批量重命名/标签/归档/导出、30 天回收站、跨会议知识库与主题图谱
-- **安全分享**：只读链接、过期时间、访问口令、可选音频下载
+- **安全分享**：只读链接、过期时间、访问口令、可选音频下载；令牌只以摘要落库
+- **音频留存与回放**：按策略保存 WAV，支持会议内回放、时间戳跳转和受控下载
 - **多格式导出**：SRT / VTT / Markdown / TXT / JSON / Word / PDF（支持企业页眉页脚）
 - **会议运营能力**：预约会议与 `.ics` 日历导入、AI 调用成本看板、审计日志、噪声告警统计
-- **生产可靠性**：SQLite WAL、Alembic 版本迁移、持久化任务队列与重试、录音块 IndexedDB 补传、优雅排空发布
+- **生产可靠性**：SQLite WAL、Alembic 版本迁移、持久化任务队列与重试、重/轻任务分池、录音块 IndexedDB 补传、优雅排空发布
+- **备份与恢复**：在线 SQLite 备份、完整性校验、恢复前安全副本、损坏库恢复与 readiness 检查
+- **安全运维**：首次登录强制改密、登录/分享防爆破、可选 Caddy TLS、Prometheus 指标与告警规则、依赖审计、镜像扫描和 SBOM
 - **会议级自适应识别**：根据噪声底、语音电平、SNR、片段长度和延迟自动调整 ASR 增益、VAD 阈值、静音断句和软/硬切分
 - **逐段诊断**：保存 ASR 来源/错误、定稿原因、有效语音、RMS、SNR、声纹相似度和身份来源
 - **AI 治理**：Token/成本统计、单场与月度预算、供应商速率限制、供应商 429 保护
@@ -41,8 +48,10 @@
 |---|---|
 | 前端 | React 19 · Vite · TypeScript · Tailwind v4 · Zustand · TanStack Query |
 | 后端 | FastAPI · uvicorn(uvloop) · orjson · pydantic v2 · SQLModel |
+| 数据 | SQLite（WAL）· Alembic · 本地数据卷 |
 | ASR | FunASR（Paraformer 流式 + 离线 · FSMN-VAD · CT-Punc · CAM++） |
 | 音频 | AudioWorklet 重采样 · 16kHz 单声道 Float32 PCM · WebSocket 二进制帧 |
+| 部署与运维 | Docker Compose · 可选 Caddy TLS · Prometheus / blackbox exporter |
 
 ## 快速开始
 
@@ -90,8 +99,11 @@ npm run dev
 
 ### 3. 配置 LLM 纪要（可选）
 
-访问 http://localhost:5173/login，用 `admin / admin123` 登录（**请立即改密码**），
-在「LLM 纪要」分组填写 API 端点与密钥。
+访问 http://localhost:5173/login，用 `admin / admin123` 登录。首次登录会强制修改
+初始化密码，改密后才能进入业务页面；随后可在「LLM 纪要」分组填写 API 端点与密钥。
+
+单机生产部署请直接参考 [deploy/README.md](./deploy/README.md)，其中包含 TLS、
+数据卷、备份恢复和监控告警配置。
 
 ## 文档
 
@@ -108,7 +120,8 @@ npm run dev
 |---|---|
 | Python | 3.10+ |
 | Node | 20+（Docker 镜像使用 Node 24 构建） |
-| 内存 | 建议 8GB+（模型常驻约 1.5GB） |
+| 内存 | 8GB+（全模型常驻约 4.7GB） |
+| 磁盘 | 建议 30GB+，音频留存默认 7 天，可通过后台调整或关闭 |
 | 浏览器 | Chrome/Edge 90+、Firefox 90+、Safari 15+ |
 | 麦克风 | 需 `https` 或 `localhost`（安全上下文限制） |
 
@@ -134,8 +147,18 @@ python -m pytest tests/ -q
 | `test_ws_protocol.py` | 握手校验、心跳、停流收尾、落库计数、**异常断开状态收口** |
 | `test_stability.py` | 并发会话隔离、长时缓冲、模型崩溃容错、并发加载去重 |
 | `test_llm_minutes.py` | JSON 抽取鲁棒性、map-reduce 切分、字段规整 |
+| `test_sqlite_backup.py` | 在线备份、完整性校验、原子恢复、损坏库恢复和安全副本 |
+| `test_job_pools.py` | 重/轻任务领取隔离、Worker 启动和任务积压指标 |
+| `test_ops.py` | 请求指标归一化、延迟直方图、磁盘/任务/成本 gauge |
+| `test_meeting_product_extras.py` | 分享权限、令牌迁移、版本化纪要和文档导出 |
 
-### 二、浏览器端到端冒烟
+### 二、前端单元测试（45 项）
+
+```bash
+cd frontend && npm test && npm run typecheck && npm run build
+```
+
+### 三、浏览器端到端冒烟
 
 ```bash
 cd frontend
@@ -145,7 +168,7 @@ npm run e2e
 
 自动启动临时后端与前端，验证登录、首次登录强制改密和进入后台。
 
-### 三、协议与识别链路（需服务已启动）
+### 四、协议与识别链路（需服务已启动）
 
 ```bash
 # WebSocket 协议冒烟（任何模式可跑）
@@ -155,7 +178,7 @@ python scripts/ws_smoke.py --port 8010
 python scripts/e2e_asr.py --wav ../../runtime/funasr_api/asr_example.wav --port 8010
 ```
 
-### 四、生产级压力与稳定性测试
+### 五、生产级压力与稳定性测试
 
 ```bash
 cd backend
@@ -193,12 +216,6 @@ python scripts/stress.py --port 8010 --only abrupt      # 断连韧性
 
 同一套测试在 `ASR_MODE=echo`（纯链路）下：首字延迟中位 3ms，
 背压 7.5MB/s 突发内存 +0MB，长时 120s 内存 +4MB。
-
-### 四、前端
-
-```bash
-cd frontend && npm test && npm run typecheck && npm run build
-```
 
 ## CPU 性能说明
 
@@ -246,7 +263,11 @@ cd frontend && npm test && npm run typecheck && npm run build
 
 - `GET /api/v1/live`：进程存活；
 - `GET /api/v1/ready`：模型就绪且未处于排空状态；
-- `GET /metrics`：Prometheus 文本指标，包含 HTTP、活跃会话和任务状态。
+- `GET /metrics`：Prometheus 文本指标，包含 HTTP 延迟/5xx、活跃会话、任务积压与
+  运行时长、模型状态、磁盘容量和 LLM 成本。
+
+仓库内置 [Prometheus 告警规则](./deploy/prometheus-alerts.yml)，可直接加载到
+Prometheus；readiness 告警建议配合 blackbox exporter。`/metrics` 不应直接暴露到公网。
 
 ### 优雅发布
 
@@ -258,6 +279,22 @@ cd frontend && npm test && npm run typecheck && npm run build
 
 终稿、说话人合并、导出、音频复核和语义索引重建均写入 `job` 表。
 进程重启后会自动恢复 pending 任务；崩溃遗留的 running 任务在锁超时后重新入队。
+
+重任务（终稿、声纹复核、索引重建）与轻任务（导出、会议元信息提取）使用独立
+Worker，避免长任务阻塞用户下载。并发可用 `JOB_HEAVY_WORKERS`（默认 1）和
+`JOB_LIGHT_WORKERS`（默认 2）调整，修改后需重启。
+
+### 备份与恢复
+
+生产部署提供经过完整性校验的 SQLite 备份和恢复脚本：
+
+```sh
+sh deploy/backup_sqlite.sh
+CONFIRM_RESTORE=yes sh deploy/restore_sqlite.sh <backup-file-name.db>
+```
+
+恢复会先保存当前数据库的安全副本，完成后自动重启后端并等待 `/api/v1/ready`。
+详细步骤见 [deploy/README.md](./deploy/README.md)。
 
 ### 分享链接
 
@@ -288,13 +325,20 @@ cd frontend && npm test && npm run typecheck && npm run build
 3. 密钥类配置（如 `llm.api_key`）在数据库中是 **Fernet 加密**存储，即使
    数据库文件泄露也不会直接暴露明文。
 4. 麦克风需 `https` 或 `localhost`（浏览器安全上下文限制）。
+5. 使用 `deploy/compose.yaml` 部署；默认只绑定 `127.0.0.1:8080`，公网访问应启用
+   Caddy TLS profile 或在外层反向代理终止 HTTPS。
+6. 不要把同一个 SQLite 数据卷挂载给多个 backend 副本；当前会话、限流和任务状态
+   仍包含进程内状态。
 
 ## 已知限制
 
-- 音频回放功能未接入（时间戳点击暂为占位），需先实现音频文件落盘
-- 说话人编号仅在单场会议内有效，不是注册身份识别
-- 静音检测用能量判据（整段 RMS + 有效语音时长双重判据），
-  嘈杂环境可能误切；可调 `vad.silence_ms` 与 `vad.min_speech_ms`
+- 当前面向**单 backend 实例**；多实例需要 PostgreSQL/Redis、WebSocket 粘性路由和
+  跨实例任务领取，属于 P2 扩容改造。
+- 音频回放依赖留存文件。`storage.audio_retention_days` 默认 7 天，设为 0 后不再
+  保存音频，回放和基于整段音频的声纹复核会不可用。
+- 流式路径仍使用自适应能量判据做 VAD，不是流式神经网络 VAD；强噪声环境可能
+  误切，可调整 `vad.silence_ms`、`vad.min_speech_ms` 和自适应参数。
+- 自动聚类得到的说话人编号仅在单场会议内稳定；需要跨会议身份时，应预先录入声纹。
 
 ## 许可证
 
