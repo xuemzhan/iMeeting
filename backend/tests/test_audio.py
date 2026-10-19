@@ -148,6 +148,16 @@ class TestDisabled:
         assert sink.close() is None
         assert list(audio_tmp.glob("*.wav")) == []
 
+    def test_close_is_idempotent(self, audio_tmp):
+        from imeeting.settings import config_store
+
+        config_store._db_overrides = {"storage.audio_retention_days": 7}
+
+        sink = audio.AudioSink(9)
+        sink.push(np.zeros(1600, dtype=np.float32))
+        assert sink.close() is not None
+        assert sink.close() is None
+
 
 class TestFailureIsolation:
     def test_write_failure_does_not_raise(self, audio_tmp, monkeypatch):
@@ -184,6 +194,7 @@ class TestFailureIsolation:
         sink = audio.AudioSink(8)
         for _ in range(5):
             sink.push(np.zeros(1600, dtype=np.float32))
+        assert sink.close() is None
         assert calls["n"] == 1, f"重复尝试打开文件 {calls['n']} 次"
         monkeypatch.setattr("builtins.open", real_open)
 

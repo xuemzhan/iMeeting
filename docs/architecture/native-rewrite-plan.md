@@ -49,7 +49,7 @@ Scope: `iMeeting/backend` 实时转写、控制面与后台任务
 
 ### 2.3 当前非模型热点
 
-1. **事件循环内的同步音频写盘**：每个音频块在 `sink.push(pcm)` 中执行 NumPy 转换和文件写入，见 `../../backend/src/imeeting/api/ws/stream.py:205`、`../../backend/src/imeeting/engine/audio.py:106-119`。
+1. **音频写盘已移出事件循环**：`AudioSink.push()` 只进入有界队列，独立线程负责 NumPy 转换与文件写入，`close()` 排空队列后补 WAV 头。仍需关注磁盘持续变慢时的队列背压。
 2. **每个音频块一次数据库提交**：收到带序号的音频块后等待 `_record_audio_seq()` 完成再发 ack，见 `../../backend/src/imeeting/api/ws/stream.py:209-212`；该函数每次打开 Session 并 commit，见 `../../backend/src/imeeting/api/ws/stream.py:801`。
 3. **每个 final 单独提交一次**：`emit()` 对每条定稿先发前端，再在线程中写库，见 `../../backend/src/imeeting/api/ws/stream.py:89-99`。
 4. **线程预算可能超订**：自动推理线程数是 CPU 核数减一，见 `../../backend/src/imeeting/engine/pool.py:34-56`；同时每次 Torch 推理又使用 `asr.ncpu=4`，见 `../../backend/src/imeeting/settings.py:140-165`。在 16 逻辑核机器上，11 个执行线程与每次 4 个模型线程并存，存在超订风险。
@@ -169,7 +169,7 @@ EngineEvent  { partial | final | speaker | warning | error | stats }
 
 ### 6.1 较有把握的部分
 
-- 去掉音频同步写盘和逐块数据库提交后，音频 ack 抖动、事件循环阻塞和 SQLite 写放大会明显下降。
+- 去掉逐块数据库提交后，音频 ack 抖动和 SQLite 写放大会进一步下降。
 - Go 网关的常驻内存和连接抖动会低于 Python 控制面；预计主要改善 P99、重连和大量空闲连接场景，而不是模型 RTF。
 - C++/ONNX 可以复用现有 Runtime，避免重新实现模型算法。
 

@@ -13,7 +13,9 @@
 from __future__ import annotations
 
 import logging
+import queue
 import struct
+import threading
 import time
 from pathlib import Path
 
@@ -25,6 +27,9 @@ logger = logging.getLogger(__name__)
 
 SAMPLE_RATE = 16000
 _HEADER_BYTES = 44
+_WRITE_QUEUE_CHUNKS = 256
+_CLOSE_TIMEOUT_SECONDS = 30.0
+_STOP = object()
 
 
 def audio_dir() -> Path:
@@ -86,10 +91,20 @@ class AudioSink:
         self.meeting_id = meeting_id
         self.session_id = session_id
         self.enabled = self._should_enable()
+        self._queue: queue.Queue[object] | None = None
+        self._writer: threading.Thread | None = None
         self._fh = None
         self._data_bytes = 0
         self._failed = False
         self.path: Path | None = None
+        if self.enabled:
+            self._queue = queue.Queue(maxsize=_WRITE_QUEUE_CHUNKS)
+            self._writer = threading.Thread(
+                target=self._run_writer,
+                name=f"audio-writer-{meeting_id}",
+                daemon=True,
+            )
+            self._writer.start()
 
     @staticmethod
     def _should_enable() -> bool:
@@ -107,14 +122,39 @@ class AudioSink:
         """追加一块 float32 PCM。未启用或已失败时静默跳过。"""
         if not self.enabled or self._failed or len(pcm) == 0:
             return
+        if self._queue is None:
+            return
         try:
+            # 正常情况下远快于写入；队列满说明磁盘持续变慢，用背压避免内存无界增长。
+            self._queue.put(pcm, timeout=1.0)
+        except queue.Full:
+            self._failed = True
+            logger.error("音频写入积压，放弃本次留存 meeting=%s", self.meeting_id)
+
+    def _run_writer(self) -> None:
+        if self._queue is None:
+            return
+        while True:
+            item = self._queue.get()
+            try:
+                if item is _STOP:
+                    return
+                if self._failed:
+                    continue
+                self._write_chunk(item)
+            finally:
+                self._queue.task_done()
+
+    def _write_chunk(self, pcm: object) -> None:
+        try:
+            audio = pcm if isinstance(pcm, np.ndarray) else np.asarray(pcm)
             if self._fh is None:
                 self.path = audio_path_for(self.meeting_id, self.session_id)
                 # 先占位 44 字节头，结束时回填真实长度
                 self._fh = open(self.path, "wb")
                 self._fh.write(b"\x00" * _HEADER_BYTES)
 
-            raw = _to_pcm16(pcm)
+            raw = _to_pcm16(audio)
             self._fh.write(raw)
             self._data_bytes += len(raw)
         except Exception:
@@ -125,7 +165,26 @@ class AudioSink:
 
     def close(self) -> Path | None:
         """收尾：回填 WAV 头。返回落盘路径；未启用或失败返回 None。"""
-        if not self.enabled or self._failed:
+        if not self.enabled:
+            return None
+        if self._queue is not None:
+            try:
+                self._queue.put(_STOP, timeout=_CLOSE_TIMEOUT_SECONDS)
+            except queue.Full:
+                self._failed = True
+                logger.error("音频写入队列无法排空 meeting=%s", self.meeting_id)
+                self._close_quietly()
+                return None
+        if self._writer is not None:
+            self._writer.join(timeout=_CLOSE_TIMEOUT_SECONDS)
+            if self._writer.is_alive():
+                self._failed = True
+                logger.error("音频写入线程超时 meeting=%s", self.meeting_id)
+                self._close_quietly()
+                return None
+            self._writer = None
+            self._queue = None
+        if self._failed:
             self._close_quietly()
             return None
         if self._fh is None:
