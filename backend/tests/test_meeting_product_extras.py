@@ -6,6 +6,7 @@ import asyncio
 import json
 from datetime import timedelta
 
+from sqlalchemy import text
 from sqlmodel import Session, select
 
 
@@ -240,6 +241,10 @@ def test_legacy_share_token_is_hashed_without_breaking_link(client, auth_headers
             )
         )
         db.commit()
+
+    # Reproduce a database created before token_hint existed.
+    with engine.begin() as conn:
+        conn.execute(text("ALTER TABLE share_link DROP COLUMN token_hint"))
 
     _migrate_schema()
 

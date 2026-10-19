@@ -97,6 +97,7 @@ npm run dev
 
 - [设计方案](./DESIGN.md) —— 架构、数据模型、接口契约、实施路线
 - [单机生产部署](./deploy/README.md) —— Docker Compose、持久卷、备份与升级
+- [生产可用性清单](./docs/production-readiness.md) —— P0/P1 完成状态与扩容边界
 - [项目结构](./docs/architecture/project-structure.md) —— 前后端目录边界与验证方式
 - [后端说明](./backend/README.md) —— 环境变量、WebSocket 协议、性能调优
 - [前端说明](./frontend/README.md) —— 音频链路、字幕渲染、主题
@@ -113,7 +114,7 @@ npm run dev
 
 ## 自测
 
-### 一、后端单元 / 接口测试（511 项，不依赖模型，约 5 分钟）
+### 一、后端单元 / 接口测试（516 项，不依赖模型，约 5 分钟）
 
 ```bash
 cd backend
@@ -134,7 +135,17 @@ python -m pytest tests/ -q
 | `test_stability.py` | 并发会话隔离、长时缓冲、模型崩溃容错、并发加载去重 |
 | `test_llm_minutes.py` | JSON 抽取鲁棒性、map-reduce 切分、字段规整 |
 
-### 二、协议与识别链路（需服务已启动）
+### 二、浏览器端到端冒烟
+
+```bash
+cd frontend
+npx playwright install chromium
+npm run e2e
+```
+
+自动启动临时后端与前端，验证登录、首次登录强制改密和进入后台。
+
+### 三、协议与识别链路（需服务已启动）
 
 ```bash
 # WebSocket 协议冒烟（任何模式可跑）
@@ -144,7 +155,7 @@ python scripts/ws_smoke.py --port 8010
 python scripts/e2e_asr.py --wav ../../runtime/funasr_api/asr_example.wav --port 8010
 ```
 
-### 三、生产级压力与稳定性测试
+### 四、生产级压力与稳定性测试
 
 ```bash
 cd backend

@@ -29,6 +29,8 @@ build/
 node_modules/
 frontend/dist/
 frontend/.tmp/
+frontend/test-results/
+frontend/playwright-report/
 *.tsbuildinfo
 vite.config.ts.timestamp-*
 vitest.config.ts.timestamp-*
