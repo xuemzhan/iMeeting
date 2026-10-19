@@ -8,7 +8,7 @@ RUN npm ci
 COPY frontend/ ./
 RUN npm run build
 
-FROM nginx:1.27-alpine
+FROM nginx:1.30.6-alpine3.24
 
 ENV BACKEND_UPSTREAM=backend:8000
 
