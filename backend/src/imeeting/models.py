@@ -24,6 +24,7 @@ class User(SQLModel, table=True):
     password_hash: str = Field(max_length=255)
     role: str = Field(default="user", max_length=16)  # admin | user
     is_active: bool = Field(default=True)
+    must_change_password: bool = Field(default=False)
     created_at: datetime = Field(default_factory=utcnow)
 
 

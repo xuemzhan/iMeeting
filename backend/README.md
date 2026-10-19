@@ -25,7 +25,8 @@ python -m imeeting.main
 
 ## 默认账号
 
-首次启动会自动创建管理员 `admin / admin123`，**请立即修改密码**。
+首次启动会自动创建管理员 `admin / admin123`。管理员首次登录后必须先修改密码，
+修改完成前业务 API 与 WebSocket 会返回 `PASSWORD_CHANGE_REQUIRED`/428。
 
 ## 环境变量
 

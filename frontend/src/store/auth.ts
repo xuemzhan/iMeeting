@@ -12,6 +12,7 @@ interface AuthState {
   bootstrap: () => Promise<void>
   login: (username: string, password: string) => Promise<boolean>
   register: (username: string, password: string, displayName?: string) => Promise<boolean>
+  changePassword: (currentPassword: string, newPassword: string) => Promise<boolean>
   logout: () => void
   isAdmin: () => boolean
   /** 本地是否持有令牌。用于「需鉴权」页面的前置判断，避免打必败请求。 */
@@ -63,6 +64,18 @@ export const useAuth = create<AuthState>((set, get) => ({
       return true
     } catch (err) {
       set({ error: err instanceof Error ? err.message : '注册失败' })
+      return false
+    }
+  },
+
+  changePassword: async (currentPassword, newPassword) => {
+    set({ error: null })
+    try {
+      const user = await authApi.changePassword(currentPassword, newPassword)
+      set({ user, error: null })
+      return true
+    } catch (err) {
+      set({ error: err instanceof Error ? err.message : '修改密码失败' })
       return false
     }
   },

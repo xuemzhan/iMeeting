@@ -25,6 +25,41 @@ def _anonymous_user(db: Session) -> User | None:
     return db.exec(select(User).where(User.role == "admin")).first()
 
 
+def _ensure_user_ready(user: User, *, allow_pending_password: bool = False) -> User:
+    if not user.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="账号已被停用")
+    if user.must_change_password and not allow_pending_password:
+        raise HTTPException(
+            status_code=status.HTTP_428_PRECONDITION_REQUIRED,
+            detail="必须先修改初始密码",
+        )
+    return user
+
+
+def _user_from_credentials(
+    credentials: HTTPAuthorizationCredentials,
+    db: Session,
+    *,
+    allow_pending_password: bool = False,
+) -> User:
+    payload = decode_access_token(credentials.credentials)
+    if payload is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="令牌无效或已过期")
+
+    try:
+        user_id = int(payload["sub"])
+    except (KeyError, ValueError, TypeError):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="令牌格式异常")
+
+    user = db.get(User, user_id)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="用户不存在")
+    return _ensure_user_ready(
+        user,
+        allow_pending_password=allow_pending_password,
+    )
+
+
 def get_current_user_or_anonymous(
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
     db: Session = Depends(get_session),
@@ -45,28 +80,14 @@ def get_current_user_or_anonymous(
         if not auth_required():
             user = _anonymous_user(db)
             if user is not None:
-                return user
+                return _ensure_user_ready(user)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="未提供访问令牌",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    payload = decode_access_token(credentials.credentials)
-    if payload is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="令牌无效或已过期")
-
-    try:
-        user_id = int(payload["sub"])
-    except (KeyError, ValueError, TypeError):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="令牌格式异常")
-
-    user = db.get(User, user_id)
-    if user is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="用户不存在")
-    if not user.is_active:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="账号已被停用")
-    return user
+    return _user_from_credentials(credentials, db)
 
 
 def get_current_user(
@@ -80,21 +101,25 @@ def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    payload = decode_access_token(credentials.credentials)
-    if payload is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="令牌无效或已过期")
+    return _user_from_credentials(credentials, db)
 
-    try:
-        user_id = int(payload["sub"])
-    except (KeyError, ValueError, TypeError):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="令牌格式异常")
 
-    user = db.get(User, user_id)
-    if user is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="用户不存在")
-    if not user.is_active:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="账号已被停用")
-    return user
+def get_current_user_allow_pending_password(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    db: Session = Depends(get_session),
+) -> User:
+    """Authenticated user who is allowed to change an initial password."""
+    if credentials is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="未提供访问令牌",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return _user_from_credentials(
+        credentials,
+        db,
+        allow_pending_password=True,
+    )
 
 
 def require_admin(user: User = Depends(get_current_user)) -> User:

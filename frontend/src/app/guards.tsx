@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 
 import { useAuth } from '../store/auth'
 
@@ -12,13 +12,17 @@ function LoadingScreen() {
 }
 
 export function Gate({ children }: { children: ReactNode }) {
-  const { loading, bootstrap } = useAuth()
+  const { loading, bootstrap, user } = useAuth()
+  const location = useLocation()
 
   useEffect(() => {
     void bootstrap()
   }, [bootstrap])
 
   if (loading) return <LoadingScreen />
+  if (user?.must_change_password && location.pathname !== '/change-password') {
+    return <Navigate to="/change-password" replace />
+  }
 
   // 未登录也可以使用主界面（本地单机场景），仅后台需要登录
   return <>{children}</>

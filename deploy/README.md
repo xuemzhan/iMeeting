@@ -76,6 +76,6 @@ Compose 默认暴露 HTTP `8080`。公网部署应在前面增加支持 TLS 的�
 ## 安全注意事项
 
 - `APP_ENV=production` 会拒绝弱 `SECRET_KEY`、默认管理员口令、关闭鉴权和通配 CORS；
-- 首次启动后立即修改管理员密码；
+- 管理员首次登录必须修改初始密码，修改前无法访问业务页面；
 - `deploy/production.env` 不要提交到 Git；
 - `/metrics` 未通过 Nginx 暴露，监控系统应通过内网采集。

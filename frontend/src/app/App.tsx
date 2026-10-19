@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 
 import { ErrorBoundary } from '../components/ErrorBoundary'
 import Admin from '../pages/admin/Admin'
+import ChangePassword from '../pages/ChangePassword'
 import History from '../pages/History'
 import Knowledge from '../pages/Knowledge'
 import Login from '../pages/Login'
@@ -26,6 +27,7 @@ export function App() {
               <Route path="/knowledge" element={<Knowledge />} />
               <Route path="/voiceprints" element={<Voiceprints />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/change-password" element={<ChangePassword />} />
               <Route path="/share/:token" element={<SharedMeeting />} />
               <Route
                 path="/admin"

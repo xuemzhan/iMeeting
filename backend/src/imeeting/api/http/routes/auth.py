@@ -15,6 +15,7 @@ from ....login_throttle import record_success as throttle_success
 from ....models import AuditLog, User
 from ....schemas import (
     AuthBootstrapOut,
+    ChangePasswordRequest,
     LoginRequest,
     RegisterRequest,
     TokenResponse,
@@ -22,7 +23,7 @@ from ....schemas import (
 )
 from ....security import create_access_token, hash_password, verify_password
 from ....settings import get_config
-from .deps import get_current_user
+from .deps import get_current_user_allow_pending_password
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
@@ -139,7 +140,49 @@ def register(payload: RegisterRequest, request: Request, db: Session = Depends(g
 
 
 @router.get("/me", response_model=UserOut)
-def me(user: User = Depends(get_current_user)):
+def me(user: User = Depends(get_current_user_allow_pending_password)):
+    return UserOut.model_validate(user)
+
+
+@router.post("/password", response_model=UserOut)
+def change_password(
+    payload: ChangePasswordRequest,
+    request: Request,
+    user: User = Depends(get_current_user_allow_pending_password),
+    db: Session = Depends(get_session),
+):
+    if not verify_password(payload.current_password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="当前密码错误",
+        )
+    if payload.new_password == payload.current_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="新密码不能与当前密码相同",
+        )
+    min_len = int(get_config("auth.min_password_length") or 8)
+    if len(payload.new_password) < min_len:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"密码至少 {min_len} 位",
+        )
+
+    user.password_hash = hash_password(payload.new_password)
+    user.must_change_password = False
+    db.add(user)
+    db.add(
+        AuditLog(
+            user_id=user.id,
+            username=user.username,
+            action="password_change",
+            target="auth",
+            ip=request.client.host if request.client else None,
+        )
+    )
+    db.commit()
+    db.refresh(user)
+    _reset_bootstrap_cache()
     return UserOut.model_validate(user)
 
 

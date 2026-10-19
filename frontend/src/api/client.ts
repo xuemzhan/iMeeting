@@ -151,6 +151,15 @@ export const authApi = {
 
   me: () => request<User>('/api/v1/auth/me'),
 
+  changePassword: (currentPassword: string, newPassword: string) =>
+    request<User>('/api/v1/auth/password', {
+      method: 'POST',
+      body: JSON.stringify({
+        current_password: currentPassword,
+        new_password: newPassword,
+      }),
+    }),
+
   /** 登录页预填：拿出厂默认管理员账号（口令仅在仍是默认值时返回）。 */
   bootstrap: () => request<AuthBootstrap>('/api/v1/auth/bootstrap'),
 }

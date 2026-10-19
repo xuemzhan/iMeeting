@@ -125,6 +125,24 @@ def _migrate_schema() -> None:
         return {c["name"] for c in inspector.get_columns(table)}
 
     with engine.begin() as conn:
+        if "user" in tables:
+            user_cols = columns("user")
+            if "must_change_password" not in user_cols:
+                conn.execute(
+                    text(
+                        "ALTER TABLE user ADD COLUMN "
+                        "must_change_password BOOLEAN DEFAULT 0"
+                    )
+                )
+                # Existing administrators created by older versions must rotate
+                # their bootstrap password before receiving business access.
+                conn.execute(
+                    text(
+                        "UPDATE user SET must_change_password = 1 "
+                        "WHERE role = 'admin'"
+                    )
+                )
+
         if "meeting" in tables:
             cols = columns("meeting")
             if "tags" not in cols:
@@ -557,6 +575,7 @@ def _ensure_admin() -> None:
             display_name="管理员",
             password_hash=hash_password(password),
             role="admin",
+            must_change_password=True,
         )
         session.add(admin)
         session.commit()

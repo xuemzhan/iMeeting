@@ -145,9 +145,20 @@ async def stream_endpoint(websocket: WebSocket) -> None:
             return
 
         # ---- 鉴权（token 可选，配置关闭鉴权时允许匿名）----
-        user_id, username = _resolve_identity(hello.get("token"))
+        user_id, username, must_change_password = _resolve_identity(hello.get("token"))
         if not _auth_required() and user_id is None:
             user_id, username = _anonymous_identity()
+            must_change_password = False
+        if must_change_password:
+            await websocket.send_json(
+                {
+                    "type": "error",
+                    "code": "PASSWORD_CHANGE_REQUIRED",
+                    "message": "请先修改初始密码后再开始会议",
+                }
+            )
+            await websocket.close(code=1008)
+            return
 
         # ---- 并发限流 ----
         if session_registry.count() >= get_config("session.max_concurrent"):
@@ -432,16 +443,23 @@ def _now_ms() -> int:
     return int(datetime.now(timezone.utc).timestamp() * 1000)
 
 
-def _resolve_identity(token: str | None) -> tuple[int | None, str]:
+def _resolve_identity(token: str | None) -> tuple[int | None, str, bool]:
     if not token:
-        return None, ""
+        return None, "", False
     payload = decode_access_token(token)
     if not payload:
-        return None, ""
+        return None, "", False
     try:
-        return int(payload["sub"]), payload.get("username", "")
+        user_id = int(payload["sub"])
     except (KeyError, ValueError, TypeError):
-        return None, ""
+        return None, "", False
+    from ...models import User
+
+    with Session(db_engine) as db:
+        user = db.get(User, user_id)
+        if user is None or not user.is_active:
+            return None, "", False
+        return user.id, user.username, user.must_change_password
 
 
 def _auth_required() -> bool:

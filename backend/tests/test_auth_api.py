@@ -19,7 +19,8 @@ class TestLogin:
         resp = client.post(
             "/api/v1/auth/login", json={"username": "admin", "password": "admin123"}
         )
-        assert "password" not in resp.text.lower().replace("password_hash", "")
+        assert "password_hash" not in resp.text
+        assert "$2b$" not in resp.text
 
     def test_wrong_password_401(self, client, admin_user):
         resp = client.post(
@@ -95,6 +96,85 @@ class TestMe:
         token = create_access_token("999999", "user")
         resp = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
         assert resp.status_code == 401
+
+
+class TestChangePassword:
+    def _pending_admin(self, client, admin_user):
+        from sqlmodel import Session
+
+        from imeeting.db import engine
+        from imeeting.models import User
+
+        with Session(engine) as db:
+            user = db.get(User, admin_user.id)
+            user.must_change_password = True
+            db.add(user)
+            db.commit()
+        token = client.post(
+            "/api/v1/auth/login",
+            json={"username": "admin", "password": "admin123"},
+        ).json()["access_token"]
+        return {"Authorization": f"Bearer {token}"}
+
+    def test_pending_password_change_blocks_business_api(self, client, admin_user):
+        headers = self._pending_admin(client, admin_user)
+
+        me = client.get("/api/v1/auth/me", headers=headers)
+        assert me.status_code == 200
+        assert me.json()["must_change_password"] is True
+
+        blocked = client.get("/api/v1/config/schema", headers=headers)
+        assert blocked.status_code == 428
+        assert "修改初始密码" in blocked.json()["detail"]
+
+    def test_change_password_rotates_hash_and_unblocks_api(self, client, admin_user):
+        headers = self._pending_admin(client, admin_user)
+        changed = client.post(
+            "/api/v1/auth/password",
+            headers=headers,
+            json={
+                "current_password": "admin123",
+                "new_password": "new-admin-password-9",
+            },
+        )
+        assert changed.status_code == 200, changed.text
+        assert changed.json()["must_change_password"] is False
+
+        assert client.get("/api/v1/config/schema", headers=headers).status_code == 200
+        old_login = client.post(
+            "/api/v1/auth/login",
+            json={"username": "admin", "password": "admin123"},
+        )
+        assert old_login.status_code == 401
+        new_login = client.post(
+            "/api/v1/auth/login",
+            json={"username": "admin", "password": "new-admin-password-9"},
+        )
+        assert new_login.status_code == 200
+
+    def test_change_password_rejects_wrong_current_password(self, client, admin_user):
+        headers = self._pending_admin(client, admin_user)
+        resp = client.post(
+            "/api/v1/auth/password",
+            headers=headers,
+            json={
+                "current_password": "wrong-password",
+                "new_password": "new-admin-password-9",
+            },
+        )
+        assert resp.status_code == 400
+
+    def test_change_password_applies_configured_minimum(self, client, admin_user):
+        headers = self._pending_admin(client, admin_user)
+        resp = client.post(
+            "/api/v1/auth/password",
+            headers=headers,
+            json={
+                "current_password": "admin123",
+                "new_password": "short",
+            },
+        )
+        assert resp.status_code in (400, 422)
 
 
 class TestAdminBoundary:

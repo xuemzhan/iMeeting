@@ -243,6 +243,13 @@ def admin_user(reset_db: None):
             db.add(user)
             db.commit()
             db.refresh(user)
+        elif user.must_change_password:
+            # Most tests exercise business behavior; password-rotation tests
+            # explicitly opt into the pending state.
+            user.must_change_password = False
+            db.add(user)
+            db.commit()
+            db.refresh(user)
         db.expunge(user)
         return user
 

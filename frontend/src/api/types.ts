@@ -288,6 +288,7 @@ export interface User {
   display_name: string
   role: 'admin' | 'user'
   is_active: boolean
+  must_change_password: boolean
   created_at: string
 }
 
