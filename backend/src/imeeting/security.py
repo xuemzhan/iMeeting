@@ -6,6 +6,7 @@ import base64
 import hashlib
 import logging
 import os
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -67,6 +68,22 @@ def verify_password(plain: str, hashed: str) -> bool:
         return bcrypt.checkpw(_clip(plain), hashed.encode("utf-8"))
     except (ValueError, TypeError):
         return False
+
+
+# ---------------------------------------------------------------------------
+# 分享链接令牌
+# ---------------------------------------------------------------------------
+
+
+def hash_share_token(token: str) -> str:
+    """Return the one-way lookup value persisted for a share token."""
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def new_share_token() -> tuple[str, str, str]:
+    """Return ``(plaintext, digest, display_hint)`` for a new share link."""
+    plaintext = secrets.token_urlsafe(24)
+    return plaintext, hash_share_token(plaintext), plaintext[:8]
 
 
 # ---------------------------------------------------------------------------

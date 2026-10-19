@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from datetime import timedelta
 
 from sqlmodel import Session, select
 
@@ -154,6 +155,10 @@ def test_metadata_segment_edit_and_minutes_version(
 
 
 def test_share_password_expiry_and_audio_permission(client, auth_headers):
+    from imeeting.db import engine
+    from imeeting.models import ShareLink
+    from imeeting.security import hash_share_token
+
     mid = _seed_meeting(title="分享测试")
     created = client.post(
         f"/api/v1/meetings/{mid}/shares",
@@ -163,6 +168,12 @@ def test_share_password_expiry_and_audio_permission(client, auth_headers):
     assert created.status_code == 200, created.text
     share = created.json()
     assert share["has_password"] is True
+    assert share["token_hint"] == share["token"][:8]
+    with Session(engine) as db:
+        row = db.get(ShareLink, share["id"])
+        assert row is not None
+        assert row.token == hash_share_token(share["token"])
+        assert share["token"] not in row.token
 
     assert client.get(f"/api/v1/share/{share['token']}").status_code == 401
     assert (
@@ -193,9 +204,12 @@ def test_share_password_expiry_and_audio_permission(client, auth_headers):
     listed = client.get(
         f"/api/v1/meetings/{mid}/shares", headers=auth_headers
     ).json()
-    assert any(row["token"] == share["token"] for row in listed)
+    assert len(listed) == 1
+    assert listed[0]["token"] == ""
+    assert listed[0]["url"] == ""
+    assert listed[0]["token_hint"] == share["token_hint"]
     revoked = client.delete(
-        f"/api/v1/meetings/{mid}/shares/{share['token']}", headers=auth_headers
+        f"/api/v1/meetings/{mid}/shares/{share['id']}", headers=auth_headers
     )
     assert revoked.status_code == 204
     assert (
@@ -205,6 +219,41 @@ def test_share_password_expiry_and_audio_permission(client, auth_headers):
         ).status_code
         == 404
     )
+
+
+def test_legacy_share_token_is_hashed_without_breaking_link(client, auth_headers):
+    from imeeting.db import _migrate_schema, engine
+    from imeeting.models import ShareLink, User, utcnow
+    from imeeting.security import hash_share_token
+
+    mid = _seed_meeting(title="历史分享迁移")
+    legacy = "legacy-plaintext-share-token"
+    with Session(engine) as db:
+        admin = db.exec(select(User).where(User.username == "admin")).one()
+        db.add(
+            ShareLink(
+                token=legacy,
+                token_hint="",
+                meeting_id=mid,
+                expires_at=utcnow() + timedelta(hours=1),
+                created_by=admin.id,
+            )
+        )
+        db.commit()
+
+    _migrate_schema()
+
+    with Session(engine) as db:
+        row = db.exec(select(ShareLink).where(ShareLink.meeting_id == mid)).one()
+        assert row.token == hash_share_token(legacy)
+        assert row.token_hint == legacy[:8]
+        assert legacy not in row.token
+    opened = client.post(f"/api/v1/share/{legacy}/open", json={"password": ""})
+    assert opened.status_code == 200, opened.text
+    revoked = client.delete(
+        f"/api/v1/meetings/{mid}/shares/{legacy}", headers=auth_headers
+    )
+    assert revoked.status_code == 204
 
 
 def test_ics_import_and_scheduled_list(client, auth_headers):

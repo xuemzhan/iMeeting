@@ -6,7 +6,6 @@ import asyncio
 import json
 import logging
 import re
-import secrets
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -63,7 +62,14 @@ from ....schemas import (
     ShareOut,
     TranscriptReviewOut,
 )
-from ....security import create_access_token, decode_access_token, hash_password, verify_password
+from ....security import (
+    create_access_token,
+    decode_access_token,
+    hash_password,
+    hash_share_token,
+    new_share_token,
+    verify_password,
+)
 from ....settings import BASE_DIR, get_config
 from ....share_throttle import check_allowed, clear_failures, record_failure
 from .deps import get_current_user_or_anonymous, require_admin
@@ -319,15 +325,16 @@ def edit_minutes(
     return _minutes_out(row)
 
 
-def _share_out(row: ShareLink) -> ShareOut:
+def _share_out(row: ShareLink, plaintext: str | None = None) -> ShareOut:
     return ShareOut(
         id=row.id,
-        token=row.token,
+        token=plaintext or "",
+        token_hint=row.token_hint,
         meeting_id=row.meeting_id,
         expires_at=row.expires_at,
         allow_download=row.allow_download,
         has_password=bool(row.password_hash),
-        url=f"/share/{row.token}",
+        url=f"/share/{plaintext}" if plaintext else "",
     )
 
 
@@ -339,8 +346,10 @@ def create_share(
     db: Session = Depends(get_session),
 ):
     _owned(meeting_id, user, db, write=True)
+    plaintext, digest, hint = new_share_token()
     row = ShareLink(
-        token=secrets.token_urlsafe(24),
+        token=digest,
+        token_hint=hint,
         meeting_id=meeting_id,
         password_hash=hash_password(payload.password) if payload.password else None,
         expires_at=utcnow() + timedelta(hours=payload.expires_hours),
@@ -358,7 +367,7 @@ def create_share(
     )
     db.commit()
     db.refresh(row)
-    return _share_out(row)
+    return _share_out(row, plaintext)
 
 
 @router.get("/meetings/{meeting_id}/shares", response_model=list[ShareOut])
@@ -374,19 +383,21 @@ def list_shares(
     return [_share_out(row) for row in rows]
 
 
-@router.delete("/meetings/{meeting_id}/shares/{token}", status_code=204)
+@router.delete("/meetings/{meeting_id}/shares/{share_ref}", status_code=204)
 def revoke_share(
     meeting_id: int,
-    token: str,
+    share_ref: str,
     user: User = Depends(get_current_user_or_anonymous),
     db: Session = Depends(get_session),
 ):
     _owned(meeting_id, user, db, write=True)
-    row = db.exec(
-        select(ShareLink).where(
-            ShareLink.meeting_id == meeting_id, ShareLink.token == token
-        )
-    ).first()
+    query = select(ShareLink).where(ShareLink.meeting_id == meeting_id)
+    if share_ref.isdigit():
+        query = query.where(ShareLink.id == int(share_ref))
+    else:
+        # Backward compatibility for clients that still hold a plaintext token.
+        query = query.where(ShareLink.token == hash_share_token(share_ref))
+    row = db.exec(query).first()
     if row is None:
         raise HTTPException(status_code=404, detail="分享链接不存在")
     db.delete(row)
@@ -395,7 +406,9 @@ def revoke_share(
 
 
 def _share_meeting(db: Session, token: str) -> ShareLink:
-    row = db.exec(select(ShareLink).where(ShareLink.token == token)).first()
+    row = db.exec(
+        select(ShareLink).where(ShareLink.token == hash_share_token(token))
+    ).first()
     if row is None:
         raise HTTPException(status_code=404, detail="分享链接不存在")
     if row.expires_at < utcnow():
@@ -407,10 +420,15 @@ def _authorize_share(db: Session, token: str, authorization: str | None) -> Shar
     if not authorization or not authorization.lower().startswith("bearer "):
         raise HTTPException(status_code=401, detail="请先验证分享访问权限")
     payload = decode_access_token(authorization.split(" ", 1)[1].strip())
+    token_digest = hash_share_token(token)
     if (
         not payload
         or payload.get("scope") != "share"
-        or payload.get("share_token") != token
+        or not (
+            payload.get("share_token_hash") == token_digest
+            # Tokens issued before hashed-token support expire within two hours.
+            or payload.get("share_token") == token
+        )
     ):
         raise HTTPException(status_code=401, detail="分享访问凭证无效或已过期")
     row = _share_meeting(db, token)
@@ -427,7 +445,7 @@ def _share_audit(
 
     db.add(
         AuditLog(
-            username=f"share:{row.token[:8]}",
+            username=f"share:{row.token_hint or row.token[:8]}",
             action=action,
             target=f"meeting:{row.meeting_id}",
             ip=request.client.host if request.client else None,
@@ -446,7 +464,8 @@ def open_share(
     db: Session = Depends(get_session),
 ):
     ip = request.client.host if request.client else "unknown"
-    allowed, retry = check_allowed(token, ip)
+    throttle_key = hash_share_token(token)
+    allowed, retry = check_allowed(throttle_key, ip)
     if not allowed:
         raise HTTPException(
             status_code=429,
@@ -455,12 +474,12 @@ def open_share(
         )
     row = _share_meeting(db, token)
     if row.password_hash and not verify_password(payload.password, row.password_hash):
-        record_failure(token, ip)
+        record_failure(throttle_key, ip)
         from ....models import utcnow as _now
 
         db.add(
             AuditLog(
-                username=f"share:{row.token[:8]}",
+                username=f"share:{row.token_hint or row.token[:8]}",
                 action="share_auth_failed",
                 target=f"meeting:{row.meeting_id}",
                 ip=ip,
@@ -469,13 +488,17 @@ def open_share(
         )
         db.commit()
         raise HTTPException(status_code=401, detail="访问口令错误")
-    clear_failures(token, ip)
+    clear_failures(throttle_key, ip)
     _share_audit(db, row, "share_open", request)
     db.commit()
     access = create_access_token(
         f"share:{row.id}",
         "share",
-        {"scope": "share", "share_token": token, "meeting_id": row.meeting_id},
+        {
+            "scope": "share",
+            "share_token_hash": hash_share_token(token),
+            "meeting_id": row.meeting_id,
+        },
     )
     return ShareOpenOut(access_token=access, expires_in=7200)
 

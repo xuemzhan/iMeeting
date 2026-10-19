@@ -12,7 +12,7 @@ from sqlalchemy.pool import StaticPool
 from sqlmodel import Session, SQLModel, create_engine, select
 
 from .models import AppConfigRow, User, utcnow
-from .security import hash_password
+from .security import hash_password, hash_share_token
 from .settings import BASE_DIR, SERVER_CONFIG, config_store
 
 logger = logging.getLogger(__name__)
@@ -476,6 +476,31 @@ def _migrate_schema() -> None:
             if "last_accessed_at" not in cols:
                 conn.execute(
                     text("ALTER TABLE share_link ADD COLUMN last_accessed_at DATETIME")
+                )
+            if "token_hint" not in cols:
+                conn.execute(
+                    text("ALTER TABLE share_link ADD COLUMN token_hint VARCHAR(16) DEFAULT ''")
+                )
+            # Older releases stored bearer tokens verbatim. Hash them in place so
+            # existing links keep working while a database dump alone is useless.
+            legacy_rows = conn.execute(
+                text(
+                    "SELECT id, token FROM share_link "
+                    "WHERE token_hint IS NULL OR token_hint = ''"
+                )
+            ).fetchall()
+            for row in legacy_rows:
+                plaintext = str(row[1])
+                conn.execute(
+                    text(
+                        "UPDATE share_link SET token = :digest, token_hint = :hint "
+                        "WHERE id = :id"
+                    ),
+                    {
+                        "digest": hash_share_token(plaintext),
+                        "hint": plaintext[:8],
+                        "id": row[0],
+                    },
                 )
 
         if "job" in tables:

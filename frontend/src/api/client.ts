@@ -336,8 +336,8 @@ export const meetingApi = {
 
   listShares: (id: number) => request<ShareLink[]>(`/api/v1/meetings/${id}/shares`),
 
-  revokeShare: (id: number, token: string) =>
-    request<void>(`/api/v1/meetings/${id}/shares/${token}`, { method: 'DELETE' }),
+  revokeShare: (id: number, shareId: number) =>
+    request<void>(`/api/v1/meetings/${id}/shares/${shareId}`, { method: 'DELETE' }),
 
   actions: (id: number) => request<ActionItem[]>(`/api/v1/meetings/${id}/actions`),
 

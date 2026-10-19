@@ -10,6 +10,7 @@ export function ShareDialog({ meetingId, onClose }: { meetingId: number; onClose
   const [allowDownload, setAllowDownload] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [createdUrl, setCreatedUrl] = useState<string | null>(null)
 
   const load = () =>
     meetingApi
@@ -30,8 +31,9 @@ export function ShareDialog({ meetingId, onClose }: { meetingId: number; onClose
         password,
         allow_download: allowDownload,
       })
+      setCreatedUrl(row.url ?? null)
       await load()
-      await copy(row.url)
+      if (row.url) await copy(row.url)
     } catch (e) {
       setError(e instanceof Error ? e.message : '创建分享失败')
     } finally {
@@ -82,18 +84,26 @@ export function ShareDialog({ meetingId, onClose }: { meetingId: number; onClose
           </button>
         </div>
         {error && <p className="mb-2 text-[11px]" style={{ color: 'var(--danger-text)' }}>{error}</p>}
+        {createdUrl && (
+          <div className="mb-3 rounded-lg p-2.5 text-[11px]" style={{ background: 'var(--bg-subtle)' }}>
+            <p className="mb-1 font-medium">新链接仅显示一次，请立即保存</p>
+            <div className="flex items-center gap-2">
+              <span className="min-w-0 flex-1 truncate font-mono text-[10px] text-secondary">{window.location.origin}{createdUrl}</span>
+              <button type="button" onClick={() => void copy(createdUrl)} className="rounded p-1 text-tertiary hover:text-[var(--accent)]" title="复制链接"><Copy size={12} /></button>
+            </div>
+          </div>
+        )}
         <div className="space-y-1.5">
           {items.length === 0 && <p className="py-4 text-center text-[11px] text-tertiary">还没有分享链接</p>}
           {items.map((item) => (
             <div key={item.id} className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-[11px]" style={{ background: 'var(--bg-subtle)' }}>
-              <span className="min-w-0 flex-1 truncate font-mono text-[10px] text-secondary">{window.location.origin}{item.url}</span>
+              <span className="min-w-0 flex-1 truncate font-mono text-[10px] text-secondary">分享 #{item.id} · {item.token_hint || '已隐藏'}…</span>
               <span className="shrink-0 text-tertiary">至 {new Date(item.expires_at).toLocaleString('zh-CN')}</span>
               {item.has_password && <span className="chip shrink-0">有口令</span>}
-              <button type="button" onClick={() => void copy(item.url)} className="rounded p-1 text-tertiary hover:text-[var(--accent)]" title="复制链接"><Copy size={12} /></button>
               <button
                 type="button"
                 onClick={async () => {
-                  await meetingApi.revokeShare(meetingId, item.token)
+                  await meetingApi.revokeShare(meetingId, item.id)
                   await load()
                 }}
                 className="rounded p-1 text-tertiary hover:text-[var(--danger-text)]"

@@ -143,12 +143,13 @@ export interface SearchMatch {
 
 export interface ShareLink {
   id: number
-  token: string
+  token?: string
+  token_hint: string
   meeting_id: number
   expires_at: string
   allow_download: boolean
   has_password: boolean
-  url: string
+  url?: string
 }
 
 export interface ActionItem {

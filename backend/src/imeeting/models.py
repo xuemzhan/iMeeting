@@ -167,7 +167,9 @@ class ShareLink(SQLModel, table=True):
     __tablename__ = "share_link"
 
     id: Optional[int] = Field(default=None, primary_key=True)
+    #: 列的旧名称保留兼容；这里始终保存明文令牌的 SHA-256，不保存可直接使用的链接。
     token: str = Field(unique=True, index=True, max_length=64)
+    token_hint: str = Field(default="", max_length=16)
     meeting_id: int = Field(foreign_key="meeting.id", index=True)
     password_hash: Optional[str] = Field(default=None, max_length=255)
     expires_at: datetime = Field(index=True)

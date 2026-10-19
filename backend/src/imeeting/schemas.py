@@ -344,7 +344,9 @@ class ShareOpenOut(BaseModel):
 
 class ShareOut(BaseModel):
     id: int
-    token: str
+    #: 仅在创建时返回一次；列表接口不会再暴露可直接访问会议的明文令牌。
+    token: str = ""
+    token_hint: str = ""
     meeting_id: int
     expires_at: datetime
     allow_download: bool
