@@ -921,6 +921,34 @@ CONFIG_SCHEMA: list[ConfigField] = [
         help="窗口内转写内容少于该字数时不做自动提取。",
     ),
     _f(
+        key="job.heavy_workers",
+        label="重任务并发数",
+        group="后台任务",
+        type="int",
+        default=1,
+        min_value=1,
+        max_value=4,
+        restart_required=True,
+        help=(
+            "终稿纪要、声纹复核和检索索引重建的并发数。每个任务都可能占用 "
+            "CPU、模型或 LLM 配额，单机默认 1，避免拖慢实时转写。"
+        ),
+    ),
+    _f(
+        key="job.light_workers",
+        label="轻任务并发数",
+        group="后台任务",
+        type="int",
+        default=2,
+        min_value=1,
+        max_value=8,
+        restart_required=True,
+        help=(
+            "导出、会议元信息提取等任务的并发数。与重任务分池后，长纪要任务"
+            "不会阻塞用户下载。"
+        ),
+    ),
+    _f(
         key="translate.enabled",
         label="启用实时双语字幕",
         group="LLM 纪要",
@@ -1224,6 +1252,8 @@ ENV_OVERRIDES: dict[str, str] = {
     "asr.device": "FUNASR_DEVICE",
     "asr.ncpu": "FUNASR_NCPU",
     "session.max_concurrent": "MAX_CONCURRENT_SESSIONS",
+    "job.heavy_workers": "JOB_HEAVY_WORKERS",
+    "job.light_workers": "JOB_LIGHT_WORKERS",
 }
 
 # 服务自身配置（不暴露给后台）

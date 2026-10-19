@@ -5,9 +5,11 @@ from __future__ import annotations
 import json
 import logging
 import re
+import shutil
 import threading
 import time
 from collections import defaultdict
+from pathlib import Path
 
 _DURATION_BUCKETS = (0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0)
 
@@ -45,7 +47,10 @@ def reset_metrics() -> None:
         _duration_buckets.clear()
 
 
-def prometheus_text(extra: dict[str, dict[str, int]] | None = None) -> str:
+def prometheus_text(
+    extra: dict[str, dict[str, int]] | None = None,
+    gauges: dict[str, float] | None = None,
+) -> str:
     lines = [
         "# HELP meeting_uptime_seconds Process uptime.",
         "# TYPE meeting_uptime_seconds gauge",
@@ -94,7 +99,23 @@ def prometheus_text(extra: dict[str, dict[str, int]] | None = None) -> str:
         lines.append(f"# TYPE {name} gauge")
         for label, value in values.items():
             lines.append(f'{name}{{status="{label}"}} {value}')
+    for name, value in (gauges or {}).items():
+        lines.append(f"# TYPE {name} gauge")
+        lines.append(f"{name} {value:.6f}")
     return "\n".join(lines) + "\n"
+
+
+def disk_gauges(path: str | Path) -> dict[str, float]:
+    """Capacity gauges for the data volume; omit them if stat fails."""
+    try:
+        usage = shutil.disk_usage(Path(path))
+    except OSError:
+        return {}
+    total = max(int(usage.total), 1)
+    return {
+        "meeting_disk_free_bytes": float(usage.free),
+        "meeting_disk_used_ratio": float(usage.used) / total,
+    }
 
 
 class JsonLogFormatter(logging.Formatter):

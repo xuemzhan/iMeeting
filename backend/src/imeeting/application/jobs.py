@@ -16,6 +16,9 @@ from ..models import Job, utcnow
 logger = logging.getLogger(__name__)
 
 _claim_lock = asyncio.Lock()
+_HEAVY_JOB_KINDS = frozenset(
+    {"final_minutes", "audio_review", "embedding_reindex"}
+)
 
 
 def enqueue_job(
@@ -60,17 +63,26 @@ def enqueue_job(
         return job
 
 
-def _claim_job() -> Job | None:
+def _claim_job(heavy: bool | None = None) -> Job | None:
     """领取一个到期任务。
 
     单进程由 asyncio 锁串行化；多进程未来可替换为 PostgreSQL 的
     ``SELECT ... FOR UPDATE SKIP LOCKED``。
+
+    ``heavy=True/False`` 将 CPU/模型密集型任务与导出等轻任务分开，
+    避免长纪要生成阻塞用户下载。
     """
     with session_scope() as db:
+        query = select(Job).where(
+            Job.status == "pending",
+            Job.run_after <= utcnow(),
+        )
+        if heavy is True:
+            query = query.where(Job.kind.in_(tuple(_HEAVY_JOB_KINDS)))
+        elif heavy is False:
+            query = query.where(Job.kind.not_in(tuple(_HEAVY_JOB_KINDS)))
         job = db.exec(
-            select(Job)
-            .where(Job.status == "pending", Job.run_after <= utcnow())
-            .order_by(Job.priority, Job.run_after, Job.id)
+            query.order_by(Job.priority, Job.run_after, Job.id)
         ).first()
         if job is None:
             return None
@@ -203,18 +215,28 @@ async def _run_job(job: Job) -> None:
     raise RuntimeError(f"未知任务类型：{job.kind}")
 
 
-async def worker_loop(stop_event: asyncio.Event) -> None:
-    await asyncio.to_thread(_recover_stale_jobs)
-    logger.info("持久化任务 Worker 已启动")
+async def worker_loop(
+    stop_event: asyncio.Event,
+    *,
+    heavy: bool | None = None,
+    lane: str = "default",
+) -> None:
+    logger.info("持久化任务 Worker 已启动 lane=%s", lane)
     while not stop_event.is_set():
         job: Job | None = None
         try:
             async with _claim_lock:
-                job = await asyncio.to_thread(_claim_job)
+                job = await asyncio.to_thread(_claim_job, heavy)
             if job is None:
                 await asyncio.sleep(1)
                 continue
-            logger.info("执行任务 id=%s kind=%s meeting=%s", job.id, job.kind, job.meeting_id)
+            logger.info(
+                "执行任务 lane=%s id=%s kind=%s meeting=%s",
+                lane,
+                job.id,
+                job.kind,
+                job.meeting_id,
+            )
             await _run_job(job)
         except asyncio.CancelledError:
             raise
@@ -224,7 +246,46 @@ async def worker_loop(stop_event: asyncio.Event) -> None:
                 await asyncio.to_thread(_fail, job, f"{type(exc).__name__}: {exc}")
         finally:
             await asyncio.sleep(0.2)
-    logger.info("持久化任务 Worker 已停止")
+    logger.info("持久化任务 Worker 已停止 lane=%s", lane)
+
+
+def _worker_counts() -> tuple[int, int]:
+    from ..settings import get_config
+
+    def clamp(value: object, default: int, maximum: int) -> int:
+        try:
+            return min(max(int(value), 1), maximum)
+        except (TypeError, ValueError):
+            return default
+
+    heavy = clamp(get_config("job.heavy_workers") or 1, 1, 4)
+    light = clamp(get_config("job.light_workers") or 2, 2, 8)
+    return heavy, light
+
+
+async def start_job_workers(stop_event: asyncio.Event) -> list[asyncio.Task]:
+    """Recover crash leftovers once, then start isolated heavy/light lanes."""
+    await asyncio.to_thread(_recover_stale_jobs)
+    heavy_count, light_count = _worker_counts()
+    tasks: list[asyncio.Task] = []
+    for index in range(heavy_count):
+        tasks.append(
+            asyncio.create_task(
+                worker_loop(stop_event, heavy=True, lane=f"heavy-{index + 1}")
+            )
+        )
+    for index in range(light_count):
+        tasks.append(
+            asyncio.create_task(
+                worker_loop(stop_event, heavy=False, lane=f"light-{index + 1}")
+            )
+        )
+    logger.info(
+        "持久化任务分池已启动：heavy=%d light=%d",
+        heavy_count,
+        light_count,
+    )
+    return tasks
 
 
 def _recover_stale_jobs() -> None:
@@ -248,3 +309,27 @@ def job_stats() -> dict[str, int]:
     for row in rows:
         counts[row.status] = counts.get(row.status, 0) + 1
     return counts
+
+
+def job_metrics() -> dict[str, float]:
+    """Return queue depth and age gauges used by Prometheus alerts."""
+    now = utcnow()
+    with Session(engine) as db:
+        rows = db.exec(select(Job)).all()
+    pending = [row for row in rows if row.status == "pending"]
+    running = [row for row in rows if row.status == "running"]
+
+    def age(row: Job, field: str) -> float:
+        value = getattr(row, field, None)
+        return max(0.0, (now - value).total_seconds()) if value else 0.0
+
+    return {
+        "oldest_pending_seconds": max(
+            (age(row, "run_after") for row in pending),
+            default=0.0,
+        ),
+        "oldest_running_seconds": max(
+            (age(row, "locked_at") for row in running),
+            default=0.0,
+        ),
+    }

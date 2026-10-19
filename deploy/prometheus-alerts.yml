@@ -1,0 +1,94 @@
+groups:
+  - name: imeeting
+    rules:
+      - alert: IMeetingBackendDown
+        expr: up{job="imeeting"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: iMeeting backend is unavailable
+          description: Prometheus has failed to scrape the backend for two minutes.
+
+      - alert: IMeetingReadinessFailing
+        expr: probe_success{job="imeeting-ready"} == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: iMeeting is not ready to receive traffic
+          description: The readiness probe has failed continuously for five minutes.
+
+      - alert: IMeetingModelError
+        expr: meeting_model_errors > 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: An iMeeting model failed to load
+          description: The service is degraded and new transcription quality may be affected.
+
+      - alert: IMeetingHttp5xxRateHigh
+        expr: |
+          sum(rate(meeting_http_requests_total{status=~"5.."}[5m]))
+          /
+          clamp_min(sum(rate(meeting_http_requests_total[5m])), 1)
+          > 0.02
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: iMeeting HTTP 5xx rate exceeds 2%
+          description: More than 2% of requests have failed for ten minutes.
+
+      - alert: IMeetingP95LatencyHigh
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le) (rate(meeting_http_request_duration_seconds_bucket[5m]))
+          ) > 3
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: iMeeting P95 API latency exceeds 3 seconds
+          description: API latency has remained high for ten minutes.
+
+      - alert: IMeetingJobBacklog
+        expr: sum(meeting_jobs{status="pending"}) > 10
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: iMeeting background job backlog is growing
+          description: More than ten jobs have remained pending for ten minutes.
+
+      - alert: IMeetingJobStalled
+        expr: |
+          meeting_job_oldest_pending_seconds > 600
+          or
+          meeting_job_oldest_running_seconds > 1800
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: An iMeeting background job is stalled
+          description: A pending job waited over ten minutes or a running job exceeded thirty minutes.
+
+      - alert: IMeetingDiskPressure
+        expr: meeting_disk_used_ratio > 0.85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: iMeeting data volume is over 85% full
+          description: Audio, exports, logs or backups are consuming the data volume.
+
+      - alert: IMeetingLLMCostSpike
+        expr: meeting_llm_cost_usd - (meeting_llm_cost_usd offset 1h) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: iMeeting LLM spend increased by more than USD 10 in one hour
+          description: Review model pricing, retry storms or an unexpectedly large meeting.

@@ -120,18 +120,19 @@ async def lifespan(app: FastAPI):
 
     # 音频留存清理：启动时跑一次，之后每 6 小时一次
     cleanup_task = asyncio.create_task(_audio_cleanup_loop())
-    from .application.jobs import worker_loop
+    from .application.jobs import start_job_workers
 
     job_stop = asyncio.Event()
-    job_worker = asyncio.create_task(worker_loop(job_stop))
+    job_workers = await start_job_workers(job_stop)
 
     yield
 
     job_stop.set()
-    try:
-        await asyncio.wait_for(job_worker, timeout=10)
-    except (asyncio.TimeoutError, asyncio.CancelledError):
-        job_worker.cancel()
+    if job_workers:
+        _, pending = await asyncio.wait(job_workers, timeout=10)
+        for worker in pending:
+            worker.cancel()
+        await asyncio.gather(*pending, return_exceptions=True)
     cleanup_task.cancel()
     try:
         await cleanup_task
@@ -225,16 +226,46 @@ app.include_router(stream.router)
 
 @app.get("/metrics", include_in_schema=False)
 def prometheus_metrics():
-    from .application.jobs import job_stats
-    from .ops import prometheus_text
+    from sqlalchemy import func
+    from sqlmodel import Session, select
+
+    from .application.jobs import job_metrics, job_stats
+    from .db import engine
+    from .engine import pool
+    from .models import LLMUsage
+    from .ops import disk_gauges, prometheus_text
     from .session_registry import active_session_count
 
+    jobs = job_metrics()
+    gauges = disk_gauges(SERVER_CONFIG["data_dir"])
+    with Session(engine) as db:
+        llm_cost = db.exec(
+            select(func.coalesce(func.sum(LLMUsage.cost_usd), 0.0))
+        ).one()
+    gauges.update(
+        {
+            "meeting_job_oldest_pending_seconds": jobs[
+                "oldest_pending_seconds"
+            ],
+            "meeting_job_oldest_running_seconds": jobs[
+                "oldest_running_seconds"
+            ],
+            "meeting_llm_cost_usd": float(llm_cost),
+            "meeting_models_loaded": float(
+                sum(1 for item in pool.get_status().values() if item["loaded"])
+            ),
+            "meeting_model_errors": float(
+                sum(1 for item in pool.get_status().values() if item["error"])
+            ),
+        }
+    )
     return PlainTextResponse(
         prometheus_text(
             {
                 "meeting_ws_active_sessions": {"active": active_session_count()},
                 "meeting_jobs": job_stats(),
-            }
+            },
+            gauges=gauges,
         ),
         media_type="text/plain; version=0.0.4",
     )

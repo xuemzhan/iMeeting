@@ -100,6 +100,30 @@ docker compose --env-file deploy/production.env -f deploy/compose.yaml \
 Caddy 会自动申请和续期证书，并将 HTTP/WebSocket 请求代理到前端容器。生产环境必须
 使用真实 DNS 名称；`localhost` 仅用于本机验证。
 
+## 监控与告警
+
+后端 `/metrics` 暴露 HTTP 延迟、5xx、活跃会话、任务积压与运行时长、模型加载状态、
+数据卷容量和累计 LLM 成本。该接口只在 Compose 内部网络可达，应由同一网络中的
+Prometheus 采集，或通过 SSH 隧道访问：
+
+```sh
+ssh -L 8000:127.0.0.1:8000 user@meeting-host
+curl -sS http://127.0.0.1:8000/metrics
+```
+
+`deploy/prometheus-alerts.yml` 提供后端不可用、readiness 失败、模型加载失败、
+5xx、P95 延迟、任务积压/卡死、磁盘容量和 LLM 成本突增规则。使用前先校验：
+
+```sh
+docker run --rm \
+  -v "$PWD/deploy/prometheus-alerts.yml:/rules.yml:ro" \
+  --entrypoint promtool prom/prometheus:v2.55.1 \
+  check rules /rules.yml
+```
+
+readiness 告警使用 blackbox exporter 的 `probe_success{job="imeeting-ready"}`
+指标；请将 `/api/v1/ready` 配置为 HTTP 探针目标。
+
 ## 安全注意事项
 
 - `APP_ENV=production` 会拒绝弱 `SECRET_KEY`、默认管理员口令、关闭鉴权和通配 CORS；
