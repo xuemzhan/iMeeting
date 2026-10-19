@@ -1,10 +1,15 @@
 import { defineConfig, devices } from '@playwright/test'
+import { rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const backendRoot = resolve(here, '../backend')
+const databasePath = join(tmpdir(), `imeeting-playwright-${process.pid}.db`)
+for (const suffix of ('', '-wal', '-shm')) {
+  rmSync(`${databasePath}${suffix}`, { force: true })
+}
 
 export default defineConfig({
   testDir: './e2e',
@@ -32,7 +37,7 @@ export default defineConfig({
         APP_ENV: 'development',
         ASR_MODE: 'off',
         ADMIN_PASSWORD: 'admin123',
-        DATABASE_URL: 'sqlite:///:memory:',
+        DATABASE_URL: `sqlite:///${databasePath.replaceAll('\\', '/')}`,
         LOG_FILE: join(tmpdir(), 'imeeting-playwright.log'),
         MEETING_SKIP_ALEMBIC: '1',
         PYTHONPATH: resolve(backendRoot, 'src'),
