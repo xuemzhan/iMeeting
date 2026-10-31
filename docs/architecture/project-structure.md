@@ -1,5 +1,10 @@
 # Project Structure
 
+<!-- doc-governance: IM-DES-002 -->
+> 文档类型：设计；状态：持续维护；内容基准日期：原文未统一标注；整理日期：2026-10-31。
+> 现行 Python/React 目录与依赖方向说明。
+> 维护责任：待指派（iMeeting 文档维护者）。[台账](../README.md) · [维护规则](../governance/README.md)。
+
 The repository is split by runtime boundary rather than by framework file type.
 
 ```text

@@ -10,7 +10,13 @@
 > 已完成；多实例、PostgreSQL/Redis 和跨机灾备属于 P2，详见
 > [生产可用性清单](./docs/production-readiness.md)。
 
+> **2026-10-29 复核**：本轮修复了录音线程泄漏、任务重启恢复、分享权限、
+> 改密后令牌撤销和模型就绪判定；验证边界及上线前待验项见
+> [生产复核报告](./docs/production-review-2026-10-29.md)。
+
 ---
+
+> **2026-10-31 核查与修复**：已修复本轮复现的对象权限、身份/模板状态、自动抽取和确认链路问题，并补充常规与浏览器回归，见[修复报告](docs/reports/2026-10-31-gap-fixes.md)。[原核查证据](docs/reviews/README.md)保留。模板匹配继续默认关闭；真实模型校准和目标服务器验收仍待完成。
 
 ## 功能
 
@@ -19,6 +25,9 @@
 - **自动断句**：静音检测切分，无需手动操作
 - **标点恢复**：自动补全标点，输出可直接阅读
 - **说话人分离**：自动区分多人对话并着色
+- **参会人重要程度**：把说话人标为「关键（1，最高）/ 次要 / 一般」；纪要以关键参会人为主干、次要参会人作补充、其余只作背景，多个次要参会人按发言分量合并并保留分歧
+- **可拖动分栏**：实时转写与会议纪要之间的分隔条可拖动（←/→ 微调、双击复位），宽度随窗口自动夹取并记住
+- **阅读字号可调**：转写 / 纪要面板独立 −/+ 缩放（85%–150%，点击百分比复位），行距随字号自适应
 - **口语录入会议信息**：开场前 N 分钟（默认 3 分钟、可配置）说出主题、参会人与议程，自动提取并支持手动修订
 - **渐进式纪要**：会中定时滚动更新草稿，结束后自动生成终稿；自动草稿、终稿、人工修订全部版本化
 - **可追溯编辑**：逐句修订转写并保留原始识别，纪要修订生成新版本，支持版本对比
@@ -66,7 +75,7 @@ cd backend
 pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
 
 # 安装 iMeeting 后端及 FunASR 推理依赖
-pip install -e ".[asr,dev]"
+pip install -c constraints-production.txt -e ".[asr,dev]"
 
 cp .env.example .env
 python -m imeeting.main
@@ -127,7 +136,7 @@ npm run dev
 
 ## 自测
 
-### 一、后端单元 / 接口测试（516 项，不依赖模型，约 5 分钟）
+### 一、后端单元 / 接口测试（544 项，不依赖模型，约 5 分钟）
 
 ```bash
 cd backend
@@ -151,8 +160,9 @@ python -m pytest tests/ -q
 | `test_job_pools.py` | 重/轻任务领取隔离、Worker 启动和任务积压指标 |
 | `test_ops.py` | 请求指标归一化、延迟直方图、磁盘/任务/成本 gauge |
 | `test_meeting_product_extras.py` | 分享权限、令牌迁移、版本化纪要和文档导出 |
+| `test_speaker_importance.py` | 参会人重要程度归一化、设置/读取/排序、改名迁移、纪要加权 prompt |
 
-### 二、前端单元测试（45 项）
+### 二、前端单元测试（66 项）
 
 ```bash
 cd frontend && npm test && npm run typecheck && npm run build
@@ -167,6 +177,31 @@ npm run e2e
 ```
 
 自动启动临时后端与前端，验证登录、首次登录强制改密和进入后台。
+
+**界面功能验收**（参会人重要程度 / 字号 / 可拖动分栏）需要一场带说话人的会议，
+用下面的独立脚本准备数据与临时库（不会碰开发库）：
+
+```bash
+# 1) 造数据：独立 SQLite + e2e 用户 + 一场带 3 个说话人的会议
+cd backend
+set DATABASE_URL=sqlite:///C:/Temp/e2e.db
+set PYTHONPATH=src
+set MEETING_SKIP_ALEMBIC=1
+C:/Python314/python.exe ../frontend/scripts/seed-e2e.py
+
+# 2) 起后端（echo 模式，不加载模型）与前端 dev server
+#    后端：python -m uvicorn imeeting.main:app --host 127.0.0.1 --port 8021
+#    前端：set VITE_API_TARGET=http://127.0.0.1:8021 && npm run dev -- --port 5175
+
+# 3) 跑浏览器验收（14 项断言，含拖动/字号/持久化/换行自适应）
+cd frontend
+set BASE_URL=http://127.0.0.1:5175
+set API_URL=http://127.0.0.1:8021
+set MEETING_ID=1
+set E2E_USERNAME=e2e
+set E2E_PASSWORD=e2e-pass-123
+node scripts/verify-features.mjs
+```
 
 ### 四、协议与识别链路（需服务已启动）
 
@@ -235,6 +270,17 @@ python scripts/stress.py --port 8010 --only abrupt      # 断连韧性
 模型在服务启动时**后台预热**，首请求不必等待。首次调用有 warmup 开销，
 稳态性能远好于首次。
 
+**启动与首屏（2026-10-23 实测）**：
+
+- 模型顺序预热到 `/api/v1/health=ok`：本机约 **67–70s**（流式 26–36s + 离线 31s）。
+  试过让两个模型**并发预热**：CPU 抢占把离线加载拖到 54–65s，总就绪 54–71s，
+  **没有稳定收益，已回退**（结论写在 `engine/pool.py` 注释里，避免后人重复试）。
+- 模型池改为**按模型分锁**后，预热离线模型期间用户开会不会再被无关模型卡住：
+  旧实现一把全局锁，首个会话要排在离线加载后面；回归用例
+  `test_loading_offline_does_not_block_streaming`。
+- 前端首屏 JS：路由级懒加载 + 首屏弹窗（会议信息/脑图）懒加载后，单包
+  **557 → 428KB**（gzip 161 → 131KB，**-19%**），历史/详情/后台等页面按需加载独立 chunk。
+
 **如果延迟累积**，按顺序尝试：放宽分块到 800ms → 换 SenseVoiceSmall → 关闭说话人分离。
 
 ## 运行与运维
@@ -278,7 +324,8 @@ Prometheus；readiness 告警建议配合 blackbox exporter。`/metrics` 不应�
 ### 后台任务
 
 终稿、说话人合并、导出、音频复核和语义索引重建均写入 `job` 表。
-进程重启后会自动恢复 pending 任务；崩溃遗留的 running 任务在锁超时后重新入队。
+进程重启后会自动恢复 pending 任务；单实例启动时，崩溃遗留的 running 任务
+立即重新入队，已耗尽重试次数的任务标记为 failed，不再依赖一次性锁超时判断。
 
 重任务（终稿、声纹复核、索引重建）与轻任务（导出、会议元信息提取）使用独立
 Worker，避免长任务阻塞用户下载。并发可用 `JOB_HEAVY_WORKERS`（默认 1）和
@@ -344,3 +391,7 @@ CONFIRM_RESTORE=yes sh deploy/restore_sqlite.sh <backup-file-name.db>
 
 本项目基于 FunASR 构建。FunASR 为 MIT 许可，但其**模型权重各有独立许可**，
 商用前请查阅对应 checkpoint 的模型卡。
+
+## 工程文档
+
+设计、需求、重写提案、生产复核、阶段报告及审计证据统一从[文档中心](docs/README.md)查阅。新增文档遵循[维护规则](docs/governance/README.md)；历史设计与旧优化评估的状态以该入口说明为准。

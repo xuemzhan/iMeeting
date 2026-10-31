@@ -1,5 +1,10 @@
 # iMeeting · 智能会议系统设计方案
 
+<!-- doc-governance: IM-DES-001 -->
+> 文档类型：设计；状态：历史记录；内容基准日期：原文未统一标注；整理日期：2026-10-31。
+> 初始 v1.0 待评审设计稿；当前能力查项目 README，目录查 project-structure。
+> 维护责任：待指派（iMeeting 文档维护者）。[台账](docs/README.md) · [维护规则](docs/governance/README.md)。
+
 > 基于 FunASR 的实时会议转写与纪要系统
 > 版本：v1.0 设计稿 · 状态：待评审
 
@@ -138,8 +143,10 @@ for chunk in audio_chunks:
 | 层 | 优化手段 |
 |---|---|
 | 前端 | 虚拟滚动、`useTransition` 降优先级、Web Worker 处理音频、字幕卡片 memo 化 |
+| 前端首屏 | 路由级 `React.lazy` + `Suspense`，首屏弹窗（会议信息/脑图）懒加载；单包 557→428KB（gzip -19%） |
 | 传输 | 二进制帧（ArrayBuffer）、避免 JSON 编码音频、压缩开关（permessage-deflate） |
 | 后端 | 模型单例懒加载、线程池隔离 ASR 推理、orjson、uvloop |
+| 模型加载 | **按模型分锁**：同一模型单飞、不同模型互不阻塞；预热保持顺序（并发预热被 CPU 抢占抵消，已实测回退） |
 | ASR | 复用 `AutoModel` 实例、CPU 线程数绑定 `ncpu`、batch_size_s 动态批 |
 | 数据库 | 字幕批量插入、按 meeting_id 索引、音频文件独立存储 |
 
@@ -175,9 +182,9 @@ for chunk in audio_chunks:
 │ ├──────────────────────────┤ │ ├─────────────────┤ │
 │ │ 说话人1  同意，那我们把…  │ │ │ 待办 · 输出报告   │ │
 │ ├──────────────────────────┤ │ └─────────────────┘ │
-│ │ 识别中  正在聆听…        │ │ 说话人               │
-│ └──────────────────────────┘ │ ● 说话人1  68%       │
-│ 自动滚动 · 时间戳可点击跳转    │ ● 说话人2  32%       │
+│ │ 识别中  正在聆听…        │ │ 参会人重要程度 · 1 最高 │
+│ └──────────────────────────┘ │ 张三  [关键][次要][一般] │
+│ 自动滚动 · 时间戳可点击跳转    │ 李四  [关键][次要][一般] │
 │                              │ [生成完整纪要]        │
 └──────────────────────────────┴─────────────────────┘
 ```
@@ -188,7 +195,12 @@ for chunk in audio_chunks:
 - 定稿瞬间：边框实线化 + 轻微高亮闪烁 300ms
 - 新字幕到达时若用户已手动上滚，暂停自动滚动并显示「回到最新」浮标
 - 时间戳点击 → 音频回放跳转到对应位置
-- 说话人占比：环形进度或横向条形，实时更新
+- **参会人重要程度**：右侧面板逐人标注「关键（1，最高）/ 次要 / 一般」，已标注的说话人在
+  字幕里显示对应小标签；设置随纪要生成生效（会中草稿亦同）
+- **可拖动分栏**：两栏之间的分隔条可拖动（指针捕获；←/→ 键微调、双击复位）；
+  宽度按容器宽度夹在 260–720px 且给转写至少留 240px，写入本地偏好
+- **阅读字号**：转写 / 纪要各自 −/+ 缩放 85%–150%，点百分比复位；正文用 CSS 变量
+  `--reader-scale` + `.reader-body*` 类，`line-height` 用无单位值，放大时行距同步放大
 
 ### 4.3 视觉风格 · 科技感
 
@@ -248,6 +260,16 @@ class Minutes(SQLModel, table=True):
     raw_markdown: str = ""
     model_used: str = ""
     created_at: datetime
+
+# 说话人重要程度（纪要加权）
+class SpeakerRole(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    meeting_id: int = Field(foreign_key="meeting.id", index=True)
+    speaker_key: str = Field(index=True)  # 与 Segment.speaker_key 对齐；旧数据用 "label:<显示名>"
+    label: str = ""
+    importance: int = 3                    # 1 关键（最高）| 2 次要 | 3 一般
+    updated_at: datetime
+    __table_args__ = (UniqueConstraint("meeting_id", "speaker_key"),)
 
 # 全局配置
 class AppConfig(SQLModel, table=True):
@@ -365,7 +387,9 @@ class AuditLog(SQLModel, table=True):
 | POST | `/api/v1/auth/login` | 登录，返回 JWT | 公开 |
 | POST | `/api/v1/auth/register` | 注册（受配置开关约束） | 公开 |
 | GET | `/api/v1/meetings` | 会议列表（分页） | 登录 |
-| GET | `/api/v1/meetings/{id}` | 会议详情含片段 | 登录 |
+| GET | `/api/v1/meetings/{id}` | 会议详情含片段与说话人重要程度 | 登录 |
+| GET | `/api/v1/meetings/{id}/speakers` | 会议内说话人 + 重要程度 | 登录 |
+| PUT | `/api/v1/meetings/{id}/speakers/importance` | 设置说话人重要程度（1/2/3） | 登录 |
 | DELETE | `/api/v1/meetings/{id}` | 删除会议 | 所有者/管理员 |
 | POST | `/api/v1/meetings/{id}/minutes` | 生成纪要 | 登录 |
 | GET | `/api/v1/meetings/{id}/export?format=srt` | 导出 | 登录 |
@@ -476,6 +500,18 @@ iMeeting/
 
 5. **为什么用 `react-window` 而不自己写虚拟滚动？**
    转写流是典型的定高列表，`react-window` 成熟稳定。自研容易在滚动锚定、动态高度上踩坑，不值得。
+
+6. **为什么说话人重要程度单独建表，而不是加到声纹上？**
+   声纹是「这个人是谁」的全局身份，重要程度是「这场会里他多重要」的会议内属性——
+   同一个人在不同会议里可以是关键或旁听。用 `(meeting_id, speaker_key)` 唯一键，
+   键跟 `Segment.speaker_key` 对齐：改名只改显示名、键不变，因此改名不会丢设置。
+   纪要侧只做一件事：把重要程度写进 prompt（关键为主干、次要为补充、其余为背景），
+   并在每句转写前打「（关键）/（次要）」标记，长会议分段摘要也不会丢权重。
+
+7. **为什么分栏宽度与字号存本地而不是服务端配置？**
+   二者是「这台设备的阅读偏好」，不是团队共享的业务配置：放 localStorage 免鉴权、
+   免同步冲突，也不污染后台 49 项业务配置。拖动时每帧只更新内存，写入做 200ms 防抖，
+   并在 `pagehide`/`visibilitychange` 兜底落盘，避免「改完立刻跳转」丢偏好。
 
 ---
 

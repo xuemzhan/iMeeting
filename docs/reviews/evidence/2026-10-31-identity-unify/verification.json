@@ -1,0 +1,61 @@
+{
+  "round": "2026-10-31 身份统一续作（Person–Voiceprint 永久关联）",
+  "verified_at": "2026-10-31T22:30:00+08:00",
+  "host": {
+    "machine": "LAPTOP-8JA7F6SF",
+    "os": "Windows 11 10.0.26200",
+    "python": "3.14.3",
+    "numpy": "2.5.4",
+    "cpu_count": 16,
+    "asr_mode": "off",
+    "torch": "unavailable"
+  },
+  "commands": [
+    {
+      "command": "python -m pytest backend/tests -q --tb=short --show-capture=no --disable-warnings --junitxml=docs/reviews/evidence/2026-10-31-identity-unify/backend-tests.xml",
+      "cwd": "iMeeting",
+      "exit_code": 0,
+      "summary": "707 passed, 0 failed, 0 skipped, 167 warnings; 414.99 s",
+      "artifact": "backend-tests.xml"
+    },
+    {
+      "command": "python -m ruff check backend/src backend/tests backend/migrations",
+      "cwd": "iMeeting",
+      "exit_code": 0,
+      "summary": "All checks passed!"
+    },
+    {
+      "command": "python scripts/docs_governance.py --write; python scripts/docs_governance.py",
+      "cwd": ".",
+      "exit_code": 0,
+      "summary": "PASS: 313 source documents; 56 registered project documents; inventory current; managed links/metadata valid."
+    }
+  ],
+  "new_tests": {
+    "file": "iMeeting/backend/tests/test_voiceprint_person_link.py",
+    "count": 8,
+    "covers": [
+      "bind_speaker 建立声纹→人员永久关联",
+      "人员改名后经关联显示新姓名，声纹自身名字不被改写",
+      "人员合并把 source 名下声纹改挂到 target",
+      "删除人员解除关联但保留声纹与模板",
+      "跨账号关联被拒绝",
+      "confirm-sample 按 (meeting_id, speaker_key) 建立关联",
+      "声纹合并时 target 继承 source 的人员关联",
+      "迁移 06 只回填同 owner 且唯一命中的行，其余留 NULL；降级移除列与索引"
+    ]
+  },
+  "environment_constraints": [
+    "测试使用夹具的独立临时 SQLite（ASR_MODE=off、MEETING_SKIP_ALEMBIC=1），新列由 SQLModel create_all 建出，迁移用例单独在最小旧表结构上执行升级/降级。",
+    "SQLite 无法给已有表补外键约束：升级库只有 person_id 列与索引，一致性由服务层维护；新建库才有 person.id 外键。",
+    "未对用户现有数据库执行迁移；未启动或重启现有业务服务。",
+    "前端本轮没有改动，因此没有重跑 Vitest/Playwright。"
+  ],
+  "not_verified": [
+    "真实生产库的回填率与歧义分布（需要在目标环境备份后执行迁移统计）",
+    "真实模型/供应商调用与识别准确率",
+    "目标服务器多用户并发、长稳、故障注入与备份恢复",
+    "TLS/Docker、漏洞扫描与生产发布",
+    "前端展示人员关联的交互"
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "round": "2026-10-31 模板治理续作（主模板 pinned）",
+  "verified_at": "2026-10-31T22:41:00+08:00",
+  "host": {
+    "machine": "LAPTOP-8JA7F6SF",
+    "os": "Windows 11 10.0.26200",
+    "python": "3.14.3",
+    "numpy": "2.5.4",
+    "cpu_count": 16,
+    "asr_mode": "off",
+    "torch": "unavailable"
+  },
+  "commands": [
+    {
+      "command": "python -m pytest backend/tests -q --tb=short --show-capture=no --disable-warnings --junitxml=docs/reviews/evidence/2026-10-31-template-primary/backend-tests.xml",
+      "cwd": "iMeeting",
+      "exit_code": 0,
+      "summary": "715 passed, 0 failed, 0 skipped, 168 warnings; 404.82 s",
+      "artifact": "backend-tests.xml"
+    },
+    {
+      "command": "python -m ruff check backend/src backend/tests backend/migrations",
+      "cwd": "iMeeting",
+      "exit_code": 0,
+      "summary": "All checks passed!"
+    },
+    {
+      "command": "npm run typecheck; npm test -- --run; npm run build",
+      "cwd": "iMeeting/frontend",
+      "exit_code": 0,
+      "summary": "类型检查通过；Vitest 11 个文件 89 项通过；生产构建成功"
+    },
+    {
+      "command": "python scripts/docs_governance.py --write; python scripts/docs_governance.py",
+      "cwd": ".",
+      "exit_code": 0,
+      "summary": "PASS: 315 source documents; 58 registered project documents; inventory current; managed links/metadata valid."
+    }
+  ],
+  "new_tests": {
+    "file": "iMeeting/backend/tests/test_voiceprint_template_pin.py",
+    "count": 8,
+    "covers": [
+      "设置主模板时取消同一人的其它主模板",
+      "没有主模板时按质量推导 primary（primary_source=quality）",
+      "只能把活跃模板设为主模板",
+      "主模板不能直接停用，取消后可停用",
+      "满槽自动淘汰跳过主模板，只淘汰一条非主模板",
+      "显式替换主模板所在槽位被拒绝",
+      "PATCH 接口置位/取消/非法操作 409",
+      "迁移 07 建部分唯一索引：同一声纹第二条 pinned 被拒、不同声纹各自允许、降级移除列"
+    ]
+  },
+  "environment_constraints": [
+    "测试使用夹具的独立临时 SQLite；新列由 SQLModel create_all 建出，迁移用例单独在 03 版本的表结构上执行 07 的升级与降级。",
+    "部分唯一索引只在 SQLite 创建；其它方言下“每人最多一条主模板”由服务层保证，不能声称库层强制。",
+    "未对用户现有数据库执行迁移；未启动或重启现有业务服务。",
+    "前端只改了模板摘要组件；Playwright 端到端本轮没有重跑（需要临时服务与浏览器）。"
+  ],
+  "not_verified": [
+    "真实模型/供应商调用与识别准确率",
+    "目标服务器多用户并发、长稳、故障注入与备份恢复",
+    "TLS/Docker、漏洞扫描与生产发布",
+    "Playwright 端到端（本轮未重跑）",
+    "模板合并与跨设备重新注册向导（未实现）"
+  ]
+}

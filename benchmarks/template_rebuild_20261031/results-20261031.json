@@ -1,0 +1,105 @@
+{
+  "measured_at": "2026-10-31T22:15:02+0800",
+  "environment": {
+    "python": "3.14.3",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "cpu_count": 16,
+    "numpy": "2.5.4",
+    "asr_mode": "off",
+    "torch_available": false,
+    "embedding_model": "deterministic stand-in (CAM++ unavailable locally)"
+  },
+  "rebuild": {
+    "speakers": 4,
+    "segments_per_speaker": 32,
+    "samples_per_run": 128,
+    "runs": [
+      {
+        "label": "cache_disabled_first",
+        "wall_seconds": 0.652,
+        "decode_calls": 128,
+        "cache_hits": 0,
+        "cache_misses": 128,
+        "templates_created": 20,
+        "templates_updated": 0
+      },
+      {
+        "label": "cache_disabled_repeat",
+        "wall_seconds": 0.222,
+        "decode_calls": 128,
+        "cache_hits": 0,
+        "cache_misses": 128,
+        "templates_created": 0,
+        "templates_updated": 20
+      },
+      {
+        "label": "cache_enabled_cold",
+        "wall_seconds": 0.319,
+        "decode_calls": 128,
+        "cache_hits": 0,
+        "cache_misses": 128,
+        "templates_created": 0,
+        "templates_updated": 20
+      },
+      {
+        "label": "cache_enabled_warm",
+        "wall_seconds": 0.173,
+        "decode_calls": 0,
+        "cache_hits": 128,
+        "cache_misses": 0,
+        "templates_created": 0,
+        "templates_updated": 20
+      }
+    ],
+    "cache_rows_after": 128,
+    "template_rows_after": 20,
+    "db_bytes": 2694296
+  },
+  "matching": {
+    "template_count": 1980,
+    "cold_matrix_build_ms": 104.047,
+    "prefilter_eligible_ratio": 0.4167,
+    "mask_cost": {
+      "legacy_python_loop": {
+        "count": 200,
+        "mean_ms": 1.977,
+        "p50_ms": 1.96,
+        "p95_ms": 2.171,
+        "p99_ms": 2.293,
+        "max_ms": 2.554
+      },
+      "vectorized_int_codes": {
+        "count": 200,
+        "mean_ms": 0.059,
+        "p50_ms": 0.058,
+        "p95_ms": 0.09,
+        "p99_ms": 0.121,
+        "max_ms": 0.138
+      }
+    },
+    "prefilter": {
+      "count": 200,
+      "mean_ms": 0.68,
+      "p50_ms": 0.67,
+      "p95_ms": 0.828,
+      "p99_ms": 1.004,
+      "max_ms": 1.28,
+      "label": "scenario_prefilter",
+      "templates_loaded": 1980,
+      "queries": 200,
+      "hits": 0
+    },
+    "full_matrix": {
+      "count": 200,
+      "mean_ms": 1.591,
+      "p50_ms": 1.546,
+      "p95_ms": 2.037,
+      "p99_ms": 2.515,
+      "max_ms": 3.084,
+      "label": "full_matrix",
+      "templates_loaded": 1980,
+      "queries": 200,
+      "hits": 0
+    }
+  }
+}

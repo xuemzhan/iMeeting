@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<testsuites name="vitest tests" tests="89" failures="0" errors="0" time="0.1589262">
+    <testsuite name="src/api/ws.test.ts" timestamp="2026-10-31T12:38:25.650Z" hostname="LAPTOP-8JA7F6SF" tests="7" failures="0" errors="0" skipped="0" time="0.0341526">
+        <testcase classname="src/api/ws.test.ts" name="TranscriptSocket 重连 &gt; 首次连接不带 meeting_id" time="0.0282491">
+        </testcase>
+        <testcase classname="src/api/ws.test.ts" name="TranscriptSocket 重连 &gt; 记住 ready 下发的 meeting_id" time="0.0012602">
+        </testcase>
+        <testcase classname="src/api/ws.test.ts" name="TranscriptSocket 重连 &gt; 重连时回传 meeting_id，复用同一场会议" time="0.0011182">
+        </testcase>
+        <testcase classname="src/api/ws.test.ts" name="TranscriptSocket 重连 &gt; 多次重连始终复用同一个 meeting_id" time="0.0004221">
+        </testcase>
+        <testcase classname="src/api/ws.test.ts" name="TranscriptSocket 重连 &gt; 主动 close 后清空绑定，下一次是新会议" time="0.0005273">
+        </testcase>
+        <testcase classname="src/api/ws.test.ts" name="TranscriptSocket 重连 &gt; 显式传入 meetingId 可继续已有会议（刷新恢复场景）" time="0.0002085">
+        </testcase>
+        <testcase classname="src/api/ws.test.ts" name="TranscriptSocket 重连 &gt; ready 之前断线，重连不带 meeting_id（尚未分配）" time="0.0002251">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/audio/recordWav.test.ts" timestamp="2026-10-31T12:38:25.655Z" hostname="LAPTOP-8JA7F6SF" tests="2" failures="0" errors="0" skipped="0" time="0.014059">
+        <testcase classname="src/audio/recordWav.test.ts" name="recordWav &gt; 倒计时按真实剩余递减，电平回调不会把它重置回起始值" time="0.0097683">
+        </testcase>
+        <testcase classname="src/audio/recordWav.test.ts" name="recordWav &gt; 全程没采到声音时抛错，而不是返回一段静音声纹" time="0.0016976">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/components/transcriptScroll.test.ts" timestamp="2026-10-31T12:38:25.655Z" hostname="LAPTOP-8JA7F6SF" tests="15" failures="0" errors="0" skipped="0" time="0.0088785">
+        <testcase classname="src/components/transcriptScroll.test.ts" name="isScrollable &gt; 内容没长过一屏 → 不可滚动" time="0.0026165">
+        </testcase>
+        <testcase classname="src/components/transcriptScroll.test.ts" name="isScrollable &gt; 亚像素级差异（&lt;=1px）不算可滚动，避免抖动出光标" time="0.0003246">
+        </testcase>
+        <testcase classname="src/components/transcriptScroll.test.ts" name="isScrollable &gt; 内容长过一屏 → 可滚动" time="0.0002099">
+        </testcase>
+        <testcase classname="src/components/transcriptScroll.test.ts" name="deriveScrollState &gt; 未溢出：不贴底判定为真（距离为负/零）、不可拖动、不显示按钮" time="0.00031">
+        </testcase>
+        <testcase classname="src/components/transcriptScroll.test.ts" name="deriveScrollState &gt; 溢出且贴底：pinned 为真、可拖动、不显示按钮" time="0.000209">
+        </testcase>
+        <testcase classname="src/components/transcriptScroll.test.ts" name="deriveScrollState &gt; 溢出且明显上滚：pinned 为假、显示「回到最新」" time="0.000237">
+        </testcase>
+        <testcase classname="src/components/transcriptScroll.test.ts" name="deriveScrollState &gt; 上滚距离在容差内仍算贴底，不显示按钮" time="0.0004547">
+        </testcase>
+        <testcase classname="src/components/transcriptScroll.test.ts" name="deriveScrollState &gt; 恰好等于容差即算离开底部" time="0.0002908">
+        </testcase>
+        <testcase classname="src/components/transcriptScroll.test.ts" name="deriveScrollState &gt; 溢出量不足容差时按钮永不出现（有意取舍）" time="0.0004063">
+        </testcase>
+        <testcase classname="src/components/transcriptScroll.test.ts" name="panScrollTop &gt; 往下拖 → 内容上移 → scrollTop 减小" time="0.000373">
+        </testcase>
+        <testcase classname="src/components/transcriptScroll.test.ts" name="panScrollTop &gt; 往上拖 → scrollTop 增大" time="0.0002335">
+        </testcase>
+        <testcase classname="src/components/transcriptScroll.test.ts" name="panScrollTop &gt; 位移为 0 → 位置不变" time="0.0001413">
+        </testcase>
+        <testcase classname="src/components/transcriptScroll.test.ts" name="panScrollTop &gt; 是绝对换算而非累加：同一个坐标算多次结果相同（幂等）" time="0.0001299">
+        </testcase>
+        <testcase classname="src/components/transcriptScroll.test.ts" name="panScrollTop &gt; 收口用松手坐标：只投递了前几次 move 也不会少滚一截" time="0.0001434">
+        </testcase>
+        <testcase classname="src/components/transcriptScroll.test.ts" name="panScrollTop &gt; 不夹取边界，交给浏览器夹取（保证换算本身可预测）" time="0.0001281">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/lib/exportJob.test.ts" timestamp="2026-10-31T12:38:25.658Z" hostname="LAPTOP-8JA7F6SF" tests="5" failures="0" errors="0" skipped="0" time="0.0129269">
+        <testcase classname="src/lib/exportJob.test.ts" name="runExportJob &gt; downloads an already completed job without polling" time="0.0041216">
+        </testcase>
+        <testcase classname="src/lib/exportJob.test.ts" name="runExportJob &gt; polls until completion and reports each unfinished state" time="0.0009321">
+        </testcase>
+        <testcase classname="src/lib/exportJob.test.ts" name="runExportJob &gt; uses the fallback name only after the task completes" time="0.000676">
+        </testcase>
+        <testcase classname="src/lib/exportJob.test.ts" name="runExportJob &gt; surfaces the server error for a failed job" time="0.0030324">
+        </testcase>
+        <testcase classname="src/lib/exportJob.test.ts" name="runExportJob &gt; stops after the polling budget" time="0.0011367">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/lib/participants.test.ts" timestamp="2026-10-31T12:38:25.659Z" hostname="LAPTOP-8JA7F6SF" tests="10" failures="0" errors="0" skipped="0" time="0.0296672">
+        <testcase classname="src/lib/participants.test.ts" name="visibleParticipants &gt; 隐藏已删除记录" time="0.0029376">
+        </testcase>
+        <testcase classname="src/lib/participants.test.ts" name="visibleParticipants &gt; 重要程度优先，其次待确认在前" time="0.0005148">
+        </testcase>
+        <testcase classname="src/lib/participants.test.ts" name="visibleParticipants &gt; 空输入不崩" time="0.0003767">
+        </testcase>
+        <testcase classname="src/lib/participants.test.ts" name="summarizeAttributes &gt; 单位与职务拼一行" time="0.0005298">
+        </testcase>
+        <testcase classname="src/lib/participants.test.ts" name="summarizeAttributes &gt; 缺职务时退到部门" time="0.0003514">
+        </testcase>
+        <testcase classname="src/lib/participants.test.ts" name="summarizeAttributes &gt; 没有属性返回空串" time="0.0002546">
+        </testcase>
+        <testcase classname="src/lib/participants.test.ts" name="labels &gt; 默认隐藏低可信语义候选，仍显示讲话人占位，可展开核对" time="0.0202439">
+        </testcase>
+        <testcase classname="src/lib/participants.test.ts" name="labels &gt; 状态文案齐全" time="0.000433">
+        </testcase>
+        <testcase classname="src/lib/participants.test.ts" name="labels &gt; 冲突等级文案不暴露阈值术语" time="0.0006273">
+        </testcase>
+        <testcase classname="src/lib/participants.test.ts" name="labels &gt; 待确认计数排除已确认与已删除" time="0.0006233">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/lib/readerPrefs.test.ts" timestamp="2026-10-31T12:38:25.662Z" hostname="LAPTOP-8JA7F6SF" tests="11" failures="0" errors="0" skipped="0" time="0.0093824">
+        <testcase classname="src/lib/readerPrefs.test.ts" name="字号缩放 &gt; 非法值回到默认，而不是 NaN 污染 CSS" time="0.0024775">
+        </testcase>
+        <testcase classname="src/lib/readerPrefs.test.ts" name="字号缩放 &gt; 越界时夹到上下限" time="0.0004996">
+        </testcase>
+        <testcase classname="src/lib/readerPrefs.test.ts" name="字号缩放 &gt; 保留两位小数，避免浮点累加出现 1.1500000000000001" time="0.0002871">
+        </testcase>
+        <testcase classname="src/lib/readerPrefs.test.ts" name="字号缩放 &gt; 按 5% 一档加减，到边界后不再变化" time="0.0003643">
+        </testcase>
+        <testcase classname="src/lib/readerPrefs.test.ts" name="字号缩放 &gt; 百分比展示与缩放值一致" time="0.0003052">
+        </testcase>
+        <testcase classname="src/lib/readerPrefs.test.ts" name="字号缩放 &gt; readerScaleStyle 输出 CSS 变量" time="0.0011107">
+        </testcase>
+        <testcase classname="src/lib/readerPrefs.test.ts" name="分栏宽度 &gt; 非法值用默认宽度" time="0.0004651">
+        </testcase>
+        <testcase classname="src/lib/readerPrefs.test.ts" name="分栏宽度 &gt; 夹在最小/最大之间" time="0.000362">
+        </testcase>
+        <testcase classname="src/lib/readerPrefs.test.ts" name="分栏宽度 &gt; 窗口较窄时不能把转写挤没（最多占 60%，且给转写留 240px）" time="0.0003878">
+        </testcase>
+        <testcase classname="src/lib/readerPrefs.test.ts" name="分栏宽度 &gt; 容器宽度未知时给出安全上限" time="0.0003204">
+        </testcase>
+        <testcase classname="src/lib/readerPrefs.test.ts" name="分栏宽度 &gt; 键盘微调一次 16px，并在边界处收敛" time="0.0003251">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/lib/speakerRoles.test.ts" timestamp="2026-10-31T12:38:25.666Z" hostname="LAPTOP-8JA7F6SF" tests="14" failures="0" errors="0" skipped="0" time="0.0160901">
+        <testcase classname="src/lib/speakerRoles.test.ts" name="rowKey &gt; 优先用 speaker_key（改名不变）" time="0.0031725">
+        </testcase>
+        <testcase classname="src/lib/speakerRoles.test.ts" name="normalizeImportance &gt; 只接受 1/2/3，其余按一般处理" time="0.0011258">
+        </testcase>
+        <testcase classname="src/lib/speakerRoles.test.ts" name="importanceMapFromApi &gt; 键与 rowKey 一致，缺省值按一般" time="0.001265">
+        </testcase>
+        <testcase classname="src/lib/speakerRoles.test.ts" name="speakerRowsFromSegments &gt; 按说话人聚合片段数与发言时长" time="0.0008115">
+        </testcase>
+        <testcase classname="src/lib/speakerRoles.test.ts" name="speakerRowsFromSegments &gt; 忽略草稿片段与无说话人片段" time="0.0003663">
+        </testcase>
+        <testcase classname="src/lib/speakerRoles.test.ts" name="speakerRowsFromSegments &gt; 重要程度来自映射：关键排最前，即使发言更短" time="0.0014941">
+        </testcase>
+        <testcase classname="src/lib/speakerRoles.test.ts" name="speakerRowsFromSegments &gt; 同名说话人在 speaker_key 缺省时合并为一行" time="0.0014728">
+        </testcase>
+        <testcase classname="src/lib/speakerRoles.test.ts" name="speakerRowsFromApi &gt; 覆盖值优先于接口值，并按重要程度排序" time="0.0006291">
+        </testcase>
+        <testcase classname="src/lib/speakerRoles.test.ts" name="speakerRowsFromApi &gt; 接口缺字段时不崩，按默认值补齐" time="0.0006311">
+        </testcase>
+        <testcase classname="src/lib/speakerRoles.test.ts" name="sortSpeakerRows &gt; 重要性相同时按时长降序，再按姓名" time="0.0004733">
+        </testcase>
+        <testcase classname="src/lib/speakerRoles.test.ts" name="normalizeState &gt; 只接受 1/2，其余按未处理" time="0.0004451">
+        </testcase>
+        <testcase classname="src/lib/speakerRoles.test.ts" name="参会人处理状态 &gt; 确认过的说话人不再出现在片段聚合的行里" time="0.0004128">
+        </testcase>
+        <testcase classname="src/lib/speakerRoles.test.ts" name="参会人处理状态 &gt; 删除过的说话人不再出现在接口清单里" time="0.0003177">
+        </testcase>
+        <testcase classname="src/lib/speakerRoles.test.ts" name="参会人处理状态 &gt; stateMapFromApi 按 rowKey 归一，缺字段按未处理" time="0.0003945">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/lib/speech.test.ts" timestamp="2026-10-31T12:38:25.669Z" hostname="LAPTOP-8JA7F6SF" tests="4" failures="0" errors="0" skipped="0" time="0.0067864">
+        <testcase classname="src/lib/speech.test.ts" name="normalizeSpokenName &gt; 去掉空格与标点" time="0.0029904">
+        </testcase>
+        <testcase classname="src/lib/speech.test.ts" name="normalizeSpokenName &gt; 保留姓名本身，限制长度" time="0.0005375">
+        </testcase>
+        <testcase classname="src/lib/speech.test.ts" name="normalizeSpokenName &gt; 空输入不崩" time="0.0004889">
+        </testcase>
+        <testcase classname="src/lib/speech.test.ts" name="speechSupported &gt; 无浏览器环境时返回 false（不能崩，也不能假装支持）" time="0.0003102">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/pages/historyTags.test.ts" timestamp="2026-10-31T12:38:25.670Z" hostname="LAPTOP-8JA7F6SF" tests="2" failures="0" errors="0" skipped="0" time="0.0057535">
+        <testcase classname="src/pages/historyTags.test.ts" name="parseHistoryTags &gt; trims comma-separated tags and drops empty values" time="0.0033257">
+        </testcase>
+        <testcase classname="src/pages/historyTags.test.ts" name="parseHistoryTags &gt; treats an empty value as no tags" time="0.0003184">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/store/paragraphs.test.ts" timestamp="2026-10-31T12:38:25.671Z" hostname="LAPTOP-8JA7F6SF" tests="3" failures="0" errors="0" skipped="0" time="0.006686">
+        <testcase classname="src/store/paragraphs.test.ts" name="groupParagraphs &gt; 合并同一说话人的短停顿碎片" time="0.0039005">
+        </testcase>
+        <testcase classname="src/store/paragraphs.test.ts" name="groupParagraphs &gt; 不跨说话人合并" time="0.0003649">
+        </testcase>
+        <testcase classname="src/store/paragraphs.test.ts" name="groupParagraphs &gt; 长停顿保持独立" time="0.0003294">
+        </testcase>
+    </testsuite>
+    <testsuite name="src/store/session.test.ts" timestamp="2026-10-31T12:38:25.672Z" hostname="LAPTOP-8JA7F6SF" tests="16" failures="0" errors="0" skipped="0" time="0.0145436">
+        <testcase classname="src/store/session.test.ts" name="renameSpeaker &gt; 取消确认后保持原说话人" time="0.0027872">
+        </testcase>
+        <testcase classname="src/store/session.test.ts" name="renameSpeaker &gt; 转交后采用服务端确认的人名" time="0.0005914">
+        </testcase>
+        <testcase classname="src/store/session.test.ts" name="upsertSegment &gt; 新片段追加到末尾" time="0.0012664">
+        </testcase>
+        <testcase classname="src/store/session.test.ts" name="upsertSegment &gt; 同 id 覆盖，不产生新行" time="0.0012875">
+        </testcase>
+        <testcase classname="src/store/session.test.ts" name="upsertSegment &gt; final 覆盖同 id 的 partial 草稿" time="0.0005283">
+        </testcase>
+        <testcase classname="src/store/session.test.ts" name="upsertSegment &gt; 已定稿的片段不会被迟到的 partial 回退" time="0.0004524">
+        </testcase>
+        <testcase classname="src/store/session.test.ts" name="upsertSegment &gt; indexById 与 segments 始终一致" time="0.0004103">
+        </testcase>
+        <testcase classname="src/store/session.test.ts" name="upsertSegment &gt; 覆盖中间元素不打乱其他片段的顺序" time="0.000385">
+        </testcase>
+        <testcase classname="src/store/session.test.ts" name="handleServerMessage &gt; ready 写入 meetingId 与 sessionId" time="0.0004906">
+        </testcase>
+        <testcase classname="src/store/session.test.ts" name="handleServerMessage &gt; partial 与随后同 id 的 final 合成一条" time="0.0005462">
+        </testcase>
+        <testcase classname="src/store/session.test.ts" name="handleServerMessage &gt; speakers 消息更新占比数据" time="0.0003325">
+        </testcase>
+        <testcase classname="src/store/session.test.ts" name="handleServerMessage &gt; speaker_update 同步已显示片段与占比" time="0.0003647">
+        </testcase>
+        <testcase classname="src/store/session.test.ts" name="handleServerMessage &gt; minutes_update 写入会中草稿" time="0.0003152">
+        </testcase>
+        <testcase classname="src/store/session.test.ts" name="updateSegmentText &gt; 定稿片段：先本地生效，再落库" time="0.0014676">
+        </testcase>
+        <testcase classname="src/store/session.test.ts" name="updateSegmentText &gt; 草稿不可修订（还没落库）" time="0.0002667">
+        </testcase>
+        <testcase classname="src/store/session.test.ts" name="updateSegmentText &gt; 落库失败要回滚本地文字，避免界面与库里不一致" time="0.0004154">
+        </testcase>
+    </testsuite>
+</testsuites>

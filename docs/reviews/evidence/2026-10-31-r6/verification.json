@@ -1,0 +1,71 @@
+{
+  "round": "2026-10-31 R6 优化续作（取样缓存 / 重建进度 / 先筛后算）",
+  "verified_at": "2026-10-31T22:25:00+08:00",
+  "host": {
+    "machine": "LAPTOP-8JA7F6SF",
+    "os": "Windows 11 10.0.26200",
+    "python": "3.14.3",
+    "numpy": "2.5.4",
+    "cpu_count": 16,
+    "asr_mode": "off",
+    "torch": "unavailable"
+  },
+  "commands": [
+    {
+      "command": "python -m pytest backend/tests -q --tb=short --show-capture=no --disable-warnings --junitxml=docs/reviews/evidence/2026-10-31-r6/backend-tests.xml",
+      "cwd": "iMeeting",
+      "exit_code": 0,
+      "summary": "699 passed, 0 failed, 0 skipped, 164 warnings; 413.58 s",
+      "artifact": "backend-tests.xml"
+    },
+    {
+      "command": "python -m ruff check backend/src backend/tests backend/migrations",
+      "cwd": "iMeeting",
+      "exit_code": 0,
+      "summary": "All checks passed!"
+    },
+    {
+      "command": "python benchmarks/template_rebuild_20261031/bench_template_optimization.py --speakers 4 --segments-per-speaker 32 --templates 2000 --queries 200",
+      "cwd": "iMeeting",
+      "exit_code": 0,
+      "summary": "重建：128 取样，缓存重复重建 0.222 s（128 次解码）→ 0.173 s（0 次解码）；匹配 1980 模板：掩码 1.977 ms → 0.059 ms，端到端 1.591 ms → 0.680 ms",
+      "artifact": "benchmarks/template_rebuild_20261031/results-20261031.json"
+    },
+    {
+      "command": "python scripts/docs_governance.py --write; python scripts/docs_governance.py",
+      "cwd": ".",
+      "exit_code": 0,
+      "summary": "PASS: 313 source documents; 54 registered project documents; inventory current; managed links/metadata valid."
+    }
+  ],
+  "new_tests": {
+    "file": "iMeeting/backend/tests/test_template_rebuild_optimization.py",
+    "count": 10,
+    "covers": [
+      "二次重建全部命中取样缓存且不再解码/推理",
+      "音频变化与片段边界变化分别让对应缓存失效",
+      "换声纹模型后整场缓存失效",
+      "进度到 done 并给出 cache_hit_rate",
+      "中途失败保留已完成说话人的进度并记录 last_error",
+      "过期缓存被清理、会议物理删除后两张子表无残留且不触发外键错误",
+      "rebuild-status 接口按会议归属鉴权",
+      "迁移 05 升级/降级/再升级",
+      "场景掩码与 Scenario.match_score 逐行结果等价",
+      "粗筛与全矩阵路径给出同一身份与同一分数"
+    ]
+  },
+  "environment_constraints": [
+    "本机没有 torch，CAM++ 无法加载：重建基准用确定性替身替代 extract_embedding，模型推理耗时没有测到，也没有外推。",
+    "重建基准使用合成 16 kHz 单声道 WAV 与临时 SQLite，不是真实会议录音或目标硬件。",
+    "后端回归使用测试夹具的独立临时 SQLite（ASR_MODE=off、MEETING_SKIP_ALEMBIC=1），不访问生产库；迁移用例单独在旧 03/04 表结构上执行 05 的升级与降级。",
+    "未对用户现有数据库执行迁移；未启动或重启现有业务服务。",
+    "前端本轮没有改动，因此没有重跑 Vitest/Playwright，也没有用上一轮的前端结果支持本轮接口。"
+  ],
+  "not_verified": [
+    "真实声纹模型的重建耗时与识别准确率",
+    "目标服务器多用户并发、长稳、故障注入与备份恢复",
+    "TLS/Docker、漏洞扫描与生产发布",
+    "FunASR 顶层按需导入（需带 torch 的环境与组件清单）",
+    "ANN/跨语言方案与文档重建收益"
+  ]
+}

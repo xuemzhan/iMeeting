@@ -1,0 +1,64 @@
+{
+  "scenario": "scoped cold matrix loads, five templates/person, mixed explicit/legacy owners, fixed seed; no real inference",
+  "python": "3.14.3",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "cpu": "Intel64 Family 6 Model 154 Stepping 3, GenuineIntel",
+  "numpy": "2.5.4",
+  "sqlalchemy": "2.1.6",
+  "fixture_sha256": "7760e281b03978b3f1628e4960cdf11cf63caf48121754d7c37e7b70a8946455",
+  "warmup_runs_discarded": 1,
+  "results": [
+    {
+      "people_total": 100,
+      "templates_total": 500,
+      "returned_templates": 250,
+      "runs": 5,
+      "milliseconds": {
+        "min": 6.322699999145698,
+        "median": 6.988500004808884,
+        "max": 9.707999997772276,
+        "raw": [
+          7.209600000351202,
+          6.988500004808884,
+          6.322699999145698,
+          6.359400002111215,
+          9.707999997772276
+        ]
+      },
+      "sql_queries": [
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "result_sha256": "5796618c3f432b298c966aa3e8e8a3b3c76242af51c0becf86a5446297bfd83d"
+    },
+    {
+      "people_total": 500,
+      "templates_total": 2500,
+      "returned_templates": 1250,
+      "runs": 5,
+      "milliseconds": {
+        "min": 27.443100007076282,
+        "median": 28.446800002711825,
+        "max": 32.390899999882095,
+        "raw": [
+          32.390899999882095,
+          27.443100007076282,
+          28.224200003023725,
+          28.446800002711825,
+          28.94390000437852
+        ]
+      },
+      "sql_queries": [
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "result_sha256": "f1adb3f453eedff7dd14d3fe50437d13c5f3e8c782d6946c53bd2e9ba6c867fc"
+    }
+  ]
+}

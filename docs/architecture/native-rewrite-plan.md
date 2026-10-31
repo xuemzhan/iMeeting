@@ -1,5 +1,10 @@
 # 会议后端 Go + C++ 渐进式重写方案
 
+<!-- doc-governance: IM-DES-003 -->
+> 文档类型：设计；状态：提案；内容基准日期：2026-10-18；整理日期：2026-10-31。
+> Go/C++ 渐进式重写提案；不代表当前后端已迁移或工期获批准。
+> 维护责任：待指派（iMeeting 文档维护者）。[台账](../README.md) · [维护规则](../governance/README.md)。
+
 Status: Proposed  
 Date: 2026-10-18  
 Scope: `iMeeting/backend` 实时转写、控制面与后台任务

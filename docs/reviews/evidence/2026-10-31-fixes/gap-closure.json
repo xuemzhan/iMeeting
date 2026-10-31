@@ -1,0 +1,317 @@
+{
+  "scope": "original 16 audit gaps, not all 83 FR/AC acceptance items",
+  "gaps": [
+    {
+      "gap": "GAP-01",
+      "state": "implemented; reproduced scope covered by local regression",
+      "code": "backend/src/imeeting/application/identity_access.py",
+      "tests": [
+        {
+          "path": "backend/tests/test_doc_code_gap_regressions.py",
+          "function": "test_foreign_person_cannot_be_deleted"
+        },
+        {
+          "path": "backend/tests/test_doc_code_gap_regressions.py",
+          "function": "test_foreign_templates_cannot_be_read"
+        },
+        {
+          "path": "backend/tests/test_identity_workflows.py",
+          "function": "test_foreign_source_meeting_rejected_before_audio_or_model"
+        },
+        {
+          "path": "backend/tests/test_identity_workflows.py",
+          "function": "test_foreign_merge_and_template_mutation_rejected"
+        },
+        {
+          "path": "backend/tests/test_identity_workflows.py",
+          "function": "test_matchers_filter_the_meeting_owner"
+        },
+        {
+          "path": "backend/tests/test_identity_workflows.py",
+          "function": "test_same_name_rebuild_cannot_reuse_foreign_identity"
+        },
+        {
+          "path": "backend/tests/test_identity_workflows.py",
+          "function": "test_conflict_list_hides_foreign_meeting_and_other_identity"
+        },
+        {
+          "path": "backend/tests/test_identity_workflows.py",
+          "function": "test_viewer_cannot_change_speaker_or_batch_confirm"
+        }
+      ],
+      "remaining": "target deployment multi-user acceptance pending"
+    },
+    {
+      "gap": "GAP-02",
+      "state": "implemented; reproduced scope covered by local regression",
+      "code": "backend/src/imeeting/application/person_extraction.py",
+      "tests": [
+        {
+          "path": "backend/tests/test_identity_workflows.py",
+          "function": "test_introduction_arriving_during_extraction_is_queued_for_followup"
+        },
+        {
+          "path": "backend/tests/test_identity_workflows.py",
+          "function": "test_automatic_trigger_runs_a_persistent_job_and_deduplicates"
+        },
+        {
+          "path": "backend/tests/test_identity_workflows.py",
+          "function": "test_periodic_zero_does_not_disable_intro_trigger"
+        },
+        {
+          "path": "backend/tests/test_identity_workflows.py",
+          "function": "test_three_failures_switch_to_rules_without_another_llm_call"
+        }
+      ],
+      "remaining": "real LLM provider and long-meeting integration pending"
+    },
+    {
+      "gap": "GAP-03",
+      "state": "implemented; reproduced scope covered by local regression",
+      "code": "backend/src/imeeting/engine/voice_template.py",
+      "tests": [
+        {
+          "path": "backend/tests/test_doc_code_gap_regressions.py",
+          "function": "test_unconfirmed_template_is_not_in_global_matching"
+        },
+        {
+          "path": "backend/tests/test_identity_workflows.py",
+          "function": "test_matchers_filter_the_meeting_owner"
+        },
+        {
+          "path": "backend/tests/test_identity_workflows.py",
+          "function": "test_automatic_candidate_cannot_change_an_approved_template"
+        }
+      ],
+      "remaining": "real acoustic corpus pending"
+    },
+    {
+      "gap": "GAP-04",
+      "state": "implemented; reproduced scope covered by local regression",
+      "code": "backend/src/imeeting/engine/voice_match.py",
+      "tests": [
+        {
+          "path": "backend/tests/test_doc_code_gap_regressions.py",
+          "function": "test_disabled_template_can_be_reenabled"
+        },
+        {
+          "path": "backend/tests/test_identity_workflows.py",
+          "function": "test_disabled_template_preserves_slot_and_retired_cannot_resume"
+        }
+      ],
+      "remaining": null
+    },
+    {
+      "gap": "GAP-05",
+      "state": "implemented; reproduced scope covered by local regression",
+      "code": "backend/src/imeeting/engine/voice_match.py",
+      "tests": [
+        {
+          "path": "backend/tests/test_doc_code_gap_regressions.py",
+          "function": "test_confirming_provisional_identity_makes_it_formal"
+        }
+      ],
+      "remaining": null
+    },
+    {
+      "gap": "GAP-06",
+      "state": "implemented; reproduced scope covered by local regression",
+      "code": "backend/src/imeeting/persons.py",
+      "tests": [
+        {
+          "path": "backend/tests/test_doc_code_gap_regressions.py",
+          "function": "test_repeated_different_unit_person_is_idempotent"
+        }
+      ],
+      "remaining": null
+    },
+    {
+      "gap": "GAP-07",
+      "state": "implemented; reproduced scope covered by local regression",
+      "code": "backend/src/imeeting/person_extract.py",
+      "tests": [
+        {
+          "path": "backend/tests/test_doc_code_gap_regressions.py",
+          "function": "test_fuzzy_quote_cannot_introduce_a_hallucinated_name"
+        },
+        {
+          "path": "backend/tests/test_doc_code_gap_regressions.py",
+          "function": "test_control_genuine_evidence_is_accepted"
+        }
+      ],
+      "remaining": null
+    },
+    {
+      "gap": "GAP-08",
+      "state": "implemented; reproduced scope covered by local regression",
+      "code": "backend/src/imeeting/person_extract.py",
+      "tests": [
+        {
+          "path": "backend/tests/test_doc_code_gap_regressions.py",
+          "function": "test_malformed_llm_confidence_is_declined"
+        },
+        {
+          "path": "backend/tests/test_identity_workflows.py",
+          "function": "test_nonfinite_and_nested_invalid_llm_fields_do_not_raise"
+        }
+      ],
+      "remaining": null
+    },
+    {
+      "gap": "GAP-09",
+      "state": "implemented; reproduced scope covered by local regression",
+      "code": "backend/src/imeeting/application/person_extraction.py",
+      "tests": [
+        {
+          "path": "backend/tests/test_doc_code_gap_regressions.py",
+          "function": "test_repeated_manual_extraction_is_rate_limited"
+        },
+        {
+          "path": "backend/tests/test_identity_workflows.py",
+          "function": "test_manual_quota_is_persisted_and_cannot_be_bypassed"
+        },
+        {
+          "path": "backend/tests/test_identity_workflows.py",
+          "function": "test_concurrent_manual_extraction_has_only_one_inflight_call"
+        },
+        {
+          "path": "backend/tests/test_identity_workflows.py",
+          "function": "test_llm_call_does_not_hold_the_write_transaction"
+        }
+      ],
+      "remaining": "SQLite single-instance scope"
+    },
+    {
+      "gap": "GAP-10",
+      "state": "implemented; reproduced scope covered by local regression",
+      "code": "backend/src/imeeting/persons.py",
+      "tests": [
+        {
+          "path": "backend/tests/test_doc_code_gap_regressions.py",
+          "function": "test_renaming_bound_person_updates_transcript"
+        },
+        {
+          "path": "backend/tests/test_identity_workflows.py",
+          "function": "test_merge_person_syncs_compatibility_projection"
+        },
+        {
+          "path": "backend/tests/test_identity_workflows.py",
+          "function": "test_real_transcript_conflict_requires_choice_and_keeps_other_identity"
+        },
+        {
+          "path": "backend/tests/test_identity_workflows.py",
+          "function": "test_reverse_order_rebind_frees_unique_key_before_assignment"
+        },
+        {
+          "path": "backend/tests/test_identity_workflows.py",
+          "function": "test_editor_can_correct_transcript_but_cannot_rename_private_biometric"
+        }
+      ],
+      "remaining": "permanent Person-Voiceprint foreign key deferred P1"
+    },
+    {
+      "gap": "GAP-11",
+      "state": "implemented; reproduced scope covered by local regression",
+      "code": "backend/src/imeeting/engine/voice_template.py",
+      "tests": [
+        {
+          "path": "backend/tests/test_doc_code_gap_regressions.py",
+          "function": "test_same_meeting_template_update_is_idempotent"
+        },
+        {
+          "path": "backend/tests/test_identity_workflows.py",
+          "function": "test_full_target_requires_replacement_and_source_replay_preserves_templates"
+        },
+        {
+          "path": "backend/tests/test_identity_workflows.py",
+          "function": "test_reordered_source_replay_is_stable_and_tracks_duration"
+        },
+        {
+          "path": "backend/tests/test_identity_workflows.py",
+          "function": "test_explicit_replacement_uses_the_selected_slot"
+        }
+      ],
+      "remaining": "full reordered clustering/coverage corpus pending"
+    },
+    {
+      "gap": "GAP-12",
+      "state": "implemented; reproduced scope covered by local regression",
+      "code": "backend/src/imeeting/db.py",
+      "tests": [
+        {
+          "path": "backend/tests/test_doc_code_gap_regressions.py",
+          "function": "test_bootstrap_does_not_log_administrator_password"
+        }
+      ],
+      "remaining": null
+    },
+    {
+      "gap": "GAP-13",
+      "state": "implemented; reproduced scope covered by local regression",
+      "code": "backend/src/imeeting/engine/speaker.py",
+      "tests": [
+        {
+          "path": "backend/tests/test_doc_code_gap_regressions.py",
+          "function": "test_single_template_keeps_legacy_identity_result"
+        },
+        {
+          "path": "backend/tests/test_identity_workflows.py",
+          "function": "test_matching_respects_callers_stricter_threshold"
+        },
+        {
+          "path": "backend/tests/test_identity_workflows.py",
+          "function": "test_bounded_template_cache"
+        }
+      ],
+      "remaining": "real calibration and rollout pending; template matching default false"
+    },
+    {
+      "gap": "GAP-14",
+      "state": "implemented; reproduced scope covered by local regression",
+      "code": "backend/src/imeeting/models.py",
+      "tests": [
+        {
+          "path": "backend/tests/test_doc_code_gap_regressions.py",
+          "function": "test_database_rejects_six_active_template_slots"
+        },
+        {
+          "path": "backend/tests/test_identity_workflows.py",
+          "function": "test_existing_sqlite_migration_protects_sixth_slot"
+        }
+      ],
+      "remaining": "production database not migrated"
+    },
+    {
+      "gap": "GAP-15",
+      "state": "implemented; reproduced scope covered by local regression",
+      "code": "backend/src/imeeting/application/voiceprint_lifecycle.py",
+      "tests": [
+        {
+          "path": "backend/tests/test_doc_code_gap_regressions.py",
+          "function": "test_voiceprint_with_templates_can_be_deleted_by_its_owner"
+        }
+      ],
+      "remaining": null
+    },
+    {
+      "gap": "GAP-16",
+      "state": "implemented; reproduced scope covered by local regression",
+      "code": "backend/src/imeeting/application/speaker_confirmation.py",
+      "tests": [
+        {
+          "path": "backend/tests/test_identity_workflows.py",
+          "function": "test_real_transcript_conflict_requires_choice_and_keeps_other_identity"
+        },
+        {
+          "path": "backend/tests/test_identity_workflows.py",
+          "function": "test_repeated_sample_decision_does_not_create_pending_conflicts"
+        },
+        {
+          "path": "backend/tests/test_identity_workflows.py",
+          "function": "test_full_target_requires_replacement_and_source_replay_preserves_templates"
+        }
+      ],
+      "remaining": "frontend/e2e/identity-confirmation.spec.ts uses controlled API responses"
+    }
+  ]
+}

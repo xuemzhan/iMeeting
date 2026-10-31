@@ -1,0 +1,18 @@
+<testsuites id="" name="" tests="6" failures="0" skipped="0" errors="0" time="21.909706999999997">
+<testsuite name="auth.spec.ts" timestamp="2026-10-31T12:42:14.467Z" hostname="" tests="1" failures="0" skipped="0" time="3.086" errors="0">
+<testcase name="first administrator login rotates the bootstrap password" classname="auth.spec.ts" time="3.086">
+</testcase>
+</testsuite>
+<testsuite name="identity-confirmation.spec.ts" timestamp="2026-10-31T12:42:14.467Z" hostname="" tests="5" failures="0" skipped="0" time="10.235" errors="0">
+<testcase name="transcript voice confirmation: cancel" classname="identity-confirmation.spec.ts" time="2.044">
+</testcase>
+<testcase name="transcript voice confirmation: confirm_self" classname="identity-confirmation.spec.ts" time="2.037">
+</testcase>
+<testcase name="transcript voice confirmation: reassign" classname="identity-confirmation.spec.ts" time="2.046">
+</testcase>
+<testcase name="transcript voice confirmation: confirm_self_full" classname="identity-confirmation.spec.ts" time="2.068">
+</testcase>
+<testcase name="transcript voice confirmation: reassign_full" classname="identity-confirmation.spec.ts" time="2.04">
+</testcase>
+</testsuite>
+</testsuites>

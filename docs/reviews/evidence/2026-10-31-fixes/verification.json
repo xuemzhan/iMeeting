@@ -1,0 +1,121 @@
+{
+  "recorded_at_utc": "2026-10-31T12:48:21.862182+00:00",
+  "scope": "local dirty checkout, Windows, single backend, SQLite; no real ASR/voice/LLM inference or production deployment",
+  "python": "3.14.3",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "node": "v24.14.0",
+  "packages": {
+    "pytest": "9.2.0",
+    "sqlmodel": "0.0.48",
+    "SQLAlchemy": "2.1.6",
+    "alembic": "1.20.1",
+    "fastapi": "0.162.0",
+    "numpy": "2.5.4"
+  },
+  "tests": {
+    "backend": {
+      "tests": 685,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 395.718
+    },
+    "frontend": {
+      "tests": 89,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 0.1589262
+    },
+    "browser": {
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 13.321
+    },
+    "migration": {
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "time": 3.712
+    },
+    "test_doc_code_gap_regressions": {
+      "tests": 16,
+      "included_in": "backend"
+    },
+    "test_identity_workflows": {
+      "tests": 30,
+      "included_in": "backend"
+    }
+  },
+  "checks": [
+    {
+      "command": "python -m ruff check backend/src backend/tests backend/migrations",
+      "cwd": "iMeeting",
+      "exit_code": 0
+    },
+    {
+      "command": "python -m pytest backend/tests -q --tb=short --show-capture=no --disable-warnings --junitxml=docs/reviews/evidence/2026-10-31-fixes/backend-tests.xml",
+      "cwd": "iMeeting",
+      "exit_code": 0,
+      "warnings": 163
+    },
+    {
+      "command": "python -m pytest backend/tests/test_identity_workflows.py::test_existing_sqlite_migration_protects_sixth_slot -q --tb=short --show-capture=no --disable-warnings --junitxml=docs/reviews/evidence/2026-10-31-fixes/migration-tests.xml",
+      "cwd": "iMeeting",
+      "exit_code": 0,
+      "note": "final delta: disabled index upgrade/downgrade; overlaps full suite, not an extra distinct case"
+    },
+    {
+      "command": "npm run typecheck",
+      "cwd": "iMeeting/frontend",
+      "exit_code": 0
+    },
+    {
+      "command": "npm test -- --reporter=junit --outputFile=../docs/reviews/evidence/2026-10-31-fixes/frontend-tests.xml",
+      "cwd": "iMeeting/frontend",
+      "exit_code": 0
+    },
+    {
+      "command": "npm run build",
+      "cwd": "iMeeting/frontend",
+      "exit_code": 0
+    },
+    {
+      "command": "npm run e2e -- --reporter=line,junit --timeout=20000",
+      "cwd": "iMeeting/frontend",
+      "exit_code": 0,
+      "env": {
+        "PLAYWRIGHT_JUNIT_OUTPUT_FILE": "iMeeting/docs/reviews/evidence/2026-10-31-fixes/browser-tests.xml"
+      },
+      "browser": "installed Chrome; 1 real auth case, 5 controlled API identity cases"
+    },
+    {
+      "command": "python scripts/docs_governance.py --write; python scripts/docs_governance.py",
+      "cwd": "FunASR-main",
+      "exit_code": 0,
+      "source_documents": 308,
+      "registered_documents": 51
+    },
+    {
+      "command": "verify source-hashes.json and protected historical document SHA-256",
+      "cwd": "FunASR-main",
+      "exit_code": 0,
+      "source_files": 261
+    }
+  ],
+  "production_db_touched": false,
+  "template_match_default": false,
+  "excluded": [
+    "target hardware acoustic accuracy and calibration",
+    "real provider cost",
+    "p95/p99 and throughput benchmarks",
+    "Docker/TLS deployment",
+    "vulnerability rescans",
+    "long-duration and fault-injection acceptance",
+    "FunASR lazy import redesign"
+  ],
+  "source_snapshot": "source-hashes.json"
+}
