@@ -2,6 +2,9 @@ import { useState } from 'react'
 import { FileText, PencilLine } from 'lucide-react'
 
 import type { ApiSegment } from '../api/types'
+import { FontSizeControl } from './FontSizeControl'
+import { normalizeImportance, rowKey } from '../lib/speakerRoles'
+import { useSettings } from '../store/settings'
 import { groupParagraphs, type Paragraph } from '../store/paragraphs'
 import { formatTimestamp, speakerLabel } from '../store/session'
 
@@ -12,6 +15,18 @@ function paragraphLowScore(items: ApiSegment[]): number | null {
   return scores.length ? Math.min(...scores) : null
 }
 
+function paragraphImportance(
+  items: ApiSegment[],
+  importanceByKey?: Record<string, number>,
+): number | undefined {
+  if (!importanceByKey) return undefined
+  const first = items[0]
+  if (!first?.speaker) return undefined
+  return normalizeImportance(
+    importanceByKey[rowKey(first.speaker_key, first.speaker)],
+  )
+}
+
 interface TranscriptPanelProps {
   segments: ApiSegment[]
   hasAudio: boolean
@@ -19,6 +34,8 @@ interface TranscriptPanelProps {
   onRenameSpeaker: (fromLabel: string, name: string) => Promise<void>
   onConfirmSpeaker: (segment: ApiSegment) => Promise<void>
   onEditSegment: (segment: ApiSegment) => void
+  /** 说话人重要程度映射（键见 lib/speakerRoles::rowKey） */
+  speakerImportance?: Record<string, number>
 }
 
 export function TranscriptPanel({
@@ -28,7 +45,10 @@ export function TranscriptPanel({
   onRenameSpeaker,
   onConfirmSpeaker,
   onEditSegment,
+  speakerImportance,
 }: TranscriptPanelProps) {
+  const scale = useSettings((s) => s.transcriptScale)
+  const setScale = useSettings((s) => s.setTranscriptScale)
   const [renaming, setRenaming] = useState<string | null>(null)
   const [renameDraft, setRenameDraft] = useState('')
   const [expandedParagraphs, setExpandedParagraphs] = useState<Set<string>>(new Set())
@@ -53,10 +73,20 @@ export function TranscriptPanel({
   }
 
   return (
-    <section className="panel overflow-hidden">
+    <section
+      className="panel reader-scope overflow-hidden"
+      style={{ '--reader-scale': String(scale) } as React.CSSProperties}
+    >
       <div className="panel-header">
         <FileText size={14} style={{ color: 'var(--text-tertiary)' }} />
         <h2>完整转写</h2>
+        <div className="ml-auto">
+          <FontSizeControl
+            value={scale}
+            onChange={setScale}
+            label="完整转写"
+          />
+        </div>
       </div>
       <div className="space-y-3 p-4">
         {segments.length === 0 && (
@@ -65,9 +95,11 @@ export function TranscriptPanel({
         {visibleParagraphs.map((paragraph: Paragraph) => {
           const lowScore = paragraphLowScore(paragraph.items)
           const hasLowConfidence = lowScore != null
+          const importance = paragraphImportance(paragraph.items, speakerImportance)
           return (
             <div
               key={paragraph.key}
+              id={paragraph.segmentId}
               className="flex gap-3"
               style={{
                 contentVisibility: 'auto',
@@ -118,7 +150,7 @@ export function TranscriptPanel({
                       setRenameDraft(speakerLabel(paragraph.speaker) ?? '')
                     }}
                     title="点击可改为真实姓名"
-                    className="mb-0.5 inline-block rounded text-[11px] font-medium transition-colors"
+                    className="mb-0.5 inline-block rounded reader-meta font-medium transition-colors"
                     style={{
                       color: 'var(--accent-text)',
                       padding: '0 3px',
@@ -129,6 +161,32 @@ export function TranscriptPanel({
                   >
                     {speakerLabel(paragraph.speaker)}
                   </button>
+                )}
+                {importance === 1 && (
+                  <span
+                    className="chip mb-0.5 ml-1.5 inline-block align-middle"
+                    style={{
+                      height: 18,
+                      background: 'var(--accent-soft)',
+                      color: 'var(--accent-text)',
+                    }}
+                    title="关键参会人（1，最高）：纪要以此人发言为主干"
+                  >
+                    关键
+                  </span>
+                )}
+                {importance === 2 && (
+                  <span
+                    className="chip mb-0.5 ml-1.5 inline-block align-middle"
+                    style={{
+                      height: 18,
+                      background: 'var(--bg-subtle)',
+                      color: 'var(--text-secondary)',
+                    }}
+                    title="次要参会人（2）：作为关键参会人的补充"
+                  >
+                    次要
+                  </span>
                 )}
                 {hasLowConfidence && (
                   <button
@@ -151,7 +209,17 @@ export function TranscriptPanel({
                     低置信 {Math.round((lowScore ?? 0) * 100)}%
                   </button>
                 )}
-                <p className="text-[13px] leading-relaxed">{paragraph.text}</p>
+                <p
+                  className="reader-body-sm cursor-text"
+                  title="双击展开并按句修订"
+                  onDoubleClick={() => {
+                    if (!expandedParagraphs.has(paragraph.key)) {
+                      toggleParagraph(paragraph.key)
+                    }
+                  }}
+                >
+                  {paragraph.text}
+                </p>
                 <button
                   type="button"
                   onClick={() => toggleParagraph(paragraph.key)}
@@ -174,7 +242,11 @@ export function TranscriptPanel({
                         <span className="shrink-0 pt-0.5 font-mono text-[10px] text-tertiary">
                           {formatTimestamp(segment.start_ms)}
                         </span>
-                        <p className="min-w-0 flex-1 text-[11px] leading-relaxed text-secondary">
+                        <p
+                          className="min-w-0 flex-1 cursor-text reader-body-xs text-secondary"
+                          title="双击修订这句话"
+                          onDoubleClick={() => onEditSegment(segment)}
+                        >
                           {segment.text}
                         </p>
                         {segment.edited_at && (

@@ -338,6 +338,37 @@
     border-width: 0;
   }
 
+  /* ---- 阅读字号：面板级缩放 ----
+     容器上写 --reader-scale（1 = 100%），正文用 reader-* 类。
+     line-height 用无单位值，字号放大时行距同步放大，不会互相挤压。 */
+  .reader-scope {
+    --reader-scale: 1;
+  }
+
+  .reader-body {
+    font-size: calc(15px * var(--reader-scale, 1));
+    line-height: 1.65;
+  }
+
+  .reader-body-sm {
+    font-size: calc(13px * var(--reader-scale, 1));
+    line-height: 1.7;
+  }
+
+  .reader-body-xs {
+    font-size: calc(12px * var(--reader-scale, 1));
+    line-height: 1.65;
+  }
+
+  .reader-title {
+    font-size: calc(13px * var(--reader-scale, 1));
+    line-height: 1.45;
+  }
+
+  .reader-meta {
+    font-size: calc(11px * var(--reader-scale, 1));
+  }
+
   /* range slider */
   input[type='range'] {
     -webkit-appearance: none;

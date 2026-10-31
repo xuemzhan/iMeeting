@@ -78,7 +78,7 @@ export function IdleHero() {
             className="text-[28px] font-semibold leading-tight tracking-tight"
             style={{ color: 'var(--text-primary)' }}
           >
-            iMeeting
+            总师会议智能伙伴
           </h1>
           {/* 副标题：小字号、灰色，与主标题形成层级 */}
           <p className="mt-1 text-[13px]" style={{ color: 'var(--text-tertiary)' }}>

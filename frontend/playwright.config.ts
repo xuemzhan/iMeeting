@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url'
 const here = dirname(fileURLToPath(import.meta.url))
 const backendRoot = resolve(here, '../backend')
 const databasePath = join(tmpdir(), `imeeting-playwright-${process.pid}.db`)
-for (const suffix of ('', '-wal', '-shm')) {
+for (const suffix of ['', '-wal', '-shm']) {
   rmSync(`${databasePath}${suffix}`, { force: true })
 }
 
@@ -39,6 +39,7 @@ export default defineConfig({
         ADMIN_PASSWORD: 'admin123',
         DATABASE_URL: `sqlite:///${databasePath.replaceAll('\\', '/')}`,
         LOG_FILE: join(tmpdir(), 'imeeting-playwright.log'),
+        DATA_DIR: join(tmpdir(), `imeeting-playwright-data-${process.pid}`),
         MEETING_SKIP_ALEMBIC: '1',
         PYTHONPATH: resolve(backendRoot, 'src'),
         REQUIRE_AUTH: '1',

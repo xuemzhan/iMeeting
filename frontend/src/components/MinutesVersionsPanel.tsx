@@ -6,11 +6,16 @@ import type { Minutes } from '../api/types'
 interface MinutesVersionsPanelProps {
   versions: Minutes[]
   onEdit: (minutes: Minutes) => void
+  /**
+   * 嵌在弹窗里时不再自己画外框与标题：弹窗已有标题栏，重复一层会显得臃肿。
+   */
+  embedded?: boolean
 }
 
 export function MinutesVersionsPanel({
   versions,
   onEdit,
+  embedded = false,
 }: MinutesVersionsPanelProps) {
   const [compareA, setCompareA] = useState<number | null>(null)
   const [compareB, setCompareB] = useState<number | null>(null)
@@ -21,16 +26,14 @@ export function MinutesVersionsPanel({
     (item) => item.version === (compareB ?? versions[1]?.version),
   )
 
-  return (
-    <section className="panel mt-3 overflow-hidden">
-      <div className="panel-header">
-        <History size={14} style={{ color: 'var(--text-tertiary)' }} />
-        <h2>纪要版本与对比</h2>
-        <span className="ml-auto text-[11px] text-tertiary">
-          自动草稿、终稿与人工修订均保留
-        </span>
-      </div>
-      <div className="grid gap-3 p-4 lg:grid-cols-[280px_1fr]">
+  const body = (
+    <div
+      className={
+        embedded
+          ? 'grid gap-3 lg:grid-cols-[280px_1fr]'
+          : 'grid gap-3 p-4 lg:grid-cols-[280px_1fr]'
+      }
+    >
         <div className="space-y-1.5">
           {versions.length === 0 && (
             <p className="py-6 text-center text-[11px] text-tertiary">
@@ -135,7 +138,21 @@ export function MinutesVersionsPanel({
             </p>
           )}
         </div>
+    </div>
+  )
+
+  if (embedded) return body
+
+  return (
+    <section className="panel mt-3 overflow-hidden">
+      <div className="panel-header">
+        <History size={14} style={{ color: 'var(--text-tertiary)' }} />
+        <h2>纪要版本与对比</h2>
+        <span className="ml-auto text-[11px] text-tertiary">
+          自动草稿、终稿与人工修订均保留
+        </span>
       </div>
+      {body}
     </section>
   )
 }

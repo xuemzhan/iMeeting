@@ -7,6 +7,16 @@
 
 只有前端端口暴露给宿主机，后端仅在 Compose 内部网络可达。
 
+2026-10-29 复核及上线前待验项见
+[生产复核报告](../docs/production-review-2026-10-29.md)。镜像安装使用
+`backend/constraints-production.txt` 中的依赖安全下限；本机源码部署也应带上
+`pip install -c constraints-production.txt -e ".[asr]"`（在 `backend` 目录执行）。
+安装完成后应对实际环境重新执行依赖审计，最低版本约束不能替代持续扫描。
+
+`/api/v1/live` 仅表示进程存活；`/api/v1/ready` 在模型加载中或加载失败时返回
+503，在 `echo`/`off` 模式或模型全部就绪时返回 200。默认预热模式下，WebSocket
+在模型尚未就绪时返回 `MODELS_NOT_READY`，避免接收无法识别的音频。
+
 ## 资源要求
 
 - CPU：4 核以上；

@@ -83,6 +83,13 @@ interface SessionState {
    *  - 调后端 relabel：改声纹库 + 回溯更新已落库的片段
    */
   renameSpeaker: (fromLabel: string, toName: string) => Promise<void>
+  /**
+   * 双击改一段转写的文字。
+   *
+   * 先改本地（界面即时响应），再 PATCH 落库；后端保留 original_text，
+   * 所以改错了仍可追溯原文。
+   */
+  updateSegmentText: (segmentId: string, text: string) => Promise<void>
   reset: () => void
 }
 
@@ -388,22 +395,48 @@ export const useSession = create<SessionState>((set, get) => ({
     const name = toName.trim()
     if (!name || name === fromLabel) return
 
-    // 先改本地，界面立刻响应，不等网络往返
-    set((s) => ({
-      segments: s.segments.map((seg) =>
-        seg.speaker === fromLabel ? { ...seg, speaker: name } : seg,
-      ),
-    }))
-
     try {
       const meetingId = useSession.getState().meetingId
       if (meetingId === null) {
         set({ error: '会议尚未开始，无法修改发言人' })
         return
       }
-      await voiceprintApi.relabel(meetingId, fromLabel, name)
+      const result = await voiceprintApi.relabel(meetingId, fromLabel, name)
+      set((s) => ({ segments: s.segments.map((seg) => seg.speaker === fromLabel ? { ...seg, speaker: result?.name ?? name } : seg), error: null }))
     } catch (e) {
       set({ error: e instanceof Error ? e.message : '说话人改名失败' })
+    }
+  },
+
+  updateSegmentText: async (segmentId, text) => {
+    const next = text.trim()
+    const current = useSession
+      .getState()
+      .segments.find((seg) => seg.segmentId === segmentId)
+    if (!current || !current.isFinal || !next || next === current.text) return
+
+    // 先改本地，界面立刻响应，不等网络往返
+    set((s) => ({
+      segments: s.segments.map((seg) =>
+        seg.segmentId === segmentId ? { ...seg, text: next } : seg,
+      ),
+    }))
+
+    try {
+      const meetingId = useSession.getState().meetingId
+      if (meetingId === null) {
+        set({ error: '会议尚未开始，无法修订转写' })
+        return
+      }
+      await meetingApi.editSegment(meetingId, segmentId, { text: next })
+    } catch (e) {
+      // 落库失败就把原文放回去，避免「界面改了、库里还是旧的」的假象
+      set((s) => ({
+        error: e instanceof Error ? e.message : '转写修订失败',
+        segments: s.segments.map((seg) =>
+          seg.segmentId === segmentId ? { ...seg, text: current.text } : seg,
+        ),
+      }))
     }
   },
 
@@ -481,6 +514,7 @@ export function handleServerMessage(msg: ServerMessage): void {
         startMs: msg.start_ms,
         endMs: msg.end_ms,
         speaker: msg.speaker,
+        speakerKey: msg.speaker_key ?? null,
         speakerScore: msg.speaker_score,
         speakerSource: msg.speaker_source,
         lowConfidence: msg.speaker_low_confidence,

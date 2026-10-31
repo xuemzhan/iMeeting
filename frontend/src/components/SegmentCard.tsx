@@ -28,6 +28,10 @@ interface Props {
   onRenameSpeaker?: (fromLabel: string, toName: string) => void
   /** 后端配置的低置信阈值 */
   lowConfidenceThreshold?: number
+  /** 该说话人的重要程度：1 关键 / 2 次要 / 3 一般 */
+  speakerImportance?: number
+  /** 双击正文进入行内修订（只对已定稿片段生效） */
+  onEditText?: (segment: Segment, text: string) => void
 }
 
 export const SegmentCard = memo(function SegmentCard({
@@ -36,12 +40,16 @@ export const SegmentCard = memo(function SegmentCard({
   style,
   onRenameSpeaker,
   lowConfidenceThreshold = 0.62,
+  speakerImportance,
+  onEditText,
 }: Props) {
   const colorIdx = speakerColorIndex(segment.speaker)
   const palette = SPEAKER_STYLES[colorIdx]
   const isDraft = !segment.isFinal
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
+  const [editingText, setEditingText] = useState(false)
+  const [textDraft, setTextDraft] = useState('')
   const label = speakerLabel(segment.speaker)
   const lowConfidence =
     segment.isFinal &&
@@ -56,6 +64,13 @@ export const SegmentCard = memo(function SegmentCard({
     if (name && segment.speaker) {
       onRenameSpeaker?.(segment.speaker, name)
     }
+  }
+
+  const commitText = () => {
+    const next = textDraft.trim()
+    setEditingText(false)
+    if (!next || next === segment.text) return
+    onEditText?.(segment, next)
   }
 
   return (
@@ -125,7 +140,7 @@ export const SegmentCard = memo(function SegmentCard({
                     : '点击可改为真实姓名'
                   : undefined
               }
-              className="rounded text-[11px] font-medium transition-colors disabled:cursor-default"
+              className="rounded reader-meta font-medium transition-colors disabled:cursor-default"
               style={{
                 color: palette.text,
                 padding: '1px 4px',
@@ -160,6 +175,33 @@ export const SegmentCard = memo(function SegmentCard({
             </span>
           )}
 
+          {!isDraft && speakerImportance === 1 && (
+            <span
+              className="chip shrink-0"
+              style={{
+                height: 18,
+                background: 'var(--accent-soft)',
+                color: 'var(--accent-text)',
+              }}
+              title="关键参会人（1，最高）：纪要以此人发言为主干"
+            >
+              关键
+            </span>
+          )}
+          {!isDraft && speakerImportance === 2 && (
+            <span
+              className="chip shrink-0"
+              style={{
+                height: 18,
+                background: 'var(--bg-subtle)',
+                color: 'var(--text-secondary)',
+              }}
+              title="次要参会人（2）：作为关键参会人的补充"
+            >
+              次要
+            </span>
+          )}
+
           {!isDraft && (
             <button
               type="button"
@@ -174,15 +216,58 @@ export const SegmentCard = memo(function SegmentCard({
         </div>
 
         {/* 正文 */}
-        <p
-          className={cn('text-[15px] leading-[1.65] whitespace-pre-wrap', isDraft && 'italic')}
-          style={{ color: isDraft ? 'var(--text-tertiary)' : 'var(--text-primary)' }}
-        >
-          {segment.text || '正在聆听…'}
-        </p>
+        {editingText ? (
+          <textarea
+            autoFocus
+            value={textDraft}
+            onChange={(e) => setTextDraft(e.target.value)}
+            onKeyDown={(e) => {
+              // 输入法组合中的 Enter 是在选词，不能当成提交
+              if (
+                e.key === 'Enter' &&
+                !e.shiftKey &&
+                !e.nativeEvent.isComposing
+              ) {
+                e.preventDefault()
+                commitText()
+              }
+              if (e.key === 'Escape') {
+                e.preventDefault()
+                setEditingText(false)
+              }
+            }}
+            onBlur={commitText}
+            rows={3}
+            aria-label="修订这段转写"
+            className="reader-body w-full resize-y rounded px-1.5 py-1 outline-none"
+            style={{
+              background: 'var(--bg-surface)',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--accent)',
+            }}
+          />
+        ) : (
+          <p
+            className={cn(
+              'reader-body whitespace-pre-wrap',
+              isDraft && 'italic',
+              !isDraft && onEditText && 'cursor-text',
+            )}
+            style={{ color: isDraft ? 'var(--text-tertiary)' : 'var(--text-primary)' }}
+            onDoubleClick={() => {
+              // 草稿还没落库，改不了；定稿双击即进入行内修订
+              if (isDraft || !onEditText) return
+              setTextDraft(segment.text)
+              setEditingText(true)
+            }}
+            title={!isDraft && onEditText ? '双击可修订这段文字' : undefined}
+          >
+            {segment.text || '正在聆听…'}
+          </p>
+        )}
         {segment.translation && (
           <p
-            className="mt-1 border-t pt-1 text-[12px] leading-relaxed"
+            className="reader-body-xs mt-1 border-t pt-1"
             style={{
               borderColor: 'var(--border-subtle)',
               color: 'var(--text-tertiary)',

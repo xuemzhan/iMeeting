@@ -1,5 +1,5 @@
 /**
- * iMeeting 品牌标识。
+ * 总师会议智能伙伴 品牌标识。
  *
  * 构成：圆角底板 + 中心芯片 + 四向电路引脚 + 一道抽象信号弧（形似 C）。
  * 取「电子科技」与「连接 / 智能」的意象，做抽象化处理，不使用具体商标图形。
@@ -16,7 +16,7 @@ export function BrandMark({ size = 24, className }: { size?: number; className?:
       height={size}
       viewBox="0 0 32 32"
       role="img"
-      aria-label="iMeeting"
+      aria-label="总师会议智能伙伴"
       className={className}
     >
       <defs>

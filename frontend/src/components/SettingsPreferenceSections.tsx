@@ -9,6 +9,9 @@ import {
   Sun,
 } from 'lucide-react'
 
+import { FontSizeControl } from './FontSizeControl'
+import { PANE_WIDTH_DEFAULT } from '../lib/readerPrefs'
+import { useSettings } from '../store/settings'
 import type { ThemeMode } from '../store/settings'
 import { SettingsRow, SettingsSection } from './SettingsPanelParts'
 
@@ -25,6 +28,12 @@ export function SettingsAppearanceSection({
   theme: ThemeMode
   onThemeChange: (theme: ThemeMode) => void
 }) {
+  const transcriptScale = useSettings((s) => s.transcriptScale)
+  const setTranscriptScale = useSettings((s) => s.setTranscriptScale)
+  const minutesScale = useSettings((s) => s.minutesScale)
+  const setMinutesScale = useSettings((s) => s.setMinutesScale)
+  const setMinutesPaneWidth = useSettings((s) => s.setMinutesPaneWidth)
+
   return (
     <SettingsSection title="外观">
       <div className="grid grid-cols-3 gap-2">
@@ -47,6 +56,40 @@ export function SettingsAppearanceSection({
             </button>
           )
         })}
+      </div>
+
+      <div className="mt-3 space-y-2">
+        <p className="text-[11px] font-medium text-tertiary">阅读字号</p>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[12px] text-secondary">实时转写</span>
+          <FontSizeControl
+            value={transcriptScale}
+            onChange={setTranscriptScale}
+            label="实时转写"
+          />
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[12px] text-secondary">会议纪要</span>
+          <FontSizeControl
+            value={minutesScale}
+            onChange={setMinutesScale}
+            label="会议纪要"
+          />
+        </div>
+        <p className="text-[10px] leading-relaxed text-tertiary">
+          面板标题栏里也有同样的 −/+ 按钮；点百分比可恢复 100%。
+        </p>
+        <button
+          type="button"
+          className="btn btn-ghost h-7 px-2 text-[11px]"
+          onClick={() => setMinutesPaneWidth(PANE_WIDTH_DEFAULT)}
+          title="把会议纪要栏宽度恢复为默认值"
+        >
+          恢复默认分栏宽度
+        </button>
+        <p className="text-[10px] leading-relaxed text-tertiary">
+          会议页中「实时转写 / 会议纪要」之间的分隔条可拖动调整宽度，双击复位。
+        </p>
       </div>
     </SettingsSection>
   )
@@ -136,7 +179,7 @@ export function SettingsAboutSection({
 }) {
   return (
     <SettingsSection title="关于">
-      <SettingsRow label="名称" value="iMeeting" />
+      <SettingsRow label="名称" value="总师会议智能伙伴" />
       <SettingsRow label="副标题" value="您的硅基伙伴" />
       <SettingsRow label="版本" value={health?.version ?? '—'} />
       <SettingsRow

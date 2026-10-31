@@ -1,18 +1,35 @@
-import { useEffect, useState } from 'react'
+import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { TopBar } from '../components/TopBar'
 import { TranscriptStream } from '../components/TranscriptStream'
+import { ParticipantsPanel } from '../components/ParticipantsPanel'
 import { MinutesPanel } from '../components/MinutesPanel'
 import { ControlBar } from '../components/ControlBar'
 import { IdleHero } from '../components/IdleHero'
+import { FontSizeControl } from '../components/FontSizeControl'
+import { PaneSplitter } from '../components/PaneSplitter'
 import { useSession } from '../store/session'
+import { useSettings } from '../store/settings'
+import { useSpeakerRoles } from '../hooks/useSpeakerRoles'
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
 import { checkBrowserSupport } from '../audio/recorder'
 import { Info, Loader2, Network, PencilLine } from 'lucide-react'
 import { meetingApi, getToken } from '../api/client'
 import type { Meeting as MeetingRecord, Minutes } from '../api/types'
-import { MeetingInfoEditor } from '../components/MeetingInfoEditor'
-import { MindMapDialog } from '../components/MindMapDialog'
+import { PANE_WIDTH_DEFAULT, clampPaneWidth } from '../lib/readerPrefs'
+import { STATE_CONFIRMED, STATE_DELETED } from '../lib/speakerRoles'
+
+// 弹窗只在用户点击时打开：懒加载，不占首屏 JS
+const MeetingInfoEditor = lazy(() =>
+  import('../components/MeetingInfoEditor').then((m) => ({
+    default: m.MeetingInfoEditor,
+  })),
+)
+const MindMapDialog = lazy(() =>
+  import('../components/MindMapDialog').then((m) => ({
+    default: m.MindMapDialog,
+  })),
+)
 
 export default function Meeting() {
   const status = useSession((s) => s.status)
@@ -21,6 +38,7 @@ export default function Meeting() {
   const segments = useSession((s) => s.segments)
   const meetingId = useSession((s) => s.meetingId)
   const renameSpeaker = useSession((s) => s.renameSpeaker)
+  const updateSegmentText = useSession((s) => s.updateSegmentText)
   const liveMinutes = useSession((s) => s.liveMinutes)
   const meetingInfo = useSession((s) => s.meetingInfo)
   const metadataCaptureMinutes = useSession((s) => s.metadataCaptureMinutes)
@@ -30,6 +48,22 @@ export default function Meeting() {
   const elapsedMs = useSession((s) => s.elapsedMs)
   const setTitle = useSession((s) => s.setTitle)
   const setMeetingInfo = useSession((s) => s.setMeetingInfo)
+
+  const transcriptScale = useSettings((s) => s.transcriptScale)
+  const setTranscriptScale = useSettings((s) => s.setTranscriptScale)
+  const minutesScale = useSettings((s) => s.minutesScale)
+  const setMinutesScale = useSettings((s) => s.setMinutesScale)
+  const minutesPaneWidth = useSettings((s) => s.minutesPaneWidth)
+  const setMinutesPaneWidth = useSettings((s) => s.setMinutesPaneWidth)
+
+  const mainRef = useRef<HTMLElement | null>(null)
+  const {
+    speakers,
+    importanceByKey,
+    setImportance,
+    setState: setSpeakerState,
+    error: speakerRoleError,
+  } = useSpeakerRoles(meetingId, { segments })
 
   const [minutes, setMinutes] = useState<Minutes | null>(null)
   const [generating, setGenerating] = useState(false)
@@ -52,6 +86,22 @@ export default function Meeting() {
   useEffect(() => {
     const support = checkBrowserSupport()
     if (!support.ok) setSupportWarning(support.reason ?? null)
+  }, [])
+
+  // 窗口变窄时把已保存的纪要宽度夹回可用范围，避免把转写挤没
+  useEffect(() => {
+    const sync = () => {
+      const el = mainRef.current
+      if (!el) return
+      const current = useSettings.getState().minutesPaneWidth
+      const clamped = clampPaneWidth(current, el.getBoundingClientRect().width)
+      if (clamped !== current) {
+        useSettings.getState().setMinutesPaneWidth(clamped)
+      }
+    }
+    sync()
+    window.addEventListener('resize', sync)
+    return () => window.removeEventListener('resize', sync)
   }, [])
 
   // 纪要拉取：会中每 30 秒刷新一次自动草稿，结束后再拉一次终稿。
@@ -200,14 +250,23 @@ export default function Meeting() {
         </div>
       )}
 
+      {meetingId !== null && !showHero && (
+        <div className="px-3 pt-3">
+          <ParticipantsPanel meetingId={meetingId} pollMs={30_000} compact />
+        </div>
+      )}
+
       {showHero ? (
         <>
           <IdleHero />
         </>
       ) : (
         <>
-          {/* 主体：转写流 + 纪要面板 */}
-          <main className="flex min-h-0 flex-1 flex-col gap-3 p-3 lg:flex-row">
+          {/* 主体：转写流 + 纪要面板（桌面端可拖动分隔条调宽度） */}
+          <main
+            ref={mainRef}
+            className="flex min-h-0 flex-1 flex-col gap-3 p-3 lg:flex-row"
+          >
             {/* 移动端标签栏 */}
             {!isIdle && (
               <div className="flex shrink-0 gap-1 lg:hidden">
@@ -241,32 +300,66 @@ export default function Meeting() {
                 全部失效 → 高度约束链断裂 → 内层 overflow-y-auto 永不溢出，
                 既没有滚动条也滚不动，超出的转写会被 overflow-hidden 直接裁掉。 */}
             <section
-              className="panel flex min-w-0 flex-1 flex-col overflow-hidden"
+              className="panel reader-scope flex min-w-0 flex-1 flex-col overflow-hidden"
               data-hidden-mobile={activeTab !== 'transcript' && !isIdle ? 'true' : undefined}
+              style={{ '--reader-scale': String(transcriptScale) } as React.CSSProperties}
             >
-              <div className="panel-header justify-between">
+              <div className="panel-header">
                 <h2>实时转写</h2>
                 <span className="count-badge">
                   {segments.filter((s) => s.isFinal).length}
                 </span>
+                <div className="ml-auto">
+                  <FontSizeControl
+                    value={transcriptScale}
+                    onChange={setTranscriptScale}
+                    label="实时转写"
+                  />
+                </div>
               </div>
               <TranscriptStream
                 segments={segments}
                 onSeek={handleSeek}
                 onRenameSpeaker={(from, to) => void renameSpeaker(from, to)}
                 lowConfidenceThreshold={speakerLowConfidenceThreshold}
+                importanceByKey={importanceByKey}
+                onEditText={(seg, text) =>
+                  void updateSegmentText(seg.segmentId, text)
+                }
               />
             </section>
 
-            {/* 桌面端纪要面板（lg 以上常驻右侧） */}
-            <aside className="panel hidden w-[300px] shrink-0 flex-col overflow-hidden lg:flex">
+            {/* 拖动分隔条：调整右栏纪要宽度（仅桌面端） */}
+            <PaneSplitter
+              containerRef={mainRef}
+              width={minutesPaneWidth}
+              onChange={setMinutesPaneWidth}
+              onReset={() => setMinutesPaneWidth(PANE_WIDTH_DEFAULT)}
+            />
+
+            {/* 桌面端纪要面板（lg 以上常驻右侧，宽度可拖动） */}
+            <aside
+              className="panel reader-scope hidden shrink-0 flex-col overflow-hidden lg:flex"
+              style={{
+                width: minutesPaneWidth,
+                maxWidth: '60%',
+                '--reader-scale': String(minutesScale),
+              } as React.CSSProperties}
+            >
               <div className="panel-header">
                 <h2>会议纪要</h2>
+                <div className="ml-auto">
+                  <FontSizeControl
+                    value={minutesScale}
+                    onChange={setMinutesScale}
+                    label="会议纪要"
+                  />
+                </div>
                 <button
                   type="button"
                   onClick={() => setMindMapOpen(true)}
                   disabled={meetingId === null}
-                  className="btn btn-ghost ml-auto px-1.5 text-[11px]"
+                  className="btn btn-ghost px-1.5 text-[11px]"
                   title="查看当前纪要脑图"
                 >
                   <Network size={12} /> 脑图
@@ -279,19 +372,34 @@ export default function Meeting() {
                 hasContent={hasContent}
                 templateId={templateId}
                 onTemplateChange={setTemplateId}
+                speakers={speakers}
+                onImportanceChange={(row, value) => void setImportance(row, value)}
+                onSpeakerConfirm={(row) => void setSpeakerState(row, STATE_CONFIRMED)}
+                onSpeakerDelete={(row) => void setSpeakerState(row, STATE_DELETED)}
+                importanceError={speakerRoleError}
               />
             </aside>
 
             {/* 移动端纪要面板（lg 以下由标签切换到） */}
             {activeTab === 'minutes' && !isIdle && (
-              <section className="panel flex min-w-0 flex-1 flex-col overflow-hidden lg:hidden">
+              <section
+                className="panel reader-scope flex min-w-0 flex-1 flex-col overflow-hidden lg:hidden"
+                style={{ '--reader-scale': String(minutesScale) } as React.CSSProperties}
+              >
                 <div className="panel-header">
                   <h2>会议纪要</h2>
+                  <div className="ml-auto">
+                    <FontSizeControl
+                      value={minutesScale}
+                      onChange={setMinutesScale}
+                      label="会议纪要"
+                    />
+                  </div>
                   <button
                     type="button"
                     onClick={() => setMindMapOpen(true)}
                     disabled={meetingId === null}
-                    className="btn btn-ghost ml-auto px-1.5 text-[11px]"
+                    className="btn btn-ghost px-1.5 text-[11px]"
                     title="查看当前纪要脑图"
                   >
                     <Network size={12} /> 脑图
@@ -304,7 +412,12 @@ export default function Meeting() {
                   hasContent={hasContent}
                   templateId={templateId}
                   onTemplateChange={setTemplateId}
-                />
+                  speakers={speakers}
+                  onImportanceChange={(row, value) => void setImportance(row, value)}
+                  onSpeakerConfirm={(row) => void setSpeakerState(row, STATE_CONFIRMED)}
+                  onSpeakerDelete={(row) => void setSpeakerState(row, STATE_DELETED)}
+                  importanceError={speakerRoleError}
+                  />
               </section>
             )}
           </main>
@@ -319,20 +432,22 @@ export default function Meeting() {
         <ControlBar />
       </footer>
 
-      {infoOpen && meetingRecord && (
-        <MeetingInfoEditor
-          meeting={meetingRecord}
-          captureMinutes={metadataCaptureMinutes}
-          onSaved={handleInfoSaved}
-          onClose={() => setInfoOpen(false)}
-        />
-      )}
-      {mindMapOpen && meetingId !== null && (
-        <MindMapDialog
-          meetingId={meetingId}
-          onClose={() => setMindMapOpen(false)}
-        />
-      )}
+      <Suspense fallback={null}>
+        {infoOpen && meetingRecord && (
+          <MeetingInfoEditor
+            meeting={meetingRecord}
+            captureMinutes={metadataCaptureMinutes}
+            onSaved={handleInfoSaved}
+            onClose={() => setInfoOpen(false)}
+          />
+        )}
+        {mindMapOpen && meetingId !== null && (
+          <MindMapDialog
+            meetingId={meetingId}
+            onClose={() => setMindMapOpen(false)}
+          />
+        )}
+      </Suspense>
     </div>
   )
 }

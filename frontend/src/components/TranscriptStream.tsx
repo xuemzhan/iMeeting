@@ -3,6 +3,7 @@ import { ArrowDown } from 'lucide-react'
 import { SegmentCard } from './SegmentCard'
 import { deriveScrollState, isScrollable, panScrollTop } from './transcriptScroll'
 import type { Segment } from '../api/types'
+import { normalizeImportance, rowKey } from '../lib/speakerRoles'
 
 interface Props {
   segments: Segment[]
@@ -11,6 +12,10 @@ interface Props {
   onRenameSpeaker?: (fromLabel: string, toName: string) => void
   /** 低于该相似度的说话人姓名显示“低置信” */
   lowConfidenceThreshold?: number
+  /** 说话人重要程度映射（键见 lib/speakerRoles::rowKey） */
+  importanceByKey?: Record<string, number>
+  /** 双击正文修订这一段文字 */
+  onEditText?: (segment: Segment, text: string) => void
 }
 
 /** 位移超过该像素才算「拖动」，否则按点击处理 */
@@ -21,6 +26,8 @@ export function TranscriptStream({
   onSeek,
   onRenameSpeaker,
   lowConfidenceThreshold,
+  importanceByKey,
+  onEditText,
 }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [pinned, setPinned] = useState(true)
@@ -161,7 +168,15 @@ export function TranscriptStream({
                 segment={seg}
                 onSeek={onSeek}
                 onRenameSpeaker={onRenameSpeaker}
+                onEditText={onEditText}
                 lowConfidenceThreshold={lowConfidenceThreshold}
+                speakerImportance={
+                  seg.isFinal && seg.speaker && importanceByKey
+                    ? normalizeImportance(
+                        importanceByKey[rowKey(seg.speakerKey, seg.speaker)],
+                      )
+                    : undefined
+                }
               />
             ))}
             <div className="h-4" />

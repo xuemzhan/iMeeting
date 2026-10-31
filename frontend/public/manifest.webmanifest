@@ -1,6 +1,6 @@
 {
-  "name": "iMeeting",
-  "short_name": "iMeeting",
+  "name": "总师会议智能伙伴",
+  "short_name": "会议伙伴",
   "description": "实时转写、说话人识别、渐进纪要与企业知识库",
   "start_url": "/",
   "display": "standalone",

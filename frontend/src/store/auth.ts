@@ -71,7 +71,8 @@ export const useAuth = create<AuthState>((set, get) => ({
   changePassword: async (currentPassword, newPassword) => {
     set({ error: null })
     try {
-      const user = await authApi.changePassword(currentPassword, newPassword)
+      const { access_token, ...user } = await authApi.changePassword(currentPassword, newPassword)
+      setToken(access_token)
       set({ user, error: null })
       return true
     } catch (err) {

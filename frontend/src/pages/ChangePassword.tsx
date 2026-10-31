@@ -43,7 +43,7 @@ export default function ChangePassword() {
         <p className="mb-5 text-[11px] leading-relaxed text-tertiary">
           {user.must_change_password
             ? '当前账号仍在使用初始化密码，修改后才能进入业务页面。'
-            : '修改后，当前登录令牌保持有效。'}
+            : '修改后，其他登录凭证将失效，当前设备会自动更新登录状态。'}
         </p>
 
         <form onSubmit={submit} className="space-y-3">

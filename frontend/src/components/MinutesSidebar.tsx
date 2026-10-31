@@ -9,7 +9,11 @@ import {
 } from 'lucide-react'
 
 import type { Minutes } from '../api/types'
+import type { SpeakerRow } from '../lib/speakerRoles'
+import { useSettings } from '../store/settings'
 import { formatTimestamp } from '../store/session'
+import { FontSizeControl } from './FontSizeControl'
+import { SpeakerRolesPanel } from './SpeakerRolesPanel'
 import { TemplatePicker } from './TemplatePicker'
 
 interface MinutesSidebarProps {
@@ -26,6 +30,12 @@ interface MinutesSidebarProps {
   onEdit: () => void
   onGenerate: () => void
   onSeek: (ms: number) => void
+  /** 参会人重要程度（详情页来自接口 speakers） */
+  speakers?: SpeakerRow[]
+  onImportanceChange?: (row: SpeakerRow, importance: number) => void
+  importanceError?: string | null
+  onSpeakerConfirm?: (row: SpeakerRow) => void
+  onSpeakerDelete?: (row: SpeakerRow) => void
 }
 
 export function MinutesSidebar({
@@ -42,12 +52,34 @@ export function MinutesSidebar({
   onEdit,
   onGenerate,
   onSeek,
+  speakers = [],
+  onImportanceChange,
+  importanceError,
+  onSpeakerConfirm,
+  onSpeakerDelete,
 }: MinutesSidebarProps) {
+  const scale = useSettings((s) => s.minutesScale)
+  const setScale = useSettings((s) => s.setMinutesScale)
+
   return (
-    <aside className="panel overflow-hidden">
+    <aside
+      className="panel reader-scope overflow-hidden"
+      style={{ '--reader-scale': String(scale) } as React.CSSProperties}
+    >
       <div className="panel-header">
         <Sparkles size={14} style={{ color: 'var(--text-tertiary)' }} />
-        <h2>会议纪要</h2>
+        <h2 className="shrink-0 whitespace-nowrap">会议纪要</h2>
+        <div className="ml-auto">
+          <FontSizeControl value={scale} onChange={setScale} label="会议纪要" />
+        </div>
+      </div>
+
+      {/* 操作单独一行：320px 侧栏里塞进标题行会把文字挤换行 */}
+      <div
+        className="flex flex-wrap items-center gap-1 px-4 pb-1 pt-2"
+        role="toolbar"
+        aria-label="纪要操作"
+      >
         {minutes && (
           <button
             type="button"
@@ -108,7 +140,7 @@ export function MinutesSidebar({
               </p>
             )}
             {minutes.summary && (
-              <p className="text-[12px] leading-relaxed text-secondary">
+              <p className="reader-body-sm text-secondary">
                 {minutes.summary}
               </p>
             )}
@@ -120,14 +152,14 @@ export function MinutesSidebar({
                 style={{ background: 'var(--accent-soft)' }}
               >
                 <p
-                  className="text-[12px] font-medium"
+                  className="reader-title font-medium"
                   style={{ color: 'var(--accent-text)' }}
                 >
                   {topic.title}
                 </p>
                 {topic.conclusion && (
                   <p
-                    className="mt-1 border-l-2 pl-2 text-[11px]"
+                    className="reader-body-xs mt-1 border-l-2 pl-2"
                     style={{
                       borderColor: 'var(--accent)',
                       color: 'var(--accent-text)',
@@ -167,7 +199,7 @@ export function MinutesSidebar({
                 {minutes.todos.map((todo, index) => (
                   <div
                     key={index}
-                    className="mb-1 rounded-lg px-2.5 py-1.5 text-[11px]"
+                    className="reader-body-xs mb-1 rounded-lg px-2.5 py-1.5"
                     style={{
                       background: 'var(--warn-soft)',
                       color: 'var(--warn-text)',
@@ -204,6 +236,20 @@ export function MinutesSidebar({
             {error}
           </div>
         )}
+
+        <div
+          className="mt-3 rounded-lg p-2.5"
+          style={{ background: 'var(--bg-subtle)' }}
+        >
+          <SpeakerRolesPanel
+            speakers={speakers}
+            onChange={(row, importance) => onImportanceChange?.(row, importance)}
+            onConfirm={(row) => onSpeakerConfirm?.(row)}
+            onDelete={(row) => onSpeakerDelete?.(row)}
+            error={importanceError}
+            disabled={!onImportanceChange}
+          />
+        </div>
 
         <TemplatePicker value={templateId} onChange={onTemplateChange} />
 

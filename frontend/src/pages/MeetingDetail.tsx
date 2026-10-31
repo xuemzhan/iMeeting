@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import {
   CheckSquare,
@@ -6,6 +7,7 @@ import {
 
 import { ApiError } from '../api/client'
 import { useMeetingDetail } from '../hooks/useMeetingDetail'
+import { useSpeakerRoles } from '../hooks/useSpeakerRoles'
 import { ActionsPanel } from '../components/ActionsPanel'
 import { AudioPlayer } from '../components/AudioPlayer'
 import { CompliancePanel } from '../components/CompliancePanel'
@@ -13,14 +15,16 @@ import { MeetingDetailHeader } from '../components/MeetingDetailHeader'
 import { MeetingInfoEditor } from '../components/MeetingInfoEditor'
 import { MembersDialog } from '../components/MembersDialog'
 import { MinutesEditor } from '../components/MinutesEditor'
-import { MinutesMindMapPanel } from '../components/MinutesMindMapPanel'
+import { MindMapDialog } from '../components/MindMapDialog'
 import { MinutesSidebar } from '../components/MinutesSidebar'
-import { MinutesVersionsPanel } from '../components/MinutesVersionsPanel'
+import { MinutesVersionsDialog } from '../components/MinutesVersionsDialog'
+import { ParticipantsPanel } from '../components/ParticipantsPanel'
 import { ReviewPanel } from '../components/ReviewPanel'
 import { SegmentEditDialog } from '../components/SegmentEditDialog'
 import { ShareDialog } from '../components/ShareDialog'
 import { TopBar } from '../components/TopBar'
 import { TranscriptPanel } from '../components/TranscriptPanel'
+import { STATE_CONFIRMED, STATE_DELETED } from '../lib/speakerRoles'
 
 export default function MeetingDetail() {
   const { id } = useParams<{ id: string }>()
@@ -32,8 +36,6 @@ export default function MeetingDetail() {
     error,
     activeMinutes,
     versions,
-    mindmap,
-    mindmapLoading,
     generating,
     genError,
     templateId,
@@ -67,6 +69,22 @@ export default function MeetingDetail() {
     onMeetingSaved,
     onMinutesSaved,
   } = useMeetingDetail(meetingId, searchParams)
+
+  useEffect(() => {
+    if (!data || !window.location.hash) return
+    const id = decodeURIComponent(window.location.hash.slice(1))
+    const timer = window.setTimeout(() => document.getElementById(id)?.scrollIntoView({ block: 'center' }), 100)
+    return () => window.clearTimeout(timer)
+  }, [data])
+
+  // 必须无条件调用（早退分支在下面）；详情接口已带 speakers，先种一份避免闪
+  const {
+    speakers,
+    importanceByKey,
+    setImportance,
+    setState: setSpeakerState,
+    error: speakerRoleError,
+  } = useSpeakerRoles(meetingId, { initial: data?.speakers })
 
   if (isLoading) {
     return (
@@ -145,6 +163,7 @@ export default function MeetingDetail() {
               onRenameSpeaker={renameSpeaker}
               onConfirmSpeaker={confirmSpeaker}
               onEditSegment={setEditingSegment}
+              speakerImportance={importanceByKey}
             />
 
             <MinutesSidebar
@@ -155,16 +174,29 @@ export default function MeetingDetail() {
               templateId={templateId}
               onTemplateChange={setTemplateId}
               showVersions={showVersions}
-              onToggleVersions={() => setShowVersions((value) => !value)}
+              onToggleVersions={() => {
+                setShowMindMap(false)
+                setShowVersions((value) => !value)
+              }}
               showMindMap={showMindMap}
-              onToggleMindMap={() => setShowMindMap((value) => !value)}
+              onToggleMindMap={() => {
+                setShowVersions(false)
+                setShowMindMap((value) => !value)
+              }}
               onEdit={() => {
                 if (activeMinutes) setEditingMinutes(activeMinutes)
               }}
               onGenerate={() => void handleGenerate()}
               onSeek={handleSeek}
+              speakers={speakers}
+              onImportanceChange={(row, value) => void setImportance(row, value)}
+              onSpeakerConfirm={(row) => void setSpeakerState(row, STATE_CONFIRMED)}
+              onSpeakerDelete={(row) => void setSpeakerState(row, STATE_DELETED)}
+              importanceError={speakerRoleError}
             />
           </div>
+
+          <ParticipantsPanel meetingId={meetingId} />
 
           <section className="panel mt-3 overflow-hidden">
             <div className="panel-header">
@@ -180,16 +212,16 @@ export default function MeetingDetail() {
           <ReviewPanel meetingId={meetingId} onSeek={handleSeek} />
 
           {showVersions && (
-            <MinutesVersionsPanel
+            <MinutesVersionsDialog
               versions={versions ?? []}
               onEdit={setEditingMinutes}
+              onClose={() => setShowVersions(false)}
             />
           )}
 
           {showMindMap && (
-            <MinutesMindMapPanel
-              data={mindmap}
-              loading={mindmapLoading}
+            <MindMapDialog
+              meetingId={meetingId}
               onSeek={handleSeek}
               onClose={() => setShowMindMap(false)}
             />

@@ -4,14 +4,12 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { meetingApi, voiceprintApi } from '../api/client'
 import type { ApiSegment, Minutes } from '../api/types'
 import { runExportJob } from '../lib/exportJob'
-import { useAuth } from '../store/auth'
 
 export function useMeetingDetail(
   meetingId: number,
   searchParams: URLSearchParams,
 ) {
   const qc = useQueryClient()
-  const hasToken = useAuth((state) => state.hasToken)
 
   const [minutes, setMinutes] = useState<Minutes | null>(null)
   const [generating, setGenerating] = useState(false)
@@ -37,7 +35,7 @@ export function useMeetingDetail(
   const { data: existingMinutes } = useQuery({
     queryKey: ['minutes', meetingId],
     queryFn: () => meetingApi.getMinutes(meetingId),
-    enabled: Number.isFinite(meetingId) && hasToken(),
+    enabled: Number.isFinite(meetingId),
   })
 
   const { data: versions } = useQuery({
@@ -47,11 +45,6 @@ export function useMeetingDetail(
   })
 
   const activeMinutes = minutes ?? existingMinutes ?? null
-  const { data: mindmap, isLoading: mindmapLoading } = useQuery({
-    queryKey: ['mindmap', meetingId],
-    queryFn: () => meetingApi.mindmap(meetingId),
-    enabled: showMindMap,
-  })
 
   useEffect(() => {
     const seconds = Number(searchParams.get('t') || 0)
@@ -161,8 +154,6 @@ export function useMeetingDetail(
     error,
     activeMinutes,
     versions,
-    mindmap,
-    mindmapLoading,
     generating,
     genError,
     templateId,

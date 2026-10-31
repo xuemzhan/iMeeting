@@ -1,10 +1,12 @@
-import type { ReactNode } from 'react'
+import { Fragment, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, RefreshCw, Users } from 'lucide-react'
 import { TopBar } from '../components/TopBar'
 import { VoiceprintEnroll } from '../components/VoiceprintEnroll'
 import { VoiceprintAdminRow } from '../components/VoiceprintAdminRow'
 import { useVoiceprintAdmin } from '../hooks/useVoiceprintAdmin'
+import { VoiceprintConflictList } from '../components/VoiceprintConflictList'
+import { VoiceprintTemplateSummary } from '../components/VoiceprintTemplateSummary'
 
 /**
  * 声纹管理页。
@@ -124,6 +126,8 @@ export default function Voiceprints() {
             </section>
           )}
 
+          <VoiceprintConflictList prints={prints} onChanged={load} />
+
           {/* 待命名 */}
           {provisional.length > 0 && (
             <section className="mb-5">
@@ -137,20 +141,22 @@ export default function Voiceprints() {
               </p>
               <ul className="flex flex-col gap-1.5">
                 {provisional.map((p) => (
-                  <VoiceprintAdminRow
-                    key={p.id}
-                    print={p}
-                    editing={editingId === p.id}
-                    draft={draft}
-                    onDraftChange={setDraft}
-                    onStartEdit={() => startEdit(p)}
-                    onSubmit={() => void submitEdit(p)}
-                    onCancel={cancelEdit}
-                    onDelete={() => void remove(p)}
-                    others={prints.filter((x) => x.id !== p.id)}
-                    onMerge={(tid) => void merge(p, tid)}
-                    onToggleDisabled={() => void toggleDisabled(p)}
-                  />
+                  <Fragment key={p.id}>
+                    <VoiceprintAdminRow
+                      print={p}
+                      editing={editingId === p.id}
+                      draft={draft}
+                      onDraftChange={setDraft}
+                      onStartEdit={() => startEdit(p)}
+                      onSubmit={() => void submitEdit(p)}
+                      onCancel={cancelEdit}
+                      onDelete={() => void remove(p)}
+                      others={prints.filter((x) => x.id !== p.id)}
+                      onMerge={(tid) => void merge(p, tid)}
+                      onToggleDisabled={() => void toggleDisabled(p)}
+                    />
+                    <VoiceprintTemplateSummary voiceprintId={p.id} />
+                  </Fragment>
                 ))}
               </ul>
             </section>
@@ -172,20 +178,22 @@ export default function Voiceprints() {
             ) : (
               <ul className="flex flex-col gap-1.5">
                 {named.map((p) => (
-                  <VoiceprintAdminRow
-                    key={p.id}
-                    print={p}
-                    editing={editingId === p.id}
-                    draft={draft}
-                    onDraftChange={setDraft}
-                    onStartEdit={() => startEdit(p)}
-                    onSubmit={() => void submitEdit(p)}
-                    onCancel={cancelEdit}
-                    onDelete={() => void remove(p)}
-                    others={prints.filter((x) => x.id !== p.id)}
-                    onMerge={(tid) => void merge(p, tid)}
-                    onToggleDisabled={() => void toggleDisabled(p)}
-                  />
+                  <Fragment key={p.id}>
+                    <VoiceprintAdminRow
+                      print={p}
+                      editing={editingId === p.id}
+                      draft={draft}
+                      onDraftChange={setDraft}
+                      onStartEdit={() => startEdit(p)}
+                      onSubmit={() => void submitEdit(p)}
+                      onCancel={cancelEdit}
+                      onDelete={() => void remove(p)}
+                      others={prints.filter((x) => x.id !== p.id)}
+                      onMerge={(tid) => void merge(p, tid)}
+                      onToggleDisabled={() => void toggleDisabled(p)}
+                    />
+                    <VoiceprintTemplateSummary voiceprintId={p.id} />
+                  </Fragment>
                 ))}
               </ul>
             )}

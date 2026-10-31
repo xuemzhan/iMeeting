@@ -19,14 +19,14 @@ RUN apt-get update \
 
 WORKDIR /app/backend
 
-COPY backend/pyproject.toml backend/README.md ./
+COPY backend/pyproject.toml backend/README.md backend/constraints-production.txt ./
 COPY backend/src ./src
 COPY backend/migrations ./migrations
 COPY backend/alembic.ini ./
 
 RUN python -m pip install --upgrade pip \
     && python -m pip install torch torchaudio --index-url "${PYTORCH_INDEX_URL}" \
-    && python -m pip install -e ".[asr]"
+    && python -m pip install -c constraints-production.txt -e ".[asr]"
 
 RUN useradd --create-home --uid 10001 imeeting \
     && mkdir -p \

@@ -12,6 +12,8 @@ export interface Segment {
   startMs: number
   endMs: number
   speaker: string | null
+  /** 会议内稳定说话人键（改名不变），用于对齐重要程度 */
+  speakerKey?: string | null
   speakerScore?: number
   speakerSource?: string
   lowConfidence?: boolean
@@ -124,7 +126,23 @@ export interface Meeting {
 
 export interface MeetingDetail extends Meeting {
   segments: ApiSegment[]
+  speakers: MeetingSpeaker[]
   speaker_low_confidence_threshold?: number
+}
+
+/**
+ * 会议内一位说话人及其重要程度。
+ * importance：1 = 关键（最高）、2 = 次要、3 = 一般。
+ * state：0 未处理（参会人面板显示）、1 已确认、2 已删除（后两者不再显示）。
+ */
+export interface MeetingSpeaker {
+  speaker: string
+  /** 稳定键；历史数据是 "label:<显示名>" */
+  speaker_key: string
+  importance: number
+  state?: number
+  segments: number
+  speech_ms: number
 }
 
 export interface MeetingSearchResult {
@@ -201,6 +219,7 @@ export interface ApiSegment {
   start_ms: number
   end_ms: number
   speaker: string | null
+  speaker_key?: string | null
   speaker_score?: number
   speaker_source?: string
   speaker_low_confidence?: boolean
@@ -432,4 +451,132 @@ export interface TranscriptReview {
   reason: string
   created_at: string
   reviewed_at: string | null
+}
+
+
+// ---------------------------------------------------------------------------
+// 人员本体（REQ-001）
+// ---------------------------------------------------------------------------
+
+export interface PersonAttributeItem {
+  category: string
+  key: string
+  value: string
+  confidence?: number
+  source?: string
+}
+
+export type ParticipantState = 'pending' | 'confirmed' | 'rejected'
+
+export interface MeetingParticipantItem {
+  participant_id: number
+  person_id: number
+  speaker: string
+  speaker_key: string | null
+  role: string
+  importance: number
+  state: ParticipantState
+  confidence: number
+  ambiguous: boolean
+  evidence: string[]
+  attributes: PersonAttributeItem[]
+  hidden_by_confidence?: boolean
+}
+
+export interface PersonSearchItem {
+  person_id: number
+  display_name: string
+  pinyin: string
+  ambiguous: boolean
+  aliases: string[]
+  attributes: PersonAttributeItem[]
+}
+
+export interface ParticipantExtractResult {
+  meeting_id: number
+  degraded?: boolean
+  skipped?: string
+  created?: number
+  updated?: number
+  extracted?: { person_id: number; name: string; created: boolean; ambiguous: boolean; confidence: number }[]
+  declined?: { reason: string; raw?: string }[]
+  candidates?: MeetingParticipantItem[]
+}
+
+// ---------------------------------------------------------------------------
+// 多场景声纹模板（REQ-002）
+// ---------------------------------------------------------------------------
+
+export interface VoiceprintScenario {
+  device: string
+  distance: string
+  noise: string
+  voice: string
+}
+
+export interface VoiceprintTemplateItem {
+  template_id: number
+  slot: number
+  active: boolean
+  confirmed: boolean
+  quality: number
+  sample_ms: number
+  snr_db: number
+  scenario: VoiceprintScenario
+  source_meeting_id: number | null
+  source_segment_id: string | null
+  superseded_by: number | null
+  similarities: Record<string, number>
+  /** 用户显式选定的主模板（每人最多一条）。 */
+  pinned?: boolean
+  /** 当前代表样本：有主模板时就是它，否则是按质量推导的候选。 */
+  primary?: boolean
+  /** pinned = 用户选定；quality = 系统推导；none = 没有活跃模板。 */
+  primary_source?: 'pinned' | 'quality' | 'none'
+}
+
+export interface VoiceprintTemplateList {
+  voiceprint_id: number
+  max_templates: number
+  templates: VoiceprintTemplateItem[]
+  /** 声纹永久关联的人员；未关联时为 null。 */
+  person?: { person_id: number; display_name: string } | null
+}
+
+export type ConflictLevel = 'none' | 'medium' | 'high'
+export type ConfirmDecision = 'confirm_self' | 'reassign' | 'cancel'
+
+export interface ConfirmSampleAssessment {
+  conflict_id: number | null
+  self_score: number | null
+  other: { voiceprint_id: number; name: string | null; score: number } | null
+  reason: '' | 'diverge' | 'conflict' | 'both'
+  level: ConflictLevel
+  tolerated: boolean
+  blocking: boolean
+  allowed_actions: ConfirmDecision[]
+}
+
+export interface ConfirmSampleResult {
+  assessment: ConfirmSampleAssessment
+  decision: ConfirmDecision
+  status: string
+  template_id: number | null
+  voiceprint_id: number
+  slot: number | null
+}
+
+export interface VoiceprintConflictItem {
+  conflict_id: number
+  voiceprint_id: number
+  voiceprint_name: string | null
+  other_voiceprint_id: number | null
+  other_name: string | null
+  self_score: number | null
+  other_score: number | null
+  reason: string
+  status: string
+  meeting_id: number | null
+  segment_id: string | null
+  created_at: string | null
 }

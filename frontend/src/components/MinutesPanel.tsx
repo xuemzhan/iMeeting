@@ -1,6 +1,9 @@
 import { Sparkles, Loader2, AlertCircle, CheckSquare, Lightbulb } from 'lucide-react'
 import { useSession } from '../store/session'
+import { useSettings } from '../store/settings'
 import type { Minutes } from '../api/types'
+import type { SpeakerRow } from '../lib/speakerRoles'
+import { SpeakerRolesPanel } from './SpeakerRolesPanel'
 import { TemplatePicker } from './TemplatePicker'
 
 interface Props {
@@ -10,6 +13,12 @@ interface Props {
   hasContent: boolean
   templateId: number | null
   onTemplateChange: (id: number | null) => void
+  /** 参会人重要程度（实时页由片段聚合） */
+  speakers?: SpeakerRow[]
+  onImportanceChange?: (row: SpeakerRow, importance: number) => void
+  importanceError?: string | null
+  onSpeakerConfirm?: (row: SpeakerRow) => void
+  onSpeakerDelete?: (row: SpeakerRow) => void
 }
 
 export function MinutesPanel({
@@ -19,14 +28,22 @@ export function MinutesPanel({
   hasContent,
   templateId,
   onTemplateChange,
+  speakers = [],
+  onImportanceChange,
+  importanceError,
+  onSpeakerConfirm,
+  onSpeakerDelete,
 }: Props) {
-  const speakers = useSession((s) => s.speakers)
   const segments = useSession((s) => s.segments)
+  const scale = useSettings((s) => s.minutesScale)
 
   const finalCount = segments.filter((s) => s.isFinal).length
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div
+      className="reader-scope flex min-h-0 flex-1 flex-col"
+      style={{ '--reader-scale': String(scale) } as React.CSSProperties}
+    >
       {/* 纪要内容 */}
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
         {generating ? (
@@ -38,39 +55,21 @@ export function MinutesPanel({
         )}
       </div>
 
-      {/* 底部：说话人统计 + 生成按钮 */}
+      {/* 底部：参会人重要程度 + 生成按钮 */}
       <div
         className="shrink-0 px-4 py-3"
         style={{ borderTop: '1px solid var(--border-subtle)' }}
       >
-        {speakers.length > 0 && (
-          <div className="mb-3">
-            <p className="mb-2 text-[11px] font-medium text-tertiary">说话人分布</p>
-            <div className="space-y-1.5">
-              {speakers.slice(0, 4).map((sp) => (
-                <div key={sp.id} className="flex items-center gap-2">
-                  <span className="w-14 shrink-0 truncate text-[11px] text-secondary">{sp.id}</span>
-                  <div
-                    className="h-1.5 flex-1 overflow-hidden rounded-full"
-                    style={{ background: 'var(--bg-subtle)' }}
-                  >
-                    <div
-                      className="h-full rounded-full transition-[width] duration-500"
-                      style={{
-                        width: `${Math.round(sp.ratio * 100)}%`,
-                        background: 'var(--accent)',
-                      }}
-                    />
-                  </div>
-                  <span className="w-8 shrink-0 text-right font-mono text-[11px] tabular-nums text-tertiary">
-                    {Math.round(sp.ratio * 100)}%
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
+        <div className="mb-3">
+          <SpeakerRolesPanel
+            speakers={speakers}
+            onChange={(row, importance) => onImportanceChange?.(row, importance)}
+            onConfirm={(row) => onSpeakerConfirm?.(row)}
+            onDelete={(row) => onSpeakerDelete?.(row)}
+            error={importanceError}
+            disabled={!onImportanceChange}
+          />
+        </div>
         <TemplatePicker value={templateId} onChange={onTemplateChange} />
 
         <button
@@ -139,7 +138,7 @@ function MinutesContent({ minutes }: { minutes: Minutes }) {
       {minutes.summary && (
         <section>
           <p className="mb-1.5 text-[11px] font-medium text-tertiary">整体摘要</p>
-          <p className="text-[13px] leading-relaxed text-secondary">{minutes.summary}</p>
+          <p className="reader-body-sm text-secondary">{minutes.summary}</p>
         </section>
       )}
 
@@ -156,17 +155,17 @@ function MinutesContent({ minutes }: { minutes: Minutes }) {
                 className="rounded-lg px-3 py-2"
                 style={{ background: 'var(--accent-soft)' }}
               >
-                <p className="text-[12px] font-medium" style={{ color: 'var(--accent-text)' }}>
+                <p className="reader-title font-medium" style={{ color: 'var(--accent-text)' }}>
                   {topic.title}
                 </p>
                 {topic.detail && (
-                  <p className="mt-1 text-[12px] leading-relaxed" style={{ color: 'var(--accent-text)', opacity: 0.85 }}>
+                  <p className="reader-body-xs mt-1" style={{ color: 'var(--accent-text)', opacity: 0.85 }}>
                     {topic.detail}
                   </p>
                 )}
                 {topic.conclusion && (
                   <p
-                    className="mt-1.5 border-l-2 pl-2 text-[12px] leading-relaxed"
+                    className="reader-body-xs mt-1.5 border-l-2 pl-2"
                     style={{ borderColor: 'var(--accent)', color: 'var(--accent-text)' }}
                   >
                     {topic.conclusion}
@@ -196,11 +195,11 @@ function MinutesContent({ minutes }: { minutes: Minutes }) {
                   style={{ background: 'var(--warn)' }}
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="text-[12px]" style={{ color: 'var(--warn-text)' }}>
+                  <p className="reader-body-xs" style={{ color: 'var(--warn-text)' }}>
                     {todo.task}
                   </p>
                   {(todo.owner || todo.due) && (
-                    <p className="mt-0.5 text-[11px] opacity-80" style={{ color: 'var(--warn-text)' }}>
+                    <p className="reader-meta mt-0.5 opacity-80" style={{ color: 'var(--warn-text)' }}>
                       {todo.owner && `责任人：${todo.owner}`}
                       {todo.owner && todo.due && ' · '}
                       {todo.due && `截止：${todo.due}`}

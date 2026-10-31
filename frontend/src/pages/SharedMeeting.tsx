@@ -41,7 +41,7 @@ export default function SharedMeeting() {
           title="返回会议首页"
         >
           <BrandMark size={24} />
-          <span>iMeeting</span>
+          <span>总师会议智能伙伴</span>
         </Link>
         <span className="ml-auto text-[11px] text-tertiary">只读分享</span>
       </header>

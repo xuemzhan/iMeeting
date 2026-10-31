@@ -13,6 +13,7 @@ import type {
   Meeting,
   MeetingDetail,
   MeetingSearchResult,
+  MeetingSpeaker,
   MindMapResponse,
   Minutes,
   MinutesTemplate,
@@ -22,7 +23,17 @@ import type {
   TokenResponse,
   User,
   Voiceprint,
+  ConfirmDecision,
+  ConfirmSampleAssessment,
+  ConfirmSampleResult,
+  MeetingParticipantItem,
+  ParticipantExtractResult,
+  PersonSearchItem,
+  VoiceprintConflictItem,
+  VoiceprintTemplateList,
 } from './types'
+
+import { askVoiceConfirmation, type VoiceConfirmation } from '../lib/voiceConfirmation'
 
 const TOKEN_KEY = 'imeeting-token'
 
@@ -39,6 +50,7 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
+    public detail?: unknown,
   ) {
     super(message)
   }
@@ -105,7 +117,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       window.dispatchEvent(new CustomEvent(AUTH_EXPIRED_EVENT))
     }
 
-    throw new ApiError(res.status, detail)
+    throw new ApiError(res.status, detail, data && typeof data === 'object' && 'detail' in data ? data.detail : null)
   }
 
   return data as T
@@ -152,7 +164,7 @@ export const authApi = {
   me: () => request<User>('/api/v1/auth/me'),
 
   changePassword: (currentPassword: string, newPassword: string) =>
-    request<User>('/api/v1/auth/password', {
+    request<User & { access_token: string }>('/api/v1/auth/password', {
       method: 'POST',
       body: JSON.stringify({
         current_password: currentPassword,
@@ -411,6 +423,24 @@ export const meetingApi = {
       { user_id: number; username: string; display_name: string; role: string }[]
     >(`/api/v1/meetings/${id}/members`),
 
+  /** 会议内说话人 + 重要程度（1 关键 / 2 次要 / 3 一般）。 */
+  speakers: (id: number) =>
+    request<MeetingSpeaker[]>(`/api/v1/meetings/${id}/speakers`),
+
+  /** 设置说话人重要程度；返回刷新后的全部说话人。 */
+  setSpeakerImportance: (id: number, speaker: string, importance: number) =>
+    request<MeetingSpeaker[]>(`/api/v1/meetings/${id}/speakers/importance`, {
+      method: 'PUT',
+      body: JSON.stringify({ speaker, importance }),
+    }),
+
+  /** 确认（1）或删除（2）一位参会人；返回刷新后的全部说话人。 */
+  setSpeakerState: (id: number, speaker: string, state: number) =>
+    request<MeetingSpeaker[]>(`/api/v1/meetings/${id}/speakers/state`, {
+      method: 'PUT',
+      body: JSON.stringify({ speaker, state }),
+    }),
+
   addMember: (id: number, username: string, role: string) =>
     request<{ user_id: number; username: string; display_name: string; role: string }>(
       `/api/v1/meetings/${id}/members`,
@@ -578,18 +608,23 @@ export const voiceprintApi = {
    * 会议进行中点某条语句的说话人标签时用这个：既改声纹库（以后认得出），
    * 也把已落库的旧标签一起改掉（回看历史时不会还是「说话人 1」）。
    */
-  relabel: (meetingId: number, fromLabel: string, toName: string) =>
-    request<{ renamed_voiceprint: boolean; updated_segments: number; name: string }>(
-      '/api/v1/voiceprints/relabel',
-      {
-        method: 'POST',
-        body: JSON.stringify({
-          meeting_id: meetingId,
-          from_label: fromLabel,
-          to_name: toName,
-        }),
-      },
-    ),
+  relabel: async (meetingId: number, fromLabel: string, toName: string) => {
+    const body = { meeting_id: meetingId, from_label: fromLabel, to_name: toName }
+    type Result = { renamed_voiceprint: boolean; updated_segments: number; name: string }
+    try {
+      const result = await request<Result>('/api/v1/voiceprints/relabel', { method: 'POST', body: JSON.stringify(body) })
+      window.dispatchEvent(new CustomEvent('imeeting-participants-changed', { detail: meetingId }))
+      return result
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.status !== 409 || !error.detail || typeof error.detail !== 'object' || !('kind' in error.detail) || error.detail.kind !== 'voiceprint_confirmation') throw error
+      const confirmation = error.detail as VoiceConfirmation
+      const choice = await askVoiceConfirmation(confirmation)
+      const result = await request<Result>('/api/v1/voiceprints/relabel', { method: 'POST', body: JSON.stringify({ ...body, ...choice, conflict_id: confirmation.assessment.conflict_id }) })
+      if (choice.decision === 'cancel') throw new Error('已取消声纹确认，原说话人保持不变')
+      window.dispatchEvent(new CustomEvent('imeeting-participants-changed', { detail: meetingId }))
+      return result
+    }
+  },
 
   /** 把 source 合并进 target：片段改挂到 target 名下，source 删除。 */
   merge: (sourceId: number, targetId: number) =>
@@ -624,6 +659,151 @@ export const voiceprintApi = {
       }[]
     >(`/api/v1/voiceprints/merge-suggestions?${sp.toString()}`)
   },
+
+  // ---- 多场景模板与确认冲突（REQ-002） ----
+
+  /** 某人的声纹模板（≤5 条，含两两相似度）。 */
+  templates: (id: number) =>
+    request<VoiceprintTemplateList>(`/api/v1/voiceprints/${id}/templates`),
+
+  /** 模板治理：停用/启用、改场景标签、设/取消主模板。 */
+  patchTemplate: (
+    id: number,
+    templateId: number,
+    patch: {
+      disabled?: boolean
+      pinned?: boolean
+      scenario_device?: string
+      scenario_distance?: string
+      scenario_noise?: string
+      scenario_voice?: string
+    },
+  ) =>
+    request<{
+      template_id: number
+      slot: number
+      disabled: boolean
+      pinned: boolean
+      scenario: Record<string, string>
+    }>(`/api/v1/voiceprints/${id}/templates/${templateId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    }),
+
+  /**
+   * 确认一条声纹样本：先评估「与本人差异大 / 更像别人」，再按 decision 落模板。
+   * 不传 decision 时只评估，不改数据。
+   */
+  confirmSample: (payload: {
+    voiceprint_id: number
+    meeting_id?: number | null
+    segment_id?: string | null
+    embedding?: number[] | null
+    decision?: ConfirmDecision
+    other_voiceprint_id?: number | null
+    slot?: number | null
+    conflict_id?: number | null
+  }) =>
+    request<ConfirmSampleAssessment | ConfirmSampleResult>(
+      '/api/v1/voiceprints/confirm-sample',
+      { method: 'POST', body: JSON.stringify(payload) },
+    ),
+
+  /** 待处理的确认冲突。 */
+  conflicts: (voiceprintId?: number) => {
+    const sp = new URLSearchParams()
+    if (voiceprintId != null) sp.set('voiceprint_id', String(voiceprintId))
+    const query = sp.toString()
+    return request<VoiceprintConflictItem[]>(
+      `/api/v1/voiceprints/conflicts${query ? `?${query}` : ''}`,
+    )
+  },
+
+  /** 处理冲突：accept（确认为本人）/ reassign（判给别人）/ cancel。 */
+  decideConflict: (
+    conflictId: number,
+    action: 'accept' | 'reassign' | 'cancel',
+    extra: { target_voiceprint_id?: number; slot?: number } = {},
+  ) =>
+    request<{ decision: string; status: string; template_id: number | null }>(
+      `/api/v1/voiceprints/conflicts/${conflictId}/decide`,
+      { method: 'POST', body: JSON.stringify({ action, ...extra }) },
+    ),
+}
+
+// ---------------------------------------------------------------------------
+// 人员本体（REQ-001）
+// ---------------------------------------------------------------------------
+
+export const personApi = {
+  confirmAll: (meetingId: number) => request<MeetingParticipantItem[]>(`/api/v1/meetings/${meetingId}/participants/confirm-all`, { method: 'POST' }),
+  /** 会议参会人（含属性、绑定、确认状态）。 */
+  participants: (meetingId: number) =>
+    request<MeetingParticipantItem[]>(
+      `/api/v1/meetings/${meetingId}/participants`,
+    ),
+
+  /** 手工（或语音输入转文字后）加一位参会人，直接视为已确认。 */
+  addParticipant: (
+    meetingId: number,
+    body: {
+      name: string
+      speaker_key?: string | null
+      role?: string
+      attributes?: { category: string; key: string; value: string }[]
+    },
+  ) =>
+    request<MeetingParticipantItem>(`/api/v1/meetings/${meetingId}/participants`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
+  /** 手动触发一次抽取；`force=false` 时仍受自动抽取上限约束。 */
+  extract: (meetingId: number, force = true) =>
+    request<ParticipantExtractResult>(
+      `/api/v1/meetings/${meetingId}/participants/extract?force=${force}`,
+      { method: 'POST' },
+    ),
+
+  /** 确认 / 编辑参一人。 */
+  updateParticipant: (
+    meetingId: number,
+    personId: number,
+    patch: {
+      state?: 'pending' | 'confirmed' | 'rejected'
+      role?: string
+      importance?: number
+      display_name?: string
+      attributes?: { category: string; key: string; value: string }[]
+    },
+  ) =>
+    request<MeetingParticipantItem>(
+      `/api/v1/meetings/${meetingId}/participants/${personId}`,
+      { method: 'PATCH', body: JSON.stringify(patch) },
+    ),
+
+  /** 把本场 speaker_key 绑到该人员（null = 解绑），并回溯转写标签。 */
+  bind: (meetingId: number, personId: number, speakerKey: string | null) =>
+    request<{ person_id: number; speaker_key: string | null; previous: string | null }>(
+      `/api/v1/meetings/${meetingId}/participants/${personId}/bind`,
+      { method: 'POST', body: JSON.stringify({ speaker_key: speakerKey }) },
+    ),
+
+  /** 人员检索（姓名/别名/拼音/属性）。 */
+  search: (q = '') =>
+    request<PersonSearchItem[]>(
+      `/api/v1/persons?q=${encodeURIComponent(q)}`,
+    ),
+
+  /** 把 source 合并进 target（保留 target）。 */
+  merge: (targetId: number, sourceId: number) =>
+    request<{ person_id: number; display_name: string; merged_source: number }>(
+      `/api/v1/persons/${targetId}/merge`,
+      { method: 'POST', body: JSON.stringify({ source_person_id: sourceId }) },
+    ),
+
+  remove: (personId: number) =>
+    request<void>(`/api/v1/persons/${personId}`, { method: 'DELETE' }),
 }
 
 // ---------------------------------------------------------------------------

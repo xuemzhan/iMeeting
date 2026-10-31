@@ -12,9 +12,12 @@ import { MindMap } from './MindMap'
 export function MindMapDialog({
   meetingId,
   onClose,
+  onSeek,
 }: {
   meetingId: number
   onClose: () => void
+  /** 点导图节点跳到音频对应位置（详情页有播放器时用） */
+  onSeek?: (ms: number) => void
 }) {
   const qc = useQueryClient()
   const [generating, setGenerating] = useState(false)
@@ -70,7 +73,7 @@ export function MindMapDialog({
               正在生成脑图…
             </div>
           ) : data ? (
-            <MindMap data={data} />
+            <MindMap data={data} onSeek={onSeek} />
           ) : error ? (
             <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
               <Network size={20} style={{ color: 'var(--text-tertiary)' }} />

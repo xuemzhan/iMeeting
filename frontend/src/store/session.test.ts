@@ -7,16 +7,40 @@
  * 运行：npx vitest run
  */
 
-import { describe, expect, it, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { meetingApi, voiceprintApi } from '../api/client'
 import type { Segment, ServerMessage } from '../api/types'
 import { handleServerMessage, upsertSegment, useSession } from './session'
+
+// updateSegmentText 会 PATCH 片段：用假 client 断言「改什么、发给谁」
+vi.mock('../api/client', () => ({
+  meetingApi: { editSegment: vi.fn(async () => ({ segment_id: 'x' })) },
+  voiceprintApi: { relabel: vi.fn(async () => ({})) },
+}))
 
 function seg(id: string, text: string, isFinal = false, seq = -1): Segment {
   return { segmentId: id, text, isFinal, startMs: 0, endMs: 600, speaker: null, seq }
 }
 
 beforeEach(() => {
-  useSession.setState({ segments: [], indexById: new Map(), speakers: [] })
+  useSession.setState({ segments: [], indexById: new Map(), speakers: [], meetingId: null, error: null })
+})
+
+describe('renameSpeaker', () => {
+  it('取消确认后保持原说话人', async () => {
+    useSession.setState({ meetingId: 1, segments: [{ ...seg('a', '原文', true), speaker: '原说话人' }] })
+    vi.mocked(voiceprintApi.relabel).mockRejectedValueOnce(new Error('已取消声纹确认'))
+    await useSession.getState().renameSpeaker('原说话人', '张三')
+    expect(useSession.getState().segments[0].speaker).toBe('原说话人')
+    expect(useSession.getState().error).toBe('已取消声纹确认')
+  })
+
+  it('转交后采用服务端确认的人名', async () => {
+    useSession.setState({ meetingId: 1, segments: [{ ...seg('a', '原文', true), speaker: '原说话人' }] })
+    vi.mocked(voiceprintApi.relabel).mockResolvedValueOnce({ name: '另一位', renamed_voiceprint: false, updated_segments: 1 })
+    await useSession.getState().renameSpeaker('原说话人', '张三')
+    expect(useSession.getState().segments[0].speaker).toBe('另一位')
+  })
 })
 
 describe('upsertSegment', () => {
@@ -174,5 +198,31 @@ describe('handleServerMessage', () => {
     expect(live?.summary).toBe('阶段性摘要')
     expect(live?.is_draft).toBe(true)
     expect(live?.version).toBe(2)
+  })
+})
+
+describe('updateSegmentText', () => {
+  it('定稿片段：先本地生效，再落库', async () => {
+    upsertSegment(seg('a', '旧文字', true, 0))
+    useSession.setState({ meetingId: 7 })
+    await useSession.getState().updateSegmentText('a', '  新文字  ')
+    expect(useSession.getState().segments[0].text).toBe('新文字')
+    expect(meetingApi.editSegment).toHaveBeenCalledWith(7, 'a', { text: '新文字' })
+  })
+
+  it('草稿不可修订（还没落库）', async () => {
+    upsertSegment(seg('b', '草稿', false))
+    useSession.setState({ meetingId: 7 })
+    await useSession.getState().updateSegmentText('b', '改草稿')
+    expect(useSession.getState().segments[0].text).toBe('草稿')
+  })
+
+  it('落库失败要回滚本地文字，避免界面与库里不一致', async () => {
+    upsertSegment(seg('c', '原文', true, 0))
+    useSession.setState({ meetingId: 7 })
+    vi.mocked(meetingApi.editSegment).mockRejectedValueOnce(new Error('boom'))
+    await useSession.getState().updateSegmentText('c', '新文')
+    expect(useSession.getState().segments[0].text).toBe('原文')
+    expect(useSession.getState().error).toBe('boom')
   })
 })

@@ -55,7 +55,7 @@ export function TopBar() {
           className="text-[15px] font-semibold tracking-tight"
           style={{ color: 'var(--text-primary)' }}
         >
-          iMeeting
+          总师会议智能伙伴
         </span>
       </Link>
 
