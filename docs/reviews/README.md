@@ -25,4 +25,4 @@ $env:PYTHONUTF8='1'
 
 优先处理对象授权和日志口令，再修身份、模板状态与删除/合并，之后接通自动抽取和确认交互。模板匹配默认开关继续关闭，待上下文输入贯通和固定语料校准后灰度开启。
 
-后续修复见[修复报告](../reports/2026-10-31-gap-fixes.md)和[新证据](evidence/2026-10-31-fixes/README.md)；R6 结构优化与性能对照见[续作报告](../reports/2026-10-31-r6-optimization.md)和[R6 证据](evidence/2026-10-31-r6/README.md)；身份统一（声纹—人员永久关联）见[身份报告](../reports/2026-10-31-identity-unify.md)和[身份证据](evidence/2026-10-31-identity-unify/README.md)；主模板治理见[主模板报告](../reports/2026-10-31-template-primary.md)和[主模板证据](evidence/2026-10-31-template-primary/README.md)。本页保留原审查发现，当前实现状态以修复报告中对应范围为准。
+后续修复见[修复报告](../reports/2026-10-31-gap-fixes.md)和[新证据](evidence/2026-10-31-fixes/README.md)；R6 结构优化与性能对照见[续作报告](../reports/2026-10-31-r6-optimization.md)和[R6 证据](evidence/2026-10-31-r6/README.md)；身份统一（声纹—人员永久关联）见[身份报告](../reports/2026-10-31-identity-unify.md)和[身份证据](evidence/2026-10-31-identity-unify/README.md)；模板治理见[主模板报告](../reports/2026-10-31-template-primary.md)、[合并报告](../reports/2026-11-01-template-merge.md)及各自证据目录。本页保留原审查发现，当前实现状态以修复报告中对应范围为准。

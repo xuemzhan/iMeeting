@@ -71,6 +71,13 @@ class TemplatePatch(BaseModel):
     scenario_voice: str | None = Field(default=None, max_length=16)
 
 
+class TemplateMergeRequest(BaseModel):
+    """把同一声纹的两条模板合并成一条（FR-5）。"""
+
+    source_template_id: int
+    target_template_id: int
+
+
 def _embedding_of(db: Session, payload: ConfirmSampleRequest) -> np.ndarray:
     """解析请求里的声纹向量：显式向量优先，否则从片段音频现抽。"""
     if payload.embedding:
@@ -202,6 +209,64 @@ def patch_template(
             "noise": updated.scenario_noise,
             "voice": updated.scenario_voice,
         },
+    }
+
+
+@router.post("/{voiceprint_id}/templates/merge")
+def merge_templates(
+    voiceprint_id: int,
+    payload: TemplateMergeRequest,
+    user: User = Depends(get_current_user_or_anonymous),
+    db: Session = Depends(get_session),
+):
+    """把同一声纹的两条活跃模板合并成 target 一条（FR-5）。
+
+    source 的来源贡献改挂到 target 后重算质心，source 退役但保留可追溯；
+    任一方是主模板时 target 继承主模板。跨人、已停用、已退役一律 409。
+    """
+    owned_voiceprint(db, voiceprint_id, user, write=True)
+    try:
+        merged = voice_template.merge_templates(
+            db,
+            voiceprint_id=voiceprint_id,
+            source_id=payload.source_template_id,
+            target_id=payload.target_template_id,
+            user_id=user.id,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    db.add(
+        AuditLog(
+            user_id=user.id,
+            username=user.username,
+            action="template_merge",
+            target=(
+                f"voiceprint:{voiceprint_id}/template:"
+                f"{payload.target_template_id}"
+            ),
+            payload=json.dumps(
+                {
+                    "source_template_id": payload.source_template_id,
+                    "target_template_id": payload.target_template_id,
+                    "sample_ms": merged.sample_ms,
+                    "pinned": bool(merged.pinned),
+                },
+                ensure_ascii=False,
+            ),
+        )
+    )
+    db.commit()
+    voice_match.invalidate_cache()
+    speaker.invalidate_cache()
+    return {
+        "template_id": merged.id,
+        "slot": merged.slot,
+        "sample_ms": merged.sample_ms,
+        "quality": round(float(merged.quality or 0.0), 4),
+        "pinned": bool(merged.pinned),
+        "retired_template_id": payload.source_template_id,
     }
 
 

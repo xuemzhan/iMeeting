@@ -34,5 +34,7 @@
 | IM-EVD-006 | [身份统一验证证据](reviews/evidence/2026-10-31-identity-unify/README.md) | 阶段快照 | 707 项后端回归、Ruff、迁移回填/降级与未验证边界 |
 | IM-RPT-006 | [2026-10-31 主模板续作](reports/2026-10-31-template-primary.md) | 阶段快照 | 主模板（pinned）选择与自动淘汰保护；模板合并仍未做 |
 | IM-EVD-007 | [主模板验证证据](reviews/evidence/2026-10-31-template-primary/README.md) | 阶段快照 | 715 项后端回归、Ruff、迁移部分唯一索引/降级与未验证边界 |
+| IM-RPT-007 | [2026-11-01 模板合并](reports/2026-11-01-template-merge.md) | 阶段快照 | 合并两条模板的口径、接口与审计；跨设备向导仍未做 |
+| IM-EVD-008 | [模板合并验证证据](reviews/evidence/2026-11-01-template-merge/README.md) | 阶段快照 | 722 项后端回归、Ruff 与合并用例（服务层+接口层） |
 
-报告列表见[报告索引](reports/README.md)，新增和归档规则见[子项目文档规制](governance/README.md)。最新修复结果查 IM-RPT-006、IM-RPT-005 与 IM-RPT-003；旧模型数据与漏洞扫描仍只在各期原范围内有效，本次未生产部署。
+报告列表见[报告索引](reports/README.md)，新增和归档规则见[子项目文档规制](governance/README.md)。最新修复结果查 IM-RPT-007、IM-RPT-006 与 IM-RPT-005；旧模型数据与漏洞扫描仍只在各期原范围内有效，本次未生产部署。

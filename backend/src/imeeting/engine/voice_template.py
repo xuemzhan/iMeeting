@@ -310,6 +310,126 @@ def _weakest_slot(db: Session, voiceprint_id: int) -> VoiceprintTemplate | None:
     return min(active, key=lambda row: (row.quality, -row.slot))
 
 
+def _ensure_source_rows(db: Session, row: VoiceprintTemplate) -> None:
+    """给历史模板补一条确定性来源行，合并时才能重算质心。"""
+    existing = db.exec(
+        select(VoiceprintTemplateSource).where(
+            VoiceprintTemplateSource.template_id == row.id
+        )
+    ).first()
+    if existing is not None:
+        return
+    db.add(
+        VoiceprintTemplateSource(
+            voiceprint_id=row.voiceprint_id,
+            template_id=row.id,
+            source_key=f"legacy-template:{row.id}",
+            embedding=row.embedding,
+            weight=max(1.0, (row.sample_ms or 0) / 1000.0),
+            sample_ms=max(0, row.sample_ms or 0),
+        )
+    )
+    db.flush()
+
+
+def merge_templates(
+    db: Session,
+    *,
+    voiceprint_id: int,
+    source_id: int,
+    target_id: int,
+    user_id: int | None = None,
+) -> VoiceprintTemplate:
+    """把同一人的两条模板合并成 ``target`` 一条（REQ-002 FR-5「合并两条模板」）。
+
+    口径（先定清楚再实现，避免合并出无法解释的模板）：
+
+    - 只允许**同一声纹的两条活跃模板**；跨人、已停用、已退役一律拒绝。
+    - ``source`` 的来源贡献改挂到 ``target``（``(voiceprint_id, source_key)``
+      唯一，重复的丢弃），随后按来源确定性重算质心、累计样本时长、取信噪比
+      与质量的最大值。同一组来源无论合并几次都得到同一质心。
+    - ``source`` 退役：``slot`` 取负、``superseded_by`` 指向 target，保留可追溯；
+      不删除历史行。
+    - 任一方是主模板时，``target`` 成为主模板（先清 source 的标记再置位，
+      兼容 SQLite 的部分唯一索引），每人仍只有一条主模板。
+    """
+    if source_id == target_id:
+        raise ValueError("不能把模板合并到自己")
+    rows = db.exec(
+        select(VoiceprintTemplate).where(
+            VoiceprintTemplate.id.in_([source_id, target_id])
+        )
+    ).all()
+    by_id = {row.id: row for row in rows}
+    source = by_id.get(source_id)
+    target = by_id.get(target_id)
+    if source is None or target is None:
+        raise LookupError("模板不存在")
+    if source.voiceprint_id != voiceprint_id or target.voiceprint_id != voiceprint_id:
+        raise ValueError("只能合并同一声纹的模板")
+    for row in (source, target):
+        if row.slot < 0 or row.superseded_by is not None or row.disabled:
+            raise ValueError("只有活跃模板可以合并")
+
+    _ensure_source_rows(db, source)
+    _ensure_source_rows(db, target)
+    for contribution in db.exec(
+        select(VoiceprintTemplateSource).where(
+            VoiceprintTemplateSource.template_id == source.id
+        )
+    ).all():
+        clash = db.exec(
+            select(VoiceprintTemplateSource).where(
+                VoiceprintTemplateSource.voiceprint_id == voiceprint_id,
+                VoiceprintTemplateSource.source_key == contribution.source_key,
+                VoiceprintTemplateSource.template_id == target.id,
+            )
+        ).first()
+        if clash is not None:
+            db.delete(contribution)
+        else:
+            contribution.template_id = target.id
+            db.add(contribution)
+    db.flush()
+
+    sources = db.exec(
+        select(VoiceprintTemplateSource)
+        .where(VoiceprintTemplateSource.template_id == target.id)
+        .order_by(VoiceprintTemplateSource.source_key)
+    ).all()
+    pairs = [
+        (vector, item.weight)
+        for item in sources
+        for vector in (_vec(item.embedding),)
+        if vector is not None
+    ]
+    if pairs:
+        target.embedding = _weighted_centroid(
+            [vector for vector, _ in pairs], [weight for _, weight in pairs]
+        ).astype(np.float32).tobytes()
+    target.sample_ms = sum(max(0, item.sample_ms) for item in sources)
+    target.snr_db = max(float(target.snr_db or 0.0), float(source.snr_db or 0.0))
+    target.quality = max(float(target.quality or 0.0), float(source.quality or 0.0))
+    target.updated_at = utcnow()
+    db.add(target)
+
+    source_pinned = bool(source.pinned)
+    source.pinned = False
+    db.add(source)
+    db.flush()
+    if source.confirmed or target.confirmed:
+        target.confirmed = True
+        target.confirmed_by = target.confirmed_by or source.confirmed_by or user_id
+        target.confirmed_at = target.confirmed_at or source.confirmed_at or utcnow()
+    if source_pinned and not target.pinned:
+        target.pinned = True
+    db.add(target)
+    db.flush()
+    _retire(db, source, target.id)
+    db.flush()
+    return target
+
+
 def store_template(
     db: Session, *, voiceprint_id: int, embedding: np.ndarray, scenario: Scenario,
     quality: float, sample_ms: int = 0, snr_db: float = 0.0,

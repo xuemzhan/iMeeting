@@ -1,0 +1,57 @@
+{
+  "round": "2026-11-01 模板治理收尾（合并两条模板）",
+  "verified_at": "2026-11-01T00:30:00+08:00",
+  "host": {
+    "machine": "LAPTOP-8JA7F6SF",
+    "os": "Windows 11 10.0.26200",
+    "python": "3.14.3",
+    "numpy": "2.5.4",
+    "cpu_count": 16,
+    "asr_mode": "off",
+    "torch": "unavailable"
+  },
+  "commands": [
+    {
+      "command": "python -m pytest backend/tests -q --tb=short --show-capture=no --disable-warnings --junitxml=docs/reviews/evidence/2026-11-01-template-merge/backend-tests.xml",
+      "cwd": "iMeeting",
+      "exit_code": 0,
+      "summary": "722 passed, 0 failed, 0 skipped, 171 warnings; 425.45 s",
+      "artifact": "backend-tests.xml"
+    },
+    {
+      "command": "python -m ruff check backend/src backend/tests backend/migrations",
+      "cwd": "iMeeting",
+      "exit_code": 0,
+      "summary": "All checks passed!"
+    },
+    {
+      "command": "python scripts/docs_governance.py --write; python scripts/docs_governance.py",
+      "cwd": ".",
+      "exit_code": 0,
+      "summary": "文档台账盘点与校验通过（以最后一次 check 的退出码为准）"
+    }
+  ],
+  "new_tests": {
+    "file": "iMeeting/backend/tests/test_template_merge.py",
+    "count": 5,
+    "covers": [
+      "source 的来源贡献改挂到 target，质心按来源重算、sample_ms 累计、source 退役可追溯",
+      "同一组来源合并得到同一质心（可重放）",
+      "拒绝跨声纹、自合并、停用模板",
+      "主模板标记转移到 target；target 已有主模板时保留",
+      "接口鉴权、审计日志与重放 409"
+    ]
+  },
+  "environment_constraints": [
+    "测试使用夹具的独立临时 SQLite；合并用例同时覆盖服务层与 HTTP 层。",
+    "未对用户现有数据库执行迁移；本轮的合并接口不涉及表结构变更。",
+    "前端本轮没有改动，因此没有重跑 Vitest/Playwright；合并入口尚未接入界面。"
+  ],
+  "not_verified": [
+    "真实模型/供应商调用与识别准确率",
+    "目标服务器多用户并发、长稳、故障注入与备份恢复",
+    "TLS/Docker、漏洞扫描与生产发布",
+    "前端合并入口与合并预览",
+    "跨设备重新注册向导（未实现）"
+  ]
+}

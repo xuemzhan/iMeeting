@@ -170,7 +170,7 @@ conflict = s_other >= 0.60 and s_other >= (s_self or 0) + 0.05 # 明显更像别
 ### FR-5 模板治理（P0/P1）
 
 - 声纹页展示某人的模板列表：场景标签、质量、样本时长、来源会议、与其它模板相似度热力图；
-- 支持手动停用/启用单条模板（`disabled`）、合并两条模板、手动选择主模板（`pinned`）；
+- 支持手动停用/启用单条模板（`disabled`）、合并两条模板、手动选择主模板（`pinned`）（三项均已实现；跨设备注册向导仍为 P1）；
 - 删除 Person 时解除声纹关联并保留声纹/模板（已实现，2026-10-31 决策）：生物特征是独立数据，删档案不等于同意销毁；要销毁必须走声纹删除接口。此处原措辞为“级联删除模板与冲突记录”，与实现和隐私预期冲突，按上述规则修订。
 - P1：跨设备“重新注册”向导（引导用户在新场景说 30 秒，直接生成第 N 条模板）。
 
@@ -225,6 +225,7 @@ voiceprint_conflict
 | GET | `/api/v1/voiceprints/{id}/templates` | 模板列表（场景标签、质量、来源、相似度矩阵） |
 | POST | `/api/v1/voiceprints/{id}/templates` | 手动新增（body 含 wav 或 segment_id + 场景标签） |
 | PATCH | `/api/v1/voiceprints/{id}/templates/{tid}` | 停用/启用、改场景标签、设为主模板 |
+| POST | `/api/v1/voiceprints/{id}/templates/merge` | 合并两条模板：来源改挂到 target、重算质心、source 退役（2026-11-01 实现） |
 | POST | `/api/v1/voiceprints/{id}/templates/{tid}/replace` | 用新样本替换该 slot |
 | POST | `/api/v1/voiceprints/confirm-sample` | 核心：body `{voiceprint_id, segment_id 或 wav, decision?: "self"|"other"|"cancel", other_voiceprint_id?}`；返回 `{conflict: bool, self_score, other: {id,name,score}, allowed_actions}` |
 | GET | `/api/v1/voiceprints/conflicts?status=pending` | 待处理冲突列表 |
