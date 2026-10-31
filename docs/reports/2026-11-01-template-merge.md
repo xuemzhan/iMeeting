@@ -23,6 +23,7 @@ REQ-002 FR-5 的模板治理还剩最后一项“合并两条模板”。主模�
 - [merge_templates](../../backend/src/imeeting/engine/voice_template.py)：服务层实现，返回合并后的 target；历史模板没有来源行时先补一条 `legacy-template:<id>` 的确定性来源，保证质心可重算。
 - 接口 `POST /api/v1/voiceprints/{id}/templates/merge`（[voiceprint_templates.py](../../backend/src/imeeting/api/http/routes/voiceprint_templates.py)）：body `{source_template_id, target_template_id}`；鉴权走 `owned_voiceprint(write=True)`；写 `AuditLog`（`action=template_merge`）；404/409 区分不存在与口径拒绝。
 - 明确不做自动合并：`GET /voiceprints/merge-suggestions` 仍只给建议，合并必须由人显式指定 target。
+- 前端 [VoiceprintTemplateSummary](../../frontend/src/components/VoiceprintTemplateSummary.tsx) 增加“合并到主模板”：只在存在主模板（含按质量推导的 primary）时显示，合并方向固定为那条，避免界面上随手指定 target；服务端 409 文案直接展示。
 
 ## 3. 验证
 
@@ -30,6 +31,7 @@ REQ-002 FR-5 的模板治理还剩最后一项“合并两条模板”。主模�
 |---|---|---|
 | 后端完整回归 | 722 通过，0 失败；425.45 秒 | [backend-tests.xml](../reviews/evidence/2026-11-01-template-merge/backend-tests.xml) |
 | 本轮新增回归 | 5 项 | [test_template_merge.py](../../backend/tests/test_template_merge.py) |
+| 前端类型检查 / 单元测试 / 生产构建 | 通过；89 项单元测试、构建成功 | 同上 |
 | Ruff（源码/测试/迁移） | 通过 | [verification.json](../reviews/evidence/2026-11-01-template-merge/verification.json) |
 | 文档规制 | `docs_governance.py` 校验通过 | 同上 |
 
@@ -40,7 +42,7 @@ REQ-002 FR-5 的模板治理还剩最后一项“合并两条模板”。主模�
 - 合并是**破坏性**操作（source 退役），只由用户显式调用；没有自动合并、没有批量合并。
 - 质心由来源行重算，因此合并前后同一组证据得到同一向量；但如果历史模板缺少来源行，补的那条 `legacy-template:<id>` 只是把当时的质心当作一条基线，不等于还原了当时的逐条证据。
 - 合并后 target 的 `source_segment_id` 等展示字段保持 target 原值（不猜“代表片段”）。
-- 前端本轮没有加合并入口；接口与审计字段已就绪。
+- 前端只提供“合并到主模板”一个入口（合并方向固定到主模板或质量推荐的那条），没有任意两条互选与合并预览。
 - 部分唯一索引只在 SQLite 生效，与上一轮一致。
 
 ## 5. 仍未完成

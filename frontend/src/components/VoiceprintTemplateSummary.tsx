@@ -63,6 +63,18 @@ export function VoiceprintTemplateSummary({ voiceprintId }: { voiceprintId: numb
     try { await voiceprintApi.patchTemplate(voiceprintId, templateId, { pinned }); await load() }
     catch (err) { setError(err instanceof Error ? err.message : '设置主模板失败') }
   }
+  const primary = displayed.find((item) => item.active && item.primary)
+  const mergeIntoPrimary = async (sourceId: number, targetId: number) => {
+    try {
+      await voiceprintApi.mergeTemplates(voiceprintId, {
+        source_template_id: sourceId,
+        target_template_id: targetId,
+      })
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '合并模板失败')
+    }
+  }
 
   return (
     <li className="px-3 pb-2" style={{ background: 'transparent' }}>
@@ -115,6 +127,15 @@ export function VoiceprintTemplateSummary({ voiceprintId }: { voiceprintId: numb
                   onClick={() => void togglePinned(item.template_id, !item.pinned)}
                 >
                   {item.pinned ? '取消主模板' : '设为主模板'}
+                </button>
+              )}
+              {item.active && primary && primary.template_id !== item.template_id && (
+                <button
+                  type="button"
+                  className="underline"
+                  onClick={() => void mergeIntoPrimary(item.template_id, primary.template_id)}
+                >
+                  合并到主模板
                 </button>
               )}
               {item.pinned && (

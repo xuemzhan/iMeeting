@@ -25,6 +25,12 @@
       "summary": "All checks passed!"
     },
     {
+      "command": "npm run typecheck; npm test -- --run; npm run build",
+      "cwd": "iMeeting/frontend",
+      "exit_code": 0,
+      "summary": "类型检查通过；Vitest 11 个文件 89 项通过；生产构建成功"
+    },
+    {
       "command": "python scripts/docs_governance.py --write; python scripts/docs_governance.py",
       "cwd": ".",
       "exit_code": 0,

@@ -690,6 +690,23 @@ export const voiceprintApi = {
       body: JSON.stringify(patch),
     }),
 
+  /** 合并同一声纹的两条模板（source 退役，来源改挂到 target 后重算质心）。 */
+  mergeTemplates: (
+    id: number,
+    body: { source_template_id: number; target_template_id: number },
+  ) =>
+    request<{
+      template_id: number
+      slot: number
+      sample_ms: number
+      quality: number
+      pinned: boolean
+      retired_template_id: number
+    }>(`/api/v1/voiceprints/${id}/templates/merge`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
   /**
    * 确认一条声纹样本：先评估「与本人差异大 / 更像别人」，再按 decision 落模板。
    * 不传 decision 时只评估，不改数据。
