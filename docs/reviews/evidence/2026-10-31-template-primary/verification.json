@@ -39,7 +39,7 @@
   ],
   "new_tests": {
     "file": "iMeeting/backend/tests/test_voiceprint_template_pin.py",
-    "count": 8,
+    "count": 10,
     "covers": [
       "设置主模板时取消同一人的其它主模板",
       "没有主模板时按质量推导 primary（primary_source=quality）",
@@ -49,6 +49,18 @@
       "显式替换主模板所在槽位被拒绝",
       "PATCH 接口置位/取消/非法操作 409",
       "迁移 07 建部分唯一索引：同一声纹第二条 pinned 被拒、不同声纹各自允许、降级移除列"
+    ]
+  },
+  "followup": {
+    "issue": "合并两个声纹时未带上 pinned，被合并方的主模板会静默丢失",
+    "fix": "merge_dependents 在目标没有主模板时继承一条；目标已有主模板时保留目标",
+    "command": "python -m pytest backend/tests -q --junitxml=docs/reviews/evidence/2026-10-31-template-primary/backend-tests-followup.xml",
+    "exit_code": 0,
+    "summary": "717 passed, 0 failed, 409.13 s",
+    "artifact": "backend-tests-followup.xml",
+    "extra_tests": [
+      "声纹合并继承被合并方的主模板",
+      "目标已有主模板时合并保留目标的主模板"
     ]
   },
   "environment_constraints": [

@@ -7,6 +7,7 @@
 | 文件 | 来源与范围 |
 |---|---|
 | [backend-tests.xml](backend-tests.xml) | 后端完整 pytest，715 通过、0 失败、0 跳过；404.82 秒。包含本轮 8 项主模板回归 |
+| [backend-tests-followup.xml](backend-tests-followup.xml) | 提交后自查修复“声纹合并丢主模板”后的复跑：717 通过、0 失败、409.13 秒；原始 715 的证据保留不覆盖 |
 | [verification.json](verification.json) | 命令、退出码、环境、产物与未验证边界 |
 
 在 `iMeeting/` 目录复现：

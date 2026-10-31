@@ -26,11 +26,11 @@ from .test_doc_code_gap_regressions import setup_pair, unit
 DIM = 192
 
 
-def _voiceprint(owner: int) -> int:
+def _voiceprint(owner: int, *, name: str = "主模板测试") -> int:
     with Session(engine) as db:
         row = Voiceprint(
             owner_id=owner,
-            name="主模板测试",
+            name=name,
             embedding=unit(0).tobytes(),
             sample_ms=4000,
             sample_count=4,
@@ -227,6 +227,58 @@ def test_patch_endpoint_sets_and_clears_pinned(client, auth_headers):
         json={"pinned": True},
     )
     assert refused.status_code == 409, refused.text
+
+
+def test_voiceprint_merge_carries_the_pinned_template(client, auth_headers):
+    with Session(engine) as db:
+        from imeeting.models import User
+
+        admin_id = db.exec(select(User).where(User.username == "admin")).first().id
+    source = _voiceprint(admin_id, name="说话人 2")
+    target = _voiceprint(admin_id, name="说话人 3")
+    source_template = _template(source, unit(0), quality=0.8)
+    with Session(engine) as db:
+        voice_match.set_template_flags(db, template_id=source_template, pinned=True)
+
+    response = client.post(
+        f"/api/v1/voiceprints/{source}/merge/{target}", headers=auth_headers
+    )
+    assert response.status_code == 200, response.text
+    with Session(engine) as db:
+        pinned = db.exec(
+            select(VoiceprintTemplate).where(
+                VoiceprintTemplate.voiceprint_id == target,
+                VoiceprintTemplate.pinned.is_(True),
+            )
+        ).all()
+    assert len(pinned) == 1, "合并声纹时应继承被合并方的主模板，而不是静默丢掉"
+
+
+def test_voiceprint_merge_keeps_the_targets_own_pin(client, auth_headers):
+    with Session(engine) as db:
+        from imeeting.models import User
+
+        admin_id = db.exec(select(User).where(User.username == "admin")).first().id
+    source = _voiceprint(admin_id, name="说话人 4")
+    target = _voiceprint(admin_id, name="说话人 5")
+    source_template = _template(source, unit(0), quality=0.8)
+    target_template = _template(target, unit(1), quality=0.7)
+    with Session(engine) as db:
+        voice_match.set_template_flags(db, template_id=source_template, pinned=True)
+        voice_match.set_template_flags(db, template_id=target_template, pinned=True)
+
+    response = client.post(
+        f"/api/v1/voiceprints/{source}/merge/{target}", headers=auth_headers
+    )
+    assert response.status_code == 200, response.text
+    with Session(engine) as db:
+        pinned = db.exec(
+            select(VoiceprintTemplate).where(
+                VoiceprintTemplate.voiceprint_id == target,
+                VoiceprintTemplate.pinned.is_(True),
+            )
+        ).all()
+    assert [row.id for row in pinned] == [target_template], "目标已有的主模板优先保留"
 
 
 def test_migration_adds_partial_unique_index(tmp_path):
