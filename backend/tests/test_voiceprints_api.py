@@ -283,8 +283,8 @@ class TestRelabel:
             "/api/v1/voiceprints/relabel",
             json={"meeting_id": 1, "from_label": "说话人 1", "to_name": "说话人 1"},
         )
-        assert r.status_code == 200
-        assert r.json()["updated_segments"] == 0
+        assert r.status_code == 404
+        assert r.json()["detail"] == "会议不存在"
 
     def test_same_name_confirms_low_confidence_speaker(self, client, admin_user):
         """同名提交是人工确认：标记 manual、分数置 1，并写审计。"""

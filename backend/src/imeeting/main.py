@@ -161,7 +161,7 @@ async def _audio_cleanup_loop(interval_seconds: int = 6 * 3600) -> None:
 
 
 app = FastAPI(
-    title="iMeeting API",
+    title="总师会议智能伙伴 API",
     version=VERSION,
     description="基于 FunASR 的实时会议转写与纪要服务",
     default_response_class=ORJSONResponse,
@@ -273,12 +273,27 @@ def prometheus_metrics():
 
 @app.get("/")
 def root():
+    # 绿色包/单端口部署：配置了前端构建目录时，根路径直接返回应用首页。
+    from .web_static import index_path
+
+    index = index_path()
+    if index is not None:
+        from fastapi.responses import FileResponse
+
+        return FileResponse(index)
     return {
         "name": SERVER_CONFIG["app_name"],
         "version": VERSION,
         "docs": "/docs",
         "health": "/api/v1/health",
     }
+
+
+# 绿色包/单端口部署：若设置了 IMEETING_WEB_DIR，则由后端托管前端构建产物。
+# 必须在所有 API 路由注册之后调用，SPA 兜底才不会遮蔽接口。
+from .web_static import mount_web  # noqa: E402  (路由注册完成后再挂载)
+
+mount_web(app)
 
 
 def main() -> None:

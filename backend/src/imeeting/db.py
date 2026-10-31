@@ -125,8 +125,39 @@ def _migrate_schema() -> None:
         return {c["name"] for c in inspector.get_columns(table)}
 
     with engine.begin() as conn:
+        if "voiceprint_template" in tables:
+            if "disabled" not in columns("voiceprint_template"):
+                conn.execute(text("ALTER TABLE voiceprint_template ADD COLUMN disabled BOOLEAN NOT NULL DEFAULT 0"))
+            if "pinned" not in columns("voiceprint_template"):
+                conn.execute(
+                    text(
+                        "ALTER TABLE voiceprint_template ADD COLUMN "
+                        "pinned BOOLEAN NOT NULL DEFAULT 0"
+                    )
+                )
+                conn.execute(
+                    text(
+                        "CREATE INDEX IF NOT EXISTS ix_voiceprint_template_pinned "
+                        "ON voiceprint_template(pinned)"
+                    )
+                )
+                if engine.dialect.name == "sqlite":
+                    # 每人最多一条主模板；部分唯一索引只在 SQLite 建。
+                    conn.execute(
+                        text(
+                            "CREATE UNIQUE INDEX IF NOT EXISTS "
+                            "uq_voiceprint_template_pinned "
+                            "ON voiceprint_template(voiceprint_id) WHERE pinned = 1"
+                        )
+                    )
+            if conn.execute(text("SELECT count(*) FROM voiceprint_template WHERE slot > 4")).scalar():
+                raise RuntimeError("旧声纹模板超出五槽范围；请备份并整理后重新启动")
+            for action, suffix in (("INSERT", "insert"), ("UPDATE OF slot", "update")):
+                conn.execute(text(f"CREATE TRIGGER IF NOT EXISTS template_slot_{suffix} BEFORE {action} ON voiceprint_template WHEN NEW.slot > 4 BEGIN SELECT RAISE(ABORT, 'template slot must be <= 4'); END"))
         if "user" in tables:
             user_cols = columns("user")
+            if "auth_version" not in user_cols:
+                conn.execute(text("ALTER TABLE user ADD COLUMN auth_version INTEGER NOT NULL DEFAULT 0"))
             if "must_change_password" not in user_cols:
                 conn.execute(
                     text(
@@ -384,6 +415,17 @@ def _migrate_schema() -> None:
                 conn.execute(
                     text("ALTER TABLE voiceprint ADD COLUMN last_seen_at DATETIME")
                 )
+            if "person_id" not in cols:
+                # 兼容未启用以 Alembic 的部署：补列 + 索引，服务层维护一致性。
+                conn.execute(
+                    text("ALTER TABLE voiceprint ADD COLUMN person_id INTEGER")
+                )
+                conn.execute(
+                    text(
+                        "CREATE INDEX IF NOT EXISTS ix_voiceprint_person_id "
+                        "ON voiceprint(person_id)"
+                    )
+                )
             # 历史临时声纹按“首次发现会议”归入会议作用域，避免跨会议串味；
             # 人工命名过的（provisional=0）保持全局身份。
             conn.execute(
@@ -605,9 +647,8 @@ def _ensure_admin() -> None:
         session.add(admin)
         session.commit()
         logger.warning(
-            "已创建默认管理员 %s / %s —— 请立即修改密码",
+            "已创建管理员 %s；首次登录必须修改初始化密码",
             username,
-            password,
         )
 
 

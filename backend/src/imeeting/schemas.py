@@ -40,6 +40,12 @@ class UserOut(BaseModel):
     created_at: datetime
 
 
+class PasswordChangeOut(UserOut):
+    """User projection plus the replacement token after password rotation."""
+
+    access_token: str
+
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
@@ -142,6 +148,8 @@ class SegmentOut(BaseModel):
     start_ms: int
     end_ms: int
     speaker: str | None = None
+    #: 会议内稳定键（改名不变），前端据此对齐重要程度等按人属性
+    speaker_key: str | None = None
     speaker_score: float = 0.0
     speaker_source: str = ""
     #: 由后端统一按“全局阈值 / 短片段阈值”计算，前端不再各自硬编码。
@@ -171,8 +179,46 @@ class SegmentOut(BaseModel):
         return self
 
 
+class MeetingSpeakerOut(BaseModel):
+    """会议内一位说话人：重要程度（1 关键 / 2 次要 / 3 一般）与处理状态。
+
+    ``state``：0 未处理（参会人面板显示）、1 已确认、2 已删除；后两者前端
+    不再显示，但转写内容与重要程度都保留。
+    """
+
+    speaker: str
+    speaker_key: str
+    importance: int = 3
+    state: int = 0
+    segments: int = 0
+    speech_ms: int = 0
+
+
+class SpeakerImportanceUpdate(BaseModel):
+    """设置某位说话人的重要程度。
+
+    ``importance``：1 = 关键（最高）、2 = 次要、3 = 一般。
+    用显示名（speaker）指定：后端按片段里的 speaker_key 落到稳定键上，
+    因此之后给该说话人改名不会丢设置。
+    """
+
+    speaker: str = Field(min_length=1, max_length=64)
+    importance: int = Field(ge=1, le=3)
+
+
+class SpeakerStateUpdate(BaseModel):
+    """设置某位说话人的处理状态：1 = 确认参会人，2 = 删除（不是参会人）。
+
+    用显示名（speaker）指定，后端落到稳定的 speaker_key 上，改名不丢状态。
+    """
+
+    speaker: str = Field(min_length=1, max_length=64)
+    state: int = Field(ge=1, le=2)
+
+
 class MeetingDetail(MeetingOut):
     segments: list[SegmentOut] = []
+    speakers: list[MeetingSpeakerOut] = []
     speaker_low_confidence_threshold: float = 0.62
 
 

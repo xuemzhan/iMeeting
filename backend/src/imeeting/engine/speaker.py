@@ -28,6 +28,7 @@ from typing import Optional
 
 import numpy as np
 
+from ..models import Meeting
 from ..settings import get_config
 
 logger = logging.getLogger(__name__)
@@ -40,11 +41,17 @@ DEFAULT_EMBEDDING_MODEL = "iic/speech_campplus_sv_zh-cn_16k-common"
 
 _model = None
 _model_name: str | None = None
+_model_signature: tuple | None = None
 _model_lock = threading.Lock()
 
 
 def _configured_model_name() -> str:
     return str(get_config("spk.embedding_model") or DEFAULT_EMBEDDING_MODEL)
+
+
+def embedding_model_signature() -> tuple:
+    return (_configured_model_name(), get_config("asr.hub") or "ms",
+            get_config("asr.model_revision") or "master", bool(get_config("asr.disable_update")))
 
 
 def _load_model():
@@ -53,28 +60,31 @@ def _load_model():
     模型名变了要重建：否则管理员在设置里换了声纹模型，程序仍拿旧模型跑，
     表现为「改了没反应」。
     """
-    global _model, _model_name
-    want = _configured_model_name()
-    if _model is not None and _model_name == want:
+    global _model, _model_name, _model_signature
+    signature = embedding_model_signature()
+    want, hub, revision, disable_update = signature
+    if _model is not None and _model_name == want and _model_signature == signature:
         return _model
     with _model_lock:
-        if _model is not None and _model_name == want:
+        if _model is not None and _model_name == want and _model_signature == signature:
             return _model
         try:
             from funasr import AutoModel
 
             _model = AutoModel(
                 model=want,
-                hub=get_config("asr.hub") or "ms",
-                model_revision=get_config("asr.model_revision") or "master",
-                disable_update=bool(get_config("asr.disable_update")),
+                hub=hub,
+                model_revision=revision,
+                disable_update=disable_update,
             )
             _model_name = want
+            _model_signature = signature
             logger.info("声纹模型已加载：%s", want)
         except Exception:
             logger.exception("声纹模型加载失败，说话人识别将不可用")
             _model = None
             _model_name = None
+            _model_signature = None
     return _model
 
 
@@ -183,7 +193,8 @@ def load_enrolled(
             from ..models import Voiceprint
 
             with session_scope() as db:
-                for vp in db.exec(select(Voiceprint)).all():
+                from ..application.identity_access import visible_voiceprint_ids
+                for vp in db.exec(select(Voiceprint).where(Voiceprint.id.in_(visible_voiceprint_ids(db, meeting_id)))).all():
                     if vp.disabled:
                         continue
                     if vp.provisional and vp.meeting_id != meeting_id:
@@ -200,6 +211,11 @@ def load_enrolled(
                         )
         except Exception:
             logger.exception("读取已录入声纹失败")
+        for cache_key in list(_CACHE):
+            if now - _CACHE[cache_key][0] >= _CACHE_TTL:
+                _CACHE.pop(cache_key, None)
+        if meeting_id not in _CACHE and len(_CACHE) >= 32:
+            _CACHE.pop(next(iter(_CACHE)))
         _CACHE[meeting_id] = (now, rows)
         return rows
 
@@ -216,8 +232,29 @@ def match_enrolled(
     meeting_id: int | None = None,
     *,
     formal_only: bool = False,
+    scenario=None,
+    speech_ms: int = 0,
+    context_voiceprint_id: int | None = None,
 ) -> Optional[tuple[str, float, int | None, str | None]]:
-    """与作用域内的声纹比对，返回 (姓名, 相似度, 声纹 id)；未命中返回 None。"""
+    """与作用域内的声纹比对，返回 (姓名, 相似度, 声纹 id, speaker_key)；未命中返回 None。
+
+    开启 ``spk.template_match_enabled`` 且库内已有模板时，走多场景模板 + 多维融合
+    的新路径（REQ-002）；否则保持旧的单质心线性比对，保证未校准前行为不变。
+    """
+    if bool(get_config("spk.template_match_enabled")):
+        try:
+            from . import voice_match
+
+            if voice_match.template_count(meeting_id) > 0:
+                hit = voice_match.match(emb, meeting_id=meeting_id, threshold=threshold, scenario=scenario, speech_ms=speech_ms, context_voiceprint_id=context_voiceprint_id)
+                if hit is None or hit["score"] < threshold:
+                    return None
+                if formal_only and str(hit["name"]).startswith(("说话人", "疑似")):
+                    return None
+                return (hit["name"], float(hit["score"]), hit.get("voiceprint_id"), None)
+        except Exception:  # 模板路径出问题不能让识别整体崩掉
+            logger.exception("模板匹配失败，退回单质心比对")
+
     best: Optional[tuple[str, float, int | None, str | None]] = None
     for name, ref, voiceprint_id, speaker_key in load_enrolled(meeting_id):
         if formal_only and name.startswith(("说话人", "疑似")):
@@ -228,6 +265,28 @@ def match_enrolled(
     if best and best[1] >= threshold:
         return best
     return None
+
+
+def _auto_add_participant(
+    meeting_id: int | None, speaker_key: str | None, name: str
+) -> None:
+    """会中识别到新讲话人 → 自动进参会人（待确认）。
+
+    没有 ``speaker_key`` 就不加：参会人靠 key 去重，靠名字会把两场会议的
+    「说话人 1」串成同一个人。任何异常都不能影响转写主流程。
+    """
+    if meeting_id is None or not speaker_key:
+        return
+    try:
+        from .. import persons
+        from ..db import session_scope
+
+        with session_scope() as db:
+            persons.ensure_auto_participant(
+                db, meeting_id=meeting_id, speaker_key=speaker_key, label=name
+            )
+    except Exception:
+        logger.exception("自动加入参会人失败 meeting=%s key=%s", meeting_id, speaker_key)
 
 
 def save_discovered(
@@ -280,25 +339,26 @@ def save_discovered(
                 existing.last_seen_at = utcnow()
                 existing.updated_at = utcnow()
                 db.add(existing)
-                db.commit()
-                invalidate_cache()
-                return
-            db.add(
-                Voiceprint(
-                    name=name,
-                    embedding=emb.astype(np.float32).tobytes(),
-                    sample_ms=0,
-                    sample_count=1,
-                    provisional=True,
-                    source_meeting_id=source_meeting_id,
-                    meeting_id=meeting_id,
-                    speaker_key=speaker_key,
-                    quality_score=0.4,
-                    last_seen_at=utcnow(),
+            else:
+                db.add(
+                    Voiceprint(
+                        owner_id=(db.get(Meeting, meeting_id).owner_id if meeting_id is not None and db.get(Meeting, meeting_id) is not None else None),
+                        name=name,
+                        embedding=emb.astype(np.float32).tobytes(),
+                        sample_ms=0,
+                        sample_count=1,
+                        provisional=True,
+                        source_meeting_id=source_meeting_id,
+                        meeting_id=meeting_id,
+                        speaker_key=speaker_key,
+                        quality_score=0.4,
+                        last_seen_at=utcnow(),
+                    )
                 )
-            )
             db.commit()
         invalidate_cache()
+        # 识别到（新的）讲话人就把它加进参会人，会中面板立刻能看到
+        _auto_add_participant(meeting_id, speaker_key, name)
     except Exception:
         # 声纹落库失败绝不能影响转写主流程
         logger.exception("待命名声纹落库失败 name=%s", name)
@@ -457,6 +517,7 @@ class SpeakerResolver:
             self.ambiguous_threshold,
             self.meeting_id,
             formal_only=True,
+            **(getattr(self, "match_context", {}) if get_config("spk.template_match_enabled") else {}),
         )
 
     def _attach_ambiguous(

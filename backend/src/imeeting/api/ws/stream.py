@@ -66,6 +66,8 @@ from ...session_registry import session_registry
 from ...settings import get_config
 
 logger = logging.getLogger(__name__)
+_HANDSHAKE_TIMEOUT_SECONDS = 15.0
+_IDLE_TIMEOUT_SECONDS = 90.0
 
 router = APIRouter()
 
@@ -90,17 +92,25 @@ async def stream_endpoint(websocket: WebSocket) -> None:
     session: StreamSession | None = None
     meeting_id: int | None = None
     pending_segments: list[dict] = []
-    sink = AudioSink(-1)  # 占位；meeting_id 确定后替换
+    sink: AudioSink | None = None
     # 收尾时用于判定会议最终状态
     graceful_stop = False
     failed = False
     progressive_task: asyncio.Task | None = None
     metadata_task: asyncio.Task | None = None
+    person_task: asyncio.Task | None = None
     pending_audio_seq: int | None = None
     audio_chunk_seq = 0
+    closed_payload: dict | None = None
 
     async def emit(payload: dict) -> None:
         """发送消息给客户端，并把定稿片段缓存待落库。"""
+        nonlocal closed_payload
+        if payload.get("type") == "closed":
+            # Acknowledge stop only after WAV/session persistence below. Clients
+            # may disconnect immediately when they receive this message.
+            closed_payload = payload
+            return
         if payload.get("type") == "final":
             pending_segments.append(payload)
         try:
@@ -118,12 +128,20 @@ async def stream_endpoint(websocket: WebSocket) -> None:
                     session.duration_ms if session else 0,
                     final_status=None,
                 )
+                from ...application.person_extraction import request_auto
+                await asyncio.to_thread(request_auto, meeting_id, text=payload.get("text", ""))
             except Exception:
                 logger.exception("增量落库失败 meeting=%s", meeting_id)
 
     try:
         # ---- 第一帧必须是 start ----
-        first = await websocket.receive()
+        try:
+            first = await asyncio.wait_for(websocket.receive(), _HANDSHAKE_TIMEOUT_SECONDS)
+        except asyncio.TimeoutError:
+            await websocket.send_json({"type": "error", "code": "START_TIMEOUT",
+                                       "message": "等待开始消息超时，请重新连接"})
+            await websocket.close(code=1008)
+            return
         if first.get("text") is None:
             await websocket.send_json({"type": "error", "code": "EXPECTED_START",
                                        "message": "首帧必须是 start 消息"})
@@ -138,7 +156,7 @@ async def stream_endpoint(websocket: WebSocket) -> None:
             await websocket.close(code=1002)
             return
 
-        if hello.get("type") != "start":
+        if not isinstance(hello, dict) or hello.get("type") != "start":
             await websocket.send_json({"type": "error", "code": "EXPECTED_START",
                                        "message": "首帧必须是 start 消息"})
             await websocket.close(code=1002)
@@ -159,6 +177,26 @@ async def stream_endpoint(websocket: WebSocket) -> None:
             )
             await websocket.close(code=1008)
             return
+
+        if _auth_required() and user_id is None:
+            await websocket.send_json({"type": "error", "code": "UNAUTHORIZED",
+                                       "message": "请重新登录后开始会议"})
+            await websocket.close(code=1008)
+            return
+
+        if str(get_config("asr.mode") or "normal") == "normal":
+            from ...engine import pool
+
+            if not get_config("asr.warmup_on_start"):
+                # Explicit lazy loading: do not acknowledge audio until both
+                # inference paths have loaded successfully.
+                for prefix in ("streaming", "offline"):
+                    await asyncio.to_thread(pool.get_model, prefix)
+            if not pool.is_ready("streaming") or not pool.is_ready("offline"):
+                await websocket.send_json({"type": "error", "code": "MODELS_NOT_READY",
+                                           "message": "识别模型尚未就绪，请稍后重试"})
+                await websocket.close(code=1013)
+                return
 
         # ---- 并发限流 ----
         if session_registry.count() >= get_config("session.max_concurrent"):
@@ -201,6 +239,8 @@ async def stream_endpoint(websocket: WebSocket) -> None:
                 _metadata_capture_loop(meeting_id, session, minutes)
             )
 
+        person_task = asyncio.create_task(_person_extraction_loop(meeting_id, session))
+
         # 会中渐进纪要：定时基于已落库转写生成阶段草稿
         try:
             from ...llm.client import LLMClient
@@ -213,8 +253,22 @@ async def stream_endpoint(websocket: WebSocket) -> None:
             logger.exception("启动渐进纪要失败 meeting=%s", meeting_id)
 
         # ---- 主循环 ----
+        max_duration_s = float(get_config("session.max_duration_minutes") or 180) * 60
+        deadline = asyncio.get_running_loop().time() + max_duration_s
         while True:
-            message = await websocket.receive()
+            remaining = deadline - asyncio.get_running_loop().time()
+            if remaining <= 0:
+                await websocket.send_json({"type": "error", "code": "SESSION_LIMIT",
+                                           "message": "已达到单会话最长时长，请重新开始"})
+                break
+            try:
+                message = await asyncio.wait_for(
+                    websocket.receive(), min(_IDLE_TIMEOUT_SECONDS, remaining)
+                )
+            except asyncio.TimeoutError:
+                await websocket.send_json({"type": "error", "code": "SESSION_TIMEOUT",
+                                           "message": "会话等待超时，请重新连接"})
+                break
 
             if message.get("type") == "websocket.disconnect":
                 break
@@ -229,7 +283,11 @@ async def stream_endpoint(websocket: WebSocket) -> None:
                     if seq is not None and seq <= audio_chunk_seq:
                         await websocket.send_json({"type": "audio_ack", "seq": seq})
                         continue
-                    sink.push(pcm)
+                    if session.duration_ms / 1000 + len(pcm) / 16000 > max_duration_s:
+                        await websocket.send_json({"type": "error", "code": "SESSION_LIMIT",
+                                                   "message": "已达到单会话最长时长，请重新开始"})
+                        break
+                    await asyncio.to_thread(sink.push, pcm)
                     await session.push_audio(pcm)
                     if seq is not None:
                         audio_chunk_seq = max(audio_chunk_seq, seq)
@@ -247,6 +305,9 @@ async def stream_endpoint(websocket: WebSocket) -> None:
             try:
                 cmd = json.loads(text)
             except json.JSONDecodeError:
+                continue
+
+            if not isinstance(cmd, dict):
                 continue
 
             kind = cmd.get("type")
@@ -292,6 +353,13 @@ async def stream_endpoint(websocket: WebSocket) -> None:
         # 否则 close() 超时或落库抛错会把名额永久占住，服务很快会「假死」。
         if session is not None:
             session_registry.discard(session.session_id)
+
+        if person_task is not None:
+            person_task.cancel()
+            try:
+                await person_task
+            except (asyncio.CancelledError, Exception):
+                pass
 
         if progressive_task is not None:
             progressive_task.cancel()
@@ -363,7 +431,7 @@ async def stream_endpoint(websocket: WebSocket) -> None:
             )
 
         # 音频收尾（回填 WAV 头）并把路径写进会议记录
-        audio_path = sink.close()
+        audio_path = await asyncio.to_thread(sink.close) if sink is not None else None
         if meeting_id is not None and audio_path is not None:
             _record_audio_path(meeting_id, str(audio_path))
         if meeting_id is not None and session is not None:
@@ -392,6 +460,17 @@ async def stream_endpoint(websocket: WebSocket) -> None:
             except Exception:
                 logger.exception("会议元信息任务入队失败 meeting=%s", meeting_id)
 
+        if meeting_id is not None and final_status in ("finished", "abandoned"):
+            from ...application.jobs import enqueue_job
+            from ...application.person_extraction import request_auto
+            try:
+                await asyncio.to_thread(request_auto, meeting_id, trigger="opening")
+                if get_config("spk.template_rebuild_enabled"):
+                    enqueue_job(kind="template_rebuild", meeting_id=meeting_id,
+                                dedupe_key=f"template_rebuild:{meeting_id}", priority=40)
+            except Exception:
+                logger.exception("会议人员/模板任务入队失败 meeting=%s", meeting_id)
+
         # 会议正常结束后自动生成终稿。说话人全局合并也由该持久化任务先执行，
         # 因而进程重启、后台任务积压都不会让终稿永久丢失。
         if (
@@ -414,6 +493,8 @@ async def stream_endpoint(websocket: WebSocket) -> None:
                 logger.exception("自动终稿任务入队失败 meeting=%s", meeting_id)
 
         try:
+            if closed_payload is not None:
+                await websocket.send_json(closed_payload)
             await websocket.close()
         except Exception:
             pass
@@ -457,7 +538,7 @@ def _resolve_identity(token: str | None) -> tuple[int | None, str, bool]:
 
     with Session(db_engine) as db:
         user = db.get(User, user_id)
-        if user is None or not user.is_active:
+        if user is None or not user.is_active or payload.get("ver", 0) != user.auth_version:
             return None, "", False
         return user.id, user.username, user.must_change_password
 
@@ -501,6 +582,8 @@ async def _metadata_capture_loop(meeting_id: int, session, minutes: int) -> None
         return
     try:
         payload = await capture_meeting_metadata(meeting_id)
+        from ...application.person_extraction import request_auto
+        await asyncio.to_thread(request_auto, meeting_id, trigger="opening")
         if payload:
             await session._emit({"type": "meeting_meta", **payload})
     except asyncio.CancelledError:
@@ -525,7 +608,7 @@ async def _progressive_minutes_loop(meeting_id: int, session) -> None:
     """
     from ...llm.progressive import generate_progressive_draft, load_transcript_lines
 
-    interval_s = max(60, int(get_config("llm.progressive_interval_minutes") or 5) * 60)
+    interval_s = max(60, int(get_config("llm.progressive_interval_minutes") or 3) * 60)
     min_chars = int(get_config("llm.progressive_min_chars") or 300)
     last_chars = 0
 
@@ -555,3 +638,18 @@ async def _progressive_minutes_loop(meeting_id: int, session) -> None:
             raise
         except Exception:
             logger.exception("渐进纪要生成失败 meeting=%s", meeting_id)
+
+
+async def _person_extraction_loop(meeting_id, session):
+    from ...application.person_extraction import request_auto
+    while not session.is_closed:
+        interval = int(get_config("person.extract_interval_minutes"))
+        await asyncio.sleep(max(30, interval * 60))
+        if session.is_closed:
+            return
+        try:
+            await asyncio.to_thread(request_auto, meeting_id, trigger="periodic")
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("人员定时任务入队失败 meeting=%s", meeting_id)

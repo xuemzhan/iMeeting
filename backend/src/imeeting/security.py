@@ -139,8 +139,13 @@ def create_access_token(subject: str, role: str, extra: dict[str, Any] | None = 
 
 
 def decode_access_token(token: str) -> dict[str, Any] | None:
+    if not isinstance(token, str) or not token:
+        return None
     try:
-        return jwt.decode(token, _secret(), algorithms=[ALGORITHM])
+        return jwt.decode(
+            token, _secret(), algorithms=[ALGORITHM],
+            options={"require": ["exp", "iat", "sub"]},
+        )
     except jwt.PyJWTError as exc:
         logger.debug("JWT 校验失败: %s", exc)
         return None

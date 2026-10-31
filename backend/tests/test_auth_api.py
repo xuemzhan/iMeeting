@@ -140,7 +140,9 @@ class TestChangePassword:
         assert changed.status_code == 200, changed.text
         assert changed.json()["must_change_password"] is False
 
-        assert client.get("/api/v1/config/schema", headers=headers).status_code == 200
+        assert client.get("/api/v1/config/schema", headers=headers).status_code == 401
+        replacement = {"Authorization": f"Bearer {changed.json()['access_token']}"}
+        assert client.get("/api/v1/config/schema", headers=replacement).status_code == 200
         old_login = client.post(
             "/api/v1/auth/login",
             json={"username": "admin", "password": "admin123"},

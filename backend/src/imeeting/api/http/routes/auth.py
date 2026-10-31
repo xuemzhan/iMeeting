@@ -17,6 +17,7 @@ from ....schemas import (
     AuthBootstrapOut,
     ChangePasswordRequest,
     LoginRequest,
+    PasswordChangeOut,
     RegisterRequest,
     TokenResponse,
     UserOut,
@@ -84,7 +85,7 @@ def login(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="账号已被停用")
 
     throttle_success(payload.username, ip)
-    token = create_access_token(str(user.id), user.role, {"username": user.username})
+    token = create_access_token(str(user.id), user.role, {"username": user.username, "ver": user.auth_version})
     db.add(
         AuditLog(
             user_id=user.id,
@@ -135,7 +136,7 @@ def register(payload: RegisterRequest, request: Request, db: Session = Depends(g
     )
     db.commit()
 
-    token = create_access_token(str(user.id), user.role, {"username": user.username})
+    token = create_access_token(str(user.id), user.role, {"username": user.username, "ver": user.auth_version})
     return TokenResponse(access_token=token, user=UserOut.model_validate(user))
 
 
@@ -144,7 +145,7 @@ def me(user: User = Depends(get_current_user_allow_pending_password)):
     return UserOut.model_validate(user)
 
 
-@router.post("/password", response_model=UserOut)
+@router.post("/password", response_model=PasswordChangeOut)
 def change_password(
     payload: ChangePasswordRequest,
     request: Request,
@@ -170,6 +171,7 @@ def change_password(
 
     user.password_hash = hash_password(payload.new_password)
     user.must_change_password = False
+    user.auth_version += 1
     db.add(user)
     db.add(
         AuditLog(
@@ -183,7 +185,12 @@ def change_password(
     db.commit()
     db.refresh(user)
     _reset_bootstrap_cache()
-    return UserOut.model_validate(user)
+    return PasswordChangeOut(
+        **UserOut.model_validate(user).model_dump(),
+        access_token=create_access_token(
+            str(user.id), user.role, {"username": user.username, "ver": user.auth_version}
+        ),
+    )
 
 
 # ---------------------------------------------------------------------------

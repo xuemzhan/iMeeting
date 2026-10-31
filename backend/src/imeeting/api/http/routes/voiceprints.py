@@ -14,9 +14,11 @@ import wave
 
 import numpy as np
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
+from ....application.identity_access import identity_owner, owned_voiceprint
+from ....application.meeting_access import owned_meeting
 from ....db import get_session
 from ....engine import speaker
 from ....models import AuditLog, Segment, User, Voiceprint, utcnow
@@ -125,7 +127,7 @@ def list_voiceprints(
     db: Session = Depends(get_session),
 ):
     rows = db.exec(select(Voiceprint).order_by(Voiceprint.created_at.desc())).all()
-    return [_out(r) for r in rows]
+    return [_out(r) for r in rows if user.role == "admin" or identity_owner(db, r) == user.id]
 
 
 @router.get("/merge-suggestions")
@@ -137,7 +139,9 @@ def merge_suggestions(
 ):
     """返回可能属于同一人的声纹对，供人工确认后合并。"""
     rows = db.exec(select(Voiceprint).where(Voiceprint.disabled == False)).all()  # noqa: E712
+    rows = [r for r in rows if user.role == "admin" or identity_owner(db, r) == user.id]
     if meeting_id is not None:
+        owned_meeting(meeting_id, user, db)
         rows = [
             row
             for row in rows
@@ -178,11 +182,12 @@ def rebuild_identity(
     用于修复历史上“人被匹配成了另一位已录入老师”后只改了文字、
     没有留下正确声纹的情况。
     """
+    owned_meeting(payload.meeting_id, user, db, write=True)
     name = payload.name.strip()
     label = payload.label.strip()
     if not name:
         raise HTTPException(status_code=400, detail="姓名不能为空")
-    existing = db.exec(select(Voiceprint).where(Voiceprint.name == name)).first()
+    existing = next((row for row in db.exec(select(Voiceprint).where(Voiceprint.name == name)).all() if identity_owner(db, row) == user.id), None)
     if existing is not None:
         return _out(existing)
     segment = db.exec(
@@ -227,6 +232,8 @@ def rebuild_identity(
     db.commit()
     db.refresh(row)
     speaker.invalidate_cache()
+    from ....engine import voice_match
+    voice_match.invalidate_cache()
     return _out(row)
 
 
@@ -267,7 +274,7 @@ async def create_voiceprint(
         )
 
     # 同名覆盖：同一人重录时不该出现两条
-    existing = db.exec(select(Voiceprint).where(Voiceprint.name == name)).first()
+    existing = next((row for row in db.exec(select(Voiceprint).where(Voiceprint.name == name)).all() if identity_owner(db, row) == user.id), None)
     if existing is not None:
         existing.embedding = emb.astype(np.float32).tobytes()
         existing.sample_ms = ms
@@ -276,6 +283,8 @@ async def create_voiceprint(
         db.commit()
         db.refresh(existing)
         speaker.invalidate_cache()
+        from ....engine import voice_match
+        voice_match.invalidate_cache()
         return _out(existing)
 
     row = Voiceprint(
@@ -289,6 +298,8 @@ async def create_voiceprint(
     db.refresh(row)
     # 清缓存，让下一次识别立刻用上新声纹
     speaker.invalidate_cache()
+    from ....engine import voice_match
+    voice_match.invalidate_cache()
     return _out(row)
 
 
@@ -296,6 +307,10 @@ class RelabelRequest(BaseModel):
     meeting_id: int
     from_label: str
     to_name: str
+    decision: str | None = None
+    conflict_id: int | None = None
+    target_voiceprint_id: int | None = None
+    slot: int | None = Field(default=None, ge=0, le=4)
 
 
 class RelabelResponse(BaseModel):
@@ -390,6 +405,39 @@ def relabel_speaker(
     同时通知该会议的活跃会话，让后续定稿立即使用新名字；只改数据库的话，
     运行中的 resolver 仍会继续输出旧标签。
     """
+    if not payload.from_label.strip() or not payload.to_name.strip():
+        raise HTTPException(400, "旧标签与新姓名都不能为空")
+    if len(payload.to_name.strip()) > 32:
+        raise HTTPException(400, "姓名过长（最多 32 字）")
+    from .... import persons
+    payload = payload.model_copy(update={"from_label": payload.from_label.strip(), "to_name": persons.normalize_name(payload.to_name)})
+    scoped_owner = owned_meeting(payload.meeting_id, user, db, write=True).owner_id
+
+    def sync_identity(segments):
+        persons.sync_transcript_identity(db, meeting_id=payload.meeting_id, owner_id=scoped_owner,
+            from_label=payload.from_label, to_name=payload.to_name.strip(), segments=segments)
+    scoped_ids = [row.id for row in db.exec(select(Voiceprint)).all() if identity_owner(db, row) == scoped_owner]
+    if user.role != "admin" and user.id != scoped_owner:
+        # Meeting editors may correct this transcript, not the owner's private
+        # reusable biometric library.
+        segments = db.exec(select(Segment).where(Segment.meeting_id == payload.meeting_id, Segment.speaker == payload.from_label)).all()
+        for segment in segments:
+            segment.speaker = payload.to_name.strip()[:32]
+            segment.speaker_source = "manual"
+            segment.speaker_score = 1.0
+            db.add(segment)
+        db.add(AuditLog(user_id=user.id, username=user.username, action="meeting_speaker_relabel", target=f"meeting:{payload.meeting_id}", payload=json.dumps({"from": payload.from_label, "to": payload.to_name})))
+        sync_identity(segments)
+        db.commit()
+        persons.publish_identity_changes(db)
+        from ....engine.streaming import rename_active_speaker
+        rename_active_speaker(payload.meeting_id, payload.from_label, payload.to_name)
+        return RelabelResponse(renamed_voiceprint=False, updated_segments=len(segments), name=payload.to_name)
+    from ....application.speaker_confirmation import preflight_relabel
+    chosen_name = preflight_relabel(db, user, payload, scoped_owner, _meeting_speaker_vector)
+    if chosen_name is None:
+        return RelabelResponse(renamed_voiceprint=False, updated_segments=0, name=payload.from_label)
+    payload = payload.model_copy(update={"to_name": chosen_name})
     meeting_id = int(payload.meeting_id)
     from_label = payload.from_label.strip()
     to_name = payload.to_name.strip()
@@ -410,6 +458,7 @@ def relabel_speaker(
             seg.speaker_source = "manual"
             seg.speaker_score = 1.0
             db.add(seg)
+        sync_identity(segs)
         db.add(
             AuditLog(
                 user_id=user.id,
@@ -423,6 +472,7 @@ def relabel_speaker(
             )
         )
         db.commit()
+        persons.publish_identity_changes(db)
         return RelabelResponse(
             renamed_voiceprint=False,
             updated_segments=len(segs),
@@ -447,11 +497,11 @@ def relabel_speaker(
     vp = None
     if speaker_key:
         vp = db.exec(
-            select(Voiceprint).where(Voiceprint.speaker_key == speaker_key)
+            select(Voiceprint).where(Voiceprint.id.in_(scoped_ids), Voiceprint.speaker_key == speaker_key)
         ).first()
     if vp is None:
         vp = db.exec(
-            select(Voiceprint)
+            select(Voiceprint).where(Voiceprint.id.in_(scoped_ids))
             .where(
                 Voiceprint.meeting_id == meeting_id,
                 Voiceprint.name == from_label,
@@ -461,13 +511,18 @@ def relabel_speaker(
     speaker_key = vp.speaker_key if vp is not None else None
     if vp is not None:
         clash = db.exec(
-            select(Voiceprint).where(Voiceprint.name == to_name, Voiceprint.id != vp.id)
+            select(Voiceprint).where(Voiceprint.id.in_(scoped_ids), Voiceprint.name == to_name, Voiceprint.id != vp.id)
         ).first()
-        if clash is not None:
+        if clash is not None and not payload.decision:
             raise HTTPException(status_code=409, detail=f"已存在名为「{to_name}」的声纹")
         # 全局已命名身份被误匹配时，绝不能把另一个人的全局声纹改名。
         # 基于本场真实质心创建新身份，保留原身份历史。
-        if vp.meeting_id not in (None, meeting_id) and not vp.provisional:
+        if clash is not None:
+            corrected_false_match = True
+            if vp.provisional:
+                vp.disabled = True
+                db.add(vp)
+        elif vp.meeting_id not in (None, meeting_id) and not vp.provisional:
             corrected_false_match = True
             vector = _meeting_speaker_vector(
                 db, meeting_id, from_label, speaker_key
@@ -530,7 +585,23 @@ def relabel_speaker(
     segs = db.exec(stmt).all()
     for s in segs:
         s.speaker = to_name
+        s.speaker_source = "manual"
+        s.speaker_score = 1.0
         db.add(s)
+    sync_identity(segs)
+
+    # 2.1) 迁移「按显示名兜底」的说话人重要程度（历史数据没有 speaker_key 时用）。
+    try:
+        from .... import speaker_roles
+
+        speaker_roles.migrate_label_key(db, meeting_id, from_label, to_name)
+    except Exception:
+        logger.exception(
+            "迁移说话人重要程度失败 meeting=%s %s->%s",
+            meeting_id,
+            from_label,
+            to_name,
+        )
 
     db.add(
         AuditLog(
@@ -552,7 +623,10 @@ def relabel_speaker(
         )
     )
     db.commit()
+    persons.publish_identity_changes(db)
     speaker.invalidate_cache()
+    from ....engine import voice_match
+    voice_match.invalidate_cache()
 
     # 同步运行中的会话（标签 + speaker_update 推送）
     try:
@@ -589,6 +663,10 @@ def merge_voiceprints(
     录音条件的向量，未必比 target 本身更可靠，而 target 通常是用户
     已经确认过的那一个。
     """
+    owned_voiceprint(db, source_id, user, write=True)
+    owned_voiceprint(db, target_id, user, write=True)
+    if identity_owner(db, db.get(Voiceprint, source_id)) != identity_owner(db, db.get(Voiceprint, target_id)):
+        raise HTTPException(409, "不能跨账号合并声纹")
     if source_id == target_id:
         raise HTTPException(status_code=400, detail="不能合并到自己")
 
@@ -618,9 +696,17 @@ def merge_voiceprints(
             s.speaker_key = target.speaker_key
         db.add(s)
 
+    # 人员的永久关联跟着身份走：target 还没关联时继承 source 的，避免合并后丢身份。
+    if getattr(target, "person_id", None) is None and getattr(source, "person_id", None) is not None:
+        target.person_id = source.person_id
+        db.add(target)
+    from ....application.voiceprint_lifecycle import merge_dependents
+    merge_dependents(db, source.id, target.id)
     db.delete(source)
     db.commit()
     speaker.invalidate_cache()
+    from ....engine import voice_match
+    voice_match.invalidate_cache()
     if scoped_meeting is not None:
         try:
             from ....engine import streaming
@@ -645,6 +731,7 @@ def rename_voiceprint(
     主要用途：把开会时自动发现的「说话人 1」改成真实姓名，
     之后所有会议都会直接认出这个人。
     """
+    owned_voiceprint(db, voiceprint_id, user, write=True)
     row = db.get(Voiceprint, voiceprint_id)
     if row is None:
         raise HTTPException(status_code=404, detail="声纹不存在")
@@ -656,7 +743,7 @@ def rename_voiceprint(
         raise HTTPException(status_code=400, detail="姓名过长（最多 32 字）")
 
     clash = db.exec(
-        select(Voiceprint).where(Voiceprint.name == name, Voiceprint.id != voiceprint_id)
+        select(Voiceprint).where(Voiceprint.owner_id == row.owner_id, Voiceprint.name == name, Voiceprint.id != voiceprint_id)
     ).first()
     if clash is not None:
         raise HTTPException(status_code=409, detail=f"已存在名为「{name}」的声纹")
@@ -683,6 +770,8 @@ def rename_voiceprint(
     db.commit()
     db.refresh(row)
     speaker.invalidate_cache()
+    from ....engine import voice_match
+    voice_match.invalidate_cache()
     if row.meeting_id is not None and old_name != name:
         try:
             from ....engine import streaming
@@ -700,6 +789,7 @@ def set_voiceprint_state(
     user: User = Depends(get_current_user_or_anonymous),
     db: Session = Depends(get_session),
 ):
+    owned_voiceprint(db, voiceprint_id, user, write=True)
     row = db.get(Voiceprint, voiceprint_id)
     if row is None:
         raise HTTPException(status_code=404, detail="声纹不存在")
@@ -709,6 +799,8 @@ def set_voiceprint_state(
     db.commit()
     db.refresh(row)
     speaker.invalidate_cache()
+    from ....engine import voice_match
+    voice_match.invalidate_cache()
     return _out(row)
 
 
@@ -718,10 +810,15 @@ def delete_voiceprint(
     user: User = Depends(get_current_user_or_anonymous),
     db: Session = Depends(get_session),
 ):
+    owned_voiceprint(db, voiceprint_id, user, write=True)
     row = db.get(Voiceprint, voiceprint_id)
     if row is None:
         raise HTTPException(status_code=404, detail="声纹不存在")
+    from ....application.voiceprint_lifecycle import remove_dependents
+    remove_dependents(db, voiceprint_id)
     db.delete(row)
     db.commit()
     speaker.invalidate_cache()
+    from ....engine import voice_match
+    voice_match.invalidate_cache()
     return None

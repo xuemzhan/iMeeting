@@ -36,9 +36,7 @@ MERGE_MAX_CHARS = 220
 
 
 def merge_fragments(lines: list[TranscriptLine]) -> list[TranscriptLine]:
-    """把明显被切断的相邻片段合并成更完整的句子（只用于纪要/导出）。
-
-    原始片段仍按时间轴保留，这里只构造一份「语义视图」：
+    """把明显被切断的相邻片段合并成更完整的句子（只用于纪要/导出）。    原始片段仍按时间轴保留，这里只构造一份「语义视图」：
 
     - **说话人完全相同**（包括两边都未知）且停顿不超过 ``MERGE_GAP_MS``；
     - 上一句偏短（<= 40 字）或下一句以连接词开头；
@@ -84,6 +82,8 @@ def merge_fragments(lines: list[TranscriptLine]) -> list[TranscriptLine]:
                     *cur.segment_ids,
                     *([cur.segment_id] if cur.segment_id else []),
                 ],
+                speaker_key=prev.speaker_key,
+                speaker_importance=prev.speaker_importance,
             )
         else:
             merged.append(cur)
@@ -91,11 +91,26 @@ def merge_fragments(lines: list[TranscriptLine]) -> list[TranscriptLine]:
 
 
 def _format_lines(lines: list[TranscriptLine]) -> str:
+    """把转写排成带时间戳的纯文本。
+
+    关键/次要参会人会带「（关键）」「（次要）」标记——模型读到的每一句都
+    自带角色，长会议分段摘要时也不会因为只看到片段而丢掉权重信息。
+    一般参会人按默认处理，不加标记。
+    """
+    from ..speaker_roles import normalize_importance
+
     out: list[str] = []
     for line in lines:
         ts = _mmss(line.start_ms)
         who = f"说话人{line.speaker}" if line.speaker else "发言"
-        out.append(f"[{ts}] {who}：{line.text}")
+        tag = ""
+        if line.speaker and line.speaker_importance is not None:
+            importance = normalize_importance(line.speaker_importance)
+            if importance == 1:
+                tag = "（关键）"
+            elif importance == 2:
+                tag = "（次要）"
+        out.append(f"[{ts}] {who}{tag}：{line.text}")
     return "\n".join(out)
 
 
@@ -158,6 +173,14 @@ async def generate_minutes(
             prompt_template + "\n\n会议转写内容：\n---\n{transcript}\n---"
         )
 
+    # 参会人重要程度：放在用户模板之前，作为不可被模板覆盖的硬约束。
+    # 没有显式设置关键/次要参会人时返回空串，行为与之前完全一致。
+    from ..speaker_roles import importance_prompt_section
+
+    priority_prompt = importance_prompt_section(lines)
+    if priority_prompt:
+        prompt_template = priority_prompt + prompt_template
+
     quality_note = (
         "纪要质量要求：数字、日期、专有名词和数量词只能来自转写；"
         "不要自行添加“三大/四大/五项”等数量词。"
@@ -206,6 +229,7 @@ async def generate_minutes(
                     "content": (
                         f"这是会议的第 {i}/{len(chunks)} 部分转写内容。"
                     + (f"\n{glossary_prompt}" if glossary_prompt else "")
+                        + (f"\n{priority_prompt}" if priority_prompt else "")
                         + "请提炼关键信息，保留议题、结论、待办及其责任人，不要添加原文没有的内容。\n\n"
                         f"---\n{chunk_text}\n---"
                     ),
@@ -220,6 +244,7 @@ async def generate_minutes(
     merged = "\n\n".join(partials)
     final_prompt = (
         draft_note
+        + priority_prompt
         + "以下是同一场会议各部分的摘要，请合并为一份完整的会议纪要。\n"
         "要求：合并重复议题，保持时间顺序，不要丢失任何待办事项。\n\n"
         "输出 JSON，结构如下：\n"

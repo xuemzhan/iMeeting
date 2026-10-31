@@ -476,6 +476,41 @@ class TestModelPool:
         finally:
             pool._BUILDERS["streaming"] = original
 
+    def test_loading_offline_does_not_block_streaming(self, env):
+        """预热离线模型时，流式模型必须能立刻单独加载。
+
+        旧实现用一把全局锁，用户在预热期间开会会被离线模型加载卡住几十秒
+        （正是启动后「第一次开会要等半天」的一个来源）。改为按模型分锁后：
+        不同模型互不阻塞，同一模型仍然只加载一次（上一条用例锁住这一点）。
+        """
+        pool._models.clear()
+        pool._status.clear()
+        import threading
+
+        offline_started = threading.Event()
+        original_streaming = pool._BUILDERS["streaming"]
+        original_offline = pool._BUILDERS["offline"]
+
+        def slow_offline():
+            offline_started.set()
+            time.sleep(1.0)
+            return object()
+
+        pool._BUILDERS["offline"] = slow_offline
+        pool._BUILDERS["streaming"] = lambda: object()
+        try:
+            worker = threading.Thread(target=lambda: pool.get_model("offline"))
+            worker.start()
+            assert offline_started.wait(2.0), "离线加载线程没有启动"
+            started = time.time()
+            pool.get_model("streaming")
+            elapsed = time.time() - started
+            worker.join(timeout=5)
+            assert elapsed < 0.5, f"流式模型被离线加载阻塞了 {elapsed:.2f}s"
+        finally:
+            pool._BUILDERS["streaming"] = original_streaming
+            pool._BUILDERS["offline"] = original_offline
+
 
 class TestInferThreads:
     """推理线程数解析。

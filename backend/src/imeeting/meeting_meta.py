@@ -144,7 +144,10 @@ async def capture_meeting_metadata(meeting_id: int) -> dict | None:
             return None
         if result["title"] and DEFAULT_TITLE_RE.match(meeting.title):
             meeting.title = result["title"]
-        if result["participants"]:
+        from . import persons
+        if persons.list_participants(db, meeting_id):
+            persons.sync_participants_string(db, meeting_id=meeting_id)
+        elif result["participants"]:
             meeting.participants = ", ".join(result["participants"])[:1000]
         if result["agenda"]:
             meeting.agenda = result["agenda"]

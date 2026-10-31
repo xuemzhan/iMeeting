@@ -78,8 +78,20 @@ def _get_executor() -> ThreadPoolExecutor:
             logger.info("推理线程数由 %d 调整为 %d，旧线程池待其任务结束后释放", old_threads, want)
     return _EXECUTOR
 
-_lock = threading.Lock()
 _models: dict[str, Any] = {}
+#: 每个模型一把锁：同一模型仍然只加载一次（单飞），但流式/离线可以并发加载，
+#: 把启动就绪时间从「两段之和」压到「较长者 + 少量 CPU 争抢」。
+_locks: dict[str, threading.Lock] = {}
+_locks_guard = threading.Lock()
+
+
+def _model_lock(prefix: str) -> threading.Lock:
+    with _locks_guard:
+        lock = _locks.get(prefix)
+        if lock is None:
+            lock = threading.Lock()
+            _locks[prefix] = lock
+        return lock
 
 # 记录每个模型实例是用什么配置构造的，配置变更时据此失效
 _build_keys: dict[str, tuple] = {}
@@ -230,7 +242,7 @@ def get_model(prefix: str) -> Any:
     # 否则并发调用时前端会看到该模型仿佛根本没在加载
     status = _status.setdefault(prefix, ModelStatus(name=prefix, loaded=False, loading=False))
 
-    with _lock:
+    with _model_lock(prefix):
         # 双重检查：可能在等锁期间已被其他线程加载
         if prefix in _models and _build_keys.get(prefix) == key:
             return _models[prefix]
@@ -312,12 +324,18 @@ def warmup_async() -> None:
         if mode != "normal":
             logger.info("asr.mode=%s，跳过模型预热", mode)
             return
+
+        # 顺序预热：两个模型都要吃满 CPU 做 torch 初始化，实测并发反而互相
+        # 拖慢（离线 31s → 54~65s），总就绪时间没有稳定收益，还会让内存峰值更抖。
+        # 真正需要的是「互不阻塞」——已由按模型的锁保证：预热离线时用户开会，
+        # 流式模型可以立刻单独加载，不必排队等离线模型。
         for prefix in ("streaming", "offline"):
             _pre_register_status(prefix)
             try:
                 get_model(prefix)
             except Exception:
                 logger.exception("预热 %s 模型失败，将在首次使用时重试", prefix)
+
         if bool(get_config("spk.enabled")):
             try:
                 from .speaker import preload_embedding_model

@@ -14,6 +14,7 @@ from sqlalchemy import delete as sa_delete
 from sqlalchemy import exists, or_
 from sqlmodel import Session, func, select
 
+from .... import speaker_roles
 from ....application.meeting_access import (
     fts_meeting_ids as _fts_meeting_ids,
 )
@@ -55,10 +56,13 @@ from ....schemas import (
     MeetingDetail,
     MeetingOut,
     MeetingSearchResult,
+    MeetingSpeakerOut,
     MeetingUpdate,
     MinutesGenerateRequest,
     MinutesOut,
     SegmentOut,
+    SpeakerImportanceUpdate,
+    SpeakerStateUpdate,
 )
 from ....settings import get_config
 from .deps import get_current_user_or_anonymous
@@ -560,6 +564,11 @@ def get_meeting(
 
     detail = MeetingDetail.model_validate(meeting)
     detail.segments = [SegmentOut.model_validate(s) for s in segments]
+    # 说话人重要程度随详情一起下发：详情页据此渲染「关键/次要」标签与
+    # 参会人面板，避免再发一次请求。
+    detail.speakers = [
+        MeetingSpeakerOut(**item) for item in speaker_roles.list_speakers(db, meeting_id)
+    ]
     detail.speaker_low_confidence_threshold = float(
         get_config("spk.low_confidence_threshold") or 0.62
     )
@@ -765,6 +774,75 @@ def merge_speakers(
     )
 
 
+@router.get("/{meeting_id}/speakers", response_model=list[MeetingSpeakerOut])
+def list_meeting_speakers(
+    meeting_id: int,
+    user: User = Depends(get_current_user_or_anonymous),
+    db: Session = Depends(get_session),
+):
+    """会议内说话人 + 重要程度（1 关键 / 2 次要 / 3 一般，默认 3）。"""
+    _owned(meeting_id, user, db)
+    return [
+        MeetingSpeakerOut(**item)
+        for item in speaker_roles.list_speakers(db, meeting_id)
+    ]
+
+
+@router.put("/{meeting_id}/speakers/importance", response_model=list[MeetingSpeakerOut])
+def update_speaker_importance(
+    meeting_id: int,
+    payload: SpeakerImportanceUpdate,
+    user: User = Depends(get_current_user_or_anonymous),
+    db: Session = Depends(get_session),
+):
+    """设置说话人重要程度；返回刷新后的全部说话人，便于前端一次覆盖。"""
+    _owned(meeting_id, user, db, write=True)
+    try:
+        items = speaker_roles.set_importance(
+            db, meeting_id, payload.speaker, payload.importance
+        )
+    except LookupError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    logger.info(
+        "会议 %s 说话人 %s 重要程度设为 %s",
+        meeting_id,
+        payload.speaker,
+        payload.importance,
+    )
+    return [MeetingSpeakerOut(**item) for item in items]
+
+
+@router.put("/{meeting_id}/speakers/state", response_model=list[MeetingSpeakerOut])
+def update_speaker_state(
+    meeting_id: int,
+    payload: SpeakerStateUpdate,
+    user: User = Depends(get_current_user_or_anonymous),
+    db: Session = Depends(get_session),
+):
+    """确认 / 删除一位参会人；返回刷新后的全部说话人，便于前端一次覆盖。
+
+    只改「参会人面板」的显示状态，不动转写片段与重要程度。
+    """
+    _owned(meeting_id, user, db, write=True)
+    try:
+        items = speaker_roles.set_state(
+            db, meeting_id, payload.speaker, payload.state
+        )
+    except LookupError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
+        ) from exc
+    logger.info(
+        "会议 %s 说话人 %s 状态设为 %s",
+        meeting_id,
+        payload.speaker,
+        speaker_roles.STATE_LABELS.get(payload.state, payload.state),
+    )
+    return [MeetingSpeakerOut(**item) for item in items]
+
+
 @router.post("/{meeting_id}/minutes", response_model=MinutesOut)
 async def create_minutes(
     meeting_id: int,
@@ -800,6 +878,8 @@ async def create_minutes(
     if not segments:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="该会议还没有转写内容")
 
+    # 参会人重要程度随片段一起带进纪要：键优先用 speaker_key（改名不变）
+    importance_by_key = speaker_roles.load_roles(db, meeting_id)
     lines = [
         TranscriptLine(
             start_ms=s.start_ms,
@@ -808,6 +888,10 @@ async def create_minutes(
             end_ms=s.end_ms,
             segment_id=s.segment_id,
             segment_ids=[s.segment_id],
+            speaker_key=s.speaker_key,
+            speaker_importance=importance_by_key.get(
+                speaker_roles.speaker_key_for(s.speaker_key, s.speaker)
+            ),
         )
         for s in segments
         if s.text.strip()

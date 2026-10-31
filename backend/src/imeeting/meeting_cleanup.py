@@ -20,6 +20,8 @@ from .models import (
     Segment,
     SegmentEmbedding,
     ShareLink,
+    TemplateRebuildState,
+    TemplateSampleEmbedding,
     TranscriptReview,
     Voiceprint,
     utcnow,
@@ -40,6 +42,10 @@ def _delete_rows(db, meeting: Meeting) -> None:
     db.execute(sa_delete(MeetingMember).where(MeetingMember.meeting_id == mid))
     db.execute(sa_delete(Job).where(Job.meeting_id == mid))
     db.execute(sa_delete(SegmentEmbedding).where(SegmentEmbedding.meeting_id == mid))
+    # 模板重建的进度与取样缓存同样按会议持有外键，必须显式清理，
+    # 否则会像 GAP-15 那样在父会议删除时触发 FOREIGN KEY 约束错误。
+    db.execute(sa_delete(TemplateRebuildState).where(TemplateRebuildState.meeting_id == mid))
+    db.execute(sa_delete(TemplateSampleEmbedding).where(TemplateSampleEmbedding.meeting_id == mid))
     db.execute(
         sa_delete(Voiceprint).where(
             Voiceprint.meeting_id == mid,

@@ -22,32 +22,41 @@ from ..db import session_scope
 from ..models import ActionItem, Minutes, Segment, utcnow
 from ..settings import get_config
 from .client import LLMClient, extract_json
-from .minutes import _finalize_minutes, generate_minutes
+from .minutes import _finalize_minutes, _format_lines, generate_minutes
 from .types import TranscriptLine
 
 logger = logging.getLogger(__name__)
 
 
 def load_transcript_lines(meeting_id: int) -> list[TranscriptLine]:
-    """按全局时间轴读取当前已落库的转写。"""
+    """按全局时间轴读取当前已落库的转写（带说话人重要程度）。"""
+    from ..speaker_roles import load_roles, speaker_key_for
+
     with session_scope() as db:
         rows = db.exec(
             select(Segment)
             .where(Segment.meeting_id == meeting_id)
             .order_by(Segment.start_ms, Segment.seq, Segment.id)
         ).all()
-        return [
-            TranscriptLine(
-                start_ms=s.start_ms,
-                speaker=s.speaker,
-                text=s.text,
-                end_ms=s.end_ms,
-                segment_id=s.segment_id,
-                segment_ids=[s.segment_id],
+        roles = load_roles(db, meeting_id)
+        lines: list[TranscriptLine] = []
+        for s in rows:
+            if not (s.text or "").strip():
+                continue
+            key = speaker_key_for(s.speaker_key, s.speaker)
+            lines.append(
+                TranscriptLine(
+                    start_ms=s.start_ms,
+                    speaker=s.speaker,
+                    text=s.text,
+                    end_ms=s.end_ms,
+                    segment_id=s.segment_id,
+                    segment_ids=[s.segment_id],
+                    speaker_key=s.speaker_key,
+                    speaker_importance=roles.get(key) if key else None,
+                )
             )
-            for s in rows
-            if (s.text or "").strip()
-        ]
+        return lines
 
 
 def _latest(meeting_id: int, *, draft: bool | None = None) -> Minutes | None:
@@ -169,17 +178,6 @@ def minutes_payload(row: Minutes) -> dict:
     }
 
 
-def _format_lines(lines: list[TranscriptLine]) -> str:
-    out = []
-    for line in lines:
-        total = line.start_ms // 1000
-        out.append(
-            f"[{total // 60:02d}:{total % 60:02d}] "
-            f"{line.speaker or '发言'}：{line.text}"
-        )
-    return "\n".join(out)
-
-
 async def _rolling_update(
     previous: Minutes,
     new_lines: list[TranscriptLine],
@@ -196,7 +194,9 @@ async def _rolling_update(
         "todos": json.loads(previous.todos or "[]"),
     }
     from ..glossary import prompt_section
+    from ..speaker_roles import importance_prompt_section
 
+    priority_prompt = importance_prompt_section(new_lines)
     prompt_prefix = prompt_section()
     if knowledge_context:
         prompt_prefix += knowledge_context + "\n\n"
@@ -214,7 +214,8 @@ async def _rolling_update(
         "6. 输出同样的 JSON 结构，并额外给出 corrections 字段："
         '[{"from":"转写中的错误片段","to":"知识库规范词","confidence":0.9}]；'
         "只列有把握的项，不确定就不要列。\n\n"
-        f"上一版纪要：\n{json.dumps(prev_payload, ensure_ascii=False)}\n\n"
+        + priority_prompt
+        + f"上一版纪要：\n{json.dumps(prev_payload, ensure_ascii=False)}\n\n"
         f"新增转写：\n---\n{_format_lines(new_lines)}\n---"
     )
     prompt = prompt_prefix + prompt_body

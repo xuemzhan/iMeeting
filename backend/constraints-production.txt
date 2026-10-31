@@ -1,0 +1,5 @@
+# Security floors verified by the 2026-10-29 dependency review.
+# Apply alongside the project install; audit the fully resolved environment in CI.
+cryptography>=50.0.0
+certifi>=2026.10.19
+pillow>=13.0.0

@@ -413,6 +413,9 @@ def _share_meeting(db: Session, token: str) -> ShareLink:
         raise HTTPException(status_code=404, detail="分享链接不存在")
     if row.expires_at < utcnow():
         raise HTTPException(status_code=410, detail="分享链接已过期")
+    meeting = db.get(Meeting, row.meeting_id)
+    if meeting is None or meeting.deleted_at is not None:
+        raise HTTPException(status_code=404, detail="会议不存在")
     return row
 
 

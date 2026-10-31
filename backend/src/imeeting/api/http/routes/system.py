@@ -39,13 +39,13 @@ def health() -> HealthOut:
     if mode != "normal":
         # echo / off 模式不需要模型，服务本身是健康的
         overall = "disabled"
+    elif any_error:
+        overall = "degraded"
     elif all(m.loaded for m in models.values()):
         overall = "ok"
     elif any(m.loaded for m in models.values()):
         # 部分就绪：可以开始转写，但精度补偿链路还没好
         overall = "loading"
-    elif any_error:
-        overall = "degraded"
     else:
         overall = "loading"
 
@@ -84,13 +84,13 @@ def readiness() -> dict:
                 "active_sessions": active_session_count(),
             },
         )
-    if health_value.status == "degraded":
+    if health_value.status not in ("ok", "disabled"):
         raise HTTPException(
             status_code=503,
-            detail={"ready": False, "reason": "models_degraded"},
+            detail={"ready": False, "reason": f"models_{health_value.status}"},
         )
     return {
-        "ready": health_value.status in ("ok", "disabled", "loading"),
+        "ready": True,
         "status": health_value.status,
         "active_sessions": active_session_count(),
     }

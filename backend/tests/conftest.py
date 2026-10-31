@@ -33,6 +33,7 @@ os.environ["ASR_MODE"] = "off"  # 单测不加载任何模型
 # 业务日志写到临时目录。否则 `imeeting.main` 导入时会把测试里的异常栈写进
 # 生产 `data/logs/backend.log`，真实故障排查时会被测试噪声干扰。
 os.environ["LOG_FILE"] = str(Path(_TMPDIR) / "backend-test.log")
+os.environ["DATA_DIR"] = _TMPDIR
 # bcrypt 默认 12 轮约 250ms/次，整个套件有几十次哈希，会把测试拖到 6 分钟以上。
 # 降到 4 轮（bcrypt 允许的最低值）纯为提速，不影响被测逻辑正确性。
 os.environ["BCRYPT_ROUNDS"] = "4"

@@ -5,19 +5,22 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from datetime import timedelta
+import os
+import threading
+from datetime import timedelta, timezone
 from typing import Any
 
-from sqlmodel import Session, select
+from sqlmodel import Session, func, select
 
 from ..db import engine, session_scope
 from ..models import Job, utcnow
 
 logger = logging.getLogger(__name__)
 
-_claim_lock = asyncio.Lock()
+_claim_lock = threading.Lock()
+_enqueue_lock = threading.Lock()
 _HEAVY_JOB_KINDS = frozenset(
-    {"final_minutes", "audio_review", "embedding_reindex"}
+    {"final_minutes", "audio_review", "embedding_reindex", "template_rebuild"}
 )
 
 
@@ -33,7 +36,7 @@ def enqueue_job(
     max_attempts: int = 3,
 ) -> Job:
     """入队任务；相同去重键处于 pending/running 时不重复创建。"""
-    with session_scope() as db:
+    with _enqueue_lock, session_scope() as db:
         if dedupe_key:
             existing = db.exec(
                 select(Job)
@@ -44,6 +47,7 @@ def enqueue_job(
                 .order_by(Job.id.desc())
             ).first()
             if existing is not None:
+                db.expunge(existing)
                 return existing
         job = Job(
             kind=kind,
@@ -66,12 +70,17 @@ def enqueue_job(
 def _claim_job(heavy: bool | None = None) -> Job | None:
     """领取一个到期任务。
 
-    单进程由 asyncio 锁串行化；多进程未来可替换为 PostgreSQL 的
+    单进程由线程锁串行化；多进程未来可替换为 PostgreSQL 的
     ``SELECT ... FOR UPDATE SKIP LOCKED``。
 
     ``heavy=True/False`` 将 CPU/模型密集型任务与导出等轻任务分开，
     避免长纪要生成阻塞用户下载。
     """
+    with _claim_lock:
+        return _claim_job_locked(heavy)
+
+
+def _claim_job_locked(heavy: bool | None) -> Job | None:
     with session_scope() as db:
         query = select(Job).where(
             Job.status == "pending",
@@ -174,6 +183,9 @@ async def _run_job(job: Job) -> None:
             from ..privacy import apply_meeting_redaction
 
             await asyncio.to_thread(apply_meeting_redaction, job.meeting_id)
+        if bool(get_config("spk.template_rebuild_enabled", True)):
+            enqueue_job(kind="template_rebuild", meeting_id=job.meeting_id,
+                        dedupe_key=f"template_rebuild:{job.meeting_id}", priority=40)
         if bool(get_config("review.auto_after_meeting")):
             enqueue_job(
                 kind="audio_review",
@@ -182,6 +194,41 @@ async def _run_job(job: Job) -> None:
                 priority=30,
             )
         _finish(job, result={"minutes": result})
+        return
+
+    if job.kind == "person_extract" and job.meeting_id is not None:
+        from ..person_extract import extract_people
+        result = await extract_people(job.meeting_id)
+        if result.get("skipped") in ("cooldown", "in_flight"):
+            from ..models import PersonExtractionState
+            from .person_extraction import aware
+            with session_scope() as db:
+                state = db.get(PersonExtractionState, job.meeting_id)
+                retry_at = max(aware(state.last_auto_at) + timedelta(minutes=5) if state.last_auto_at else utcnow(),
+                               aware(state.lease_until) if state.lease_until else utcnow())
+                row = db.get(Job, job.id)
+                row.status = "pending"
+                row.run_after = retry_at
+                row.locked_at = None
+                row.attempts = max(0, row.attempts - 1)
+                db.add(row)
+            return
+        _finish(job, result=result)
+        if not result.get("skipped"):
+            # A final introduction may arrive during the remote call. Once
+            # this job is finished, enqueue any still-unprocessed segments.
+            from .person_extraction import request_auto
+            request_auto(job.meeting_id, trigger="followup")
+        return
+    if job.kind == "template_rebuild" and job.meeting_id is not None:
+        from ..engine.voice_template import rebuild_meeting_templates
+        if not get_config("spk.template_rebuild_enabled") or os.getenv("ASR_MODE") in ("off", "echo"):
+            _finish(job, result={"skipped": "disabled"})
+        else:
+            result = await asyncio.to_thread(
+                rebuild_meeting_templates, job.meeting_id, job_id=job.id
+            )
+            _finish(job, result=result)
         return
 
     if job.kind == "meeting_meta" and job.meeting_id is not None:
@@ -225,8 +272,7 @@ async def worker_loop(
     while not stop_event.is_set():
         job: Job | None = None
         try:
-            async with _claim_lock:
-                job = await asyncio.to_thread(_claim_job, heavy)
+            job = await asyncio.to_thread(_claim_job, heavy)
             if job is None:
                 await asyncio.sleep(1)
                 continue
@@ -289,25 +335,27 @@ async def start_job_workers(stop_event: asyncio.Event) -> list[asyncio.Task]:
 
 
 def _recover_stale_jobs() -> None:
-    """进程崩溃后把超时的 running 任务重新放回队列。"""
-    cutoff = utcnow() - timedelta(minutes=10)
+    """Recover all abandoned jobs before starting this single-instance worker pool.
+
+    No workers from the previous process can still own a job. Checking lock age
+    only once at startup would strand recently claimed jobs forever.
+    """
     with session_scope() as db:
         rows = db.exec(select(Job).where(Job.status == "running")).all()
         for row in rows:
-            if row.locked_at is None or row.locked_at < cutoff:
-                row.status = "pending"
-                row.locked_at = None
-                row.run_after = utcnow()
-                row.updated_at = utcnow()
-                db.add(row)
+            row.status = "failed" if row.attempts >= row.max_attempts else "pending"
+            row.last_error = "任务执行被服务重启中断"
+            row.locked_at = None
+            row.run_after = utcnow()
+            row.updated_at = utcnow()
+            db.add(row)
 
 
 def job_stats() -> dict[str, int]:
     with Session(engine) as db:
-        rows = db.exec(select(Job)).all()
+        rows = db.exec(select(Job.status, func.count()).group_by(Job.status)).all()
     counts = {"pending": 0, "running": 0, "succeeded": 0, "failed": 0}
-    for row in rows:
-        counts[row.status] = counts.get(row.status, 0) + 1
+    counts.update({status: count for status, count in rows})
     return counts
 
 
@@ -315,21 +363,20 @@ def job_metrics() -> dict[str, float]:
     """Return queue depth and age gauges used by Prometheus alerts."""
     now = utcnow()
     with Session(engine) as db:
-        rows = db.exec(select(Job)).all()
-    pending = [row for row in rows if row.status == "pending"]
-    running = [row for row in rows if row.status == "running"]
+        pending = db.exec(
+            select(func.min(Job.run_after)).where(Job.status == "pending")
+        ).one()
+        running = db.exec(
+            select(func.min(Job.locked_at)).where(Job.status == "running")
+        ).one()
 
-    def age(row: Job, field: str) -> float:
-        value = getattr(row, field, None)
+    def age(value) -> float:
+        # SQLite may return naive datetimes, other backends preserve timezone.
+        if value is not None and value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
         return max(0.0, (now - value).total_seconds()) if value else 0.0
 
     return {
-        "oldest_pending_seconds": max(
-            (age(row, "run_after") for row in pending),
-            default=0.0,
-        ),
-        "oldest_running_seconds": max(
-            (age(row, "locked_at") for row in running),
-            default=0.0,
-        ),
+        "oldest_pending_seconds": age(pending),
+        "oldest_running_seconds": age(running),
     }

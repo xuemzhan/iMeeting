@@ -645,6 +645,17 @@ class StreamSession:
         # 一个 10ms 的爆音配上 1.5s 静音，整段 RMS 仍有 0.017（高于阈值），
         # 结果就是每次敲键盘都多出一条转写记录。因此必须统计「有效语音时长」。
         speech_ms = self._speech_ms(audio)
+        if get_config("spk.template_match_enabled"):
+            from .voice_template import scenario_of
+            energy = float(rms(audio))
+            noise = max(1e-9, float(self._noise_tracker.noise_floor))
+            snr_db = float(20 * np.log10(max(energy, 1e-9) / noise))
+            history = self._speaker_context.snapshot()
+            previous_key = history[-1][1] if history else ""
+            previous_id = int(previous_key[3:]) if previous_key.startswith("vp_") and previous_key[3:].isdigit() else None
+            self._speaker_resolver.match_context = {"scenario": scenario_of(speech_ms=speech_ms, rms=energy, snr_db=snr_db),
+                                                    "speech_ms": speech_ms, "context_voiceprint_id": previous_id}
+
         if speech_ms < self._min_speech_ms:
             self.metrics.note_drop("low_speech")
             logger.debug(

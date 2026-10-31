@@ -19,15 +19,16 @@ SAMPLE_RATE = 16000
 
 
 def _read_audio(path: Path, start_ms: int, end_ms: int, gain: float) -> np.ndarray:
-    start = int(start_ms * SAMPLE_RATE / 1000)
-    frames = max(1, int((end_ms - start_ms) * SAMPLE_RATE / 1000))
-    audio, sr = sf.read(
-        path,
-        start=start,
-        frames=frames,
-        dtype="float32",
-        always_2d=False,
-    )
+    if end_ms <= start_ms:
+        return np.zeros(0, dtype=np.float32)
+    with sf.SoundFile(path) as source:
+        sr = source.samplerate
+        start = max(0, int(start_ms * sr / 1000))
+        if start >= len(source):
+            return np.zeros(0, dtype=np.float32)
+        source.seek(start)
+        frames = max(1, int((end_ms - max(0, start_ms)) * sr / 1000))
+        audio = source.read(frames=frames, dtype="float32", always_2d=False)
     audio = np.asarray(audio, dtype=np.float32)
     if audio.ndim > 1:
         audio = audio.mean(axis=1)

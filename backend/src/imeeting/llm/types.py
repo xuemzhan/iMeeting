@@ -14,4 +14,8 @@ class TranscriptLine:
     end_ms: int | None = None
     segment_id: str = ""
     segment_ids: list[str] = field(default_factory=list)
+    #: 会议内稳定说话人键（改名不变），用于对齐重要程度
+    speaker_key: str | None = None
+    #: 说话人重要程度：1 关键（最高）| 2 次要 | 3 一般；None 表示未设置
+    speaker_importance: int | None = None
 

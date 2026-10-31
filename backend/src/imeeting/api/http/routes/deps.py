@@ -54,6 +54,8 @@ def _user_from_credentials(
     user = db.get(User, user_id)
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="用户不存在")
+    if payload.get("ver", 0) != user.auth_version:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="密码已修改，请重新登录")
     return _ensure_user_ready(
         user,
         allow_pending_password=allow_pending_password,
