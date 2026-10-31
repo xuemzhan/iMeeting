@@ -1,0 +1,426 @@
+{
+  "date": "2026-10-31",
+  "scope": "45 register entries at start of audit; not a claim that all guide prose was verified",
+  "documents": [
+    {
+      "id": "FA-DES-001",
+      "path": "docs/architecture/funasr-refactor.md",
+      "kind": "design",
+      "document_status": "proposed",
+      "correspondence": "部分目录分层已落地；全量导入和注册覆盖仍存在；按需导入方案未完成。",
+      "implementation_sources": [
+        "funasr/__init__.py",
+        "funasr/register.py",
+        "iMeeting/backend/src/imeeting/api/http/router.py"
+      ]
+    },
+    {
+      "id": "FA-PLN-001",
+      "path": "docs/production-optimization-plan.md",
+      "kind": "plan",
+      "document_status": "snapshot",
+      "correspondence": "主Python请求/解析/归档边界有代码及本轮回归；原生/GPU/容器/长稳待验边界保留。",
+      "implementation_sources": [
+        "funasr/utils/asgi_limits.py",
+        "funasr/utils/safe_parse.py",
+        "portable/extract_from_split.py"
+      ]
+    },
+    {
+      "id": "FA-PLN-002",
+      "path": "docs/community_growth_20k.md",
+      "kind": "plan",
+      "document_status": "historical",
+      "correspondence": "当期历史/证据材料；本轮不重跑原实验、不确认线上发布状态。",
+      "implementation_sources": []
+    },
+    {
+      "id": "FA-REV-001",
+      "path": "docs/production-evidence/prepush-review.md",
+      "kind": "review",
+      "document_status": "snapshot",
+      "correspondence": "当期历史/证据材料；本轮不重跑原实验、不确认线上发布状态。",
+      "implementation_sources": []
+    },
+    {
+      "id": "FA-RPT-001",
+      "path": "docs/rust-audio-optimization.md",
+      "kind": "report",
+      "document_status": "snapshot",
+      "correspondence": "Python/Rust缓冲入口和本轮缓冲回归对应；历史性能数字不复测。",
+      "implementation_sources": [
+        "funasr/utils/audio_buffer.py",
+        "runtime/rust/audio_buffer/src/lib.rs"
+      ]
+    },
+    {
+      "id": "FA-RPT-002",
+      "path": "docs/operations/funasr-com-site-release.md",
+      "kind": "report",
+      "document_status": "snapshot",
+      "correspondence": "当期历史/证据材料；本轮不重跑原实验、不确认线上发布状态。",
+      "implementation_sources": []
+    },
+    {
+      "id": "FA-EVD-001",
+      "path": "docs/production-evidence/README.md",
+      "kind": "evidence",
+      "document_status": "snapshot",
+      "correspondence": "当期历史/证据材料；本轮不重跑原实验、不确认线上发布状态。",
+      "implementation_sources": []
+    },
+    {
+      "id": "FA-DES-101",
+      "path": "docs/superpowers/specs/2026-07-26-funasr-product-deployment-hub-design.md",
+      "kind": "design",
+      "document_status": "historical",
+      "correspondence": "可定位站点/协议现行实现；原计划勾选、合并、发布状态未在本轮重验。",
+      "implementation_sources": [
+        "web-pages/product-site/build.py",
+        "runtime/docs/onnxruntime_binary_output.md"
+      ]
+    },
+    {
+      "id": "FA-DES-102",
+      "path": "docs/superpowers/specs/2026-07-27-rtx4090-community-benchmark-design.md",
+      "kind": "design",
+      "document_status": "historical",
+      "correspondence": "可定位站点/协议现行实现；原计划勾选、合并、发布状态未在本轮重验。",
+      "implementation_sources": [
+        "web-pages/product-site/build.py",
+        "runtime/docs/onnxruntime_binary_output.md"
+      ]
+    },
+    {
+      "id": "FA-DES-103",
+      "path": "docs/superpowers/specs/2026-08-03-funasr-binary-json-timestamps-design.md",
+      "kind": "design",
+      "document_status": "historical",
+      "correspondence": "可定位站点/协议现行实现；原计划勾选、合并、发布状态未在本轮重验。",
+      "implementation_sources": [
+        "web-pages/product-site/build.py",
+        "runtime/docs/onnxruntime_binary_output.md"
+      ]
+    },
+    {
+      "id": "FA-DES-104",
+      "path": "docs/superpowers/specs/2026-09-06-comprehensive-documentation.md",
+      "kind": "design",
+      "document_status": "historical",
+      "correspondence": "可定位站点/协议现行实现；原计划勾选、合并、发布状态未在本轮重验。",
+      "implementation_sources": [
+        "web-pages/product-site/build.py",
+        "runtime/docs/onnxruntime_binary_output.md"
+      ]
+    },
+    {
+      "id": "FA-DES-105",
+      "path": "docs/superpowers/specs/2026-09-06-docs-product-redesign.md",
+      "kind": "design",
+      "document_status": "historical",
+      "correspondence": "可定位站点/协议现行实现；原计划勾选、合并、发布状态未在本轮重验。",
+      "implementation_sources": [
+        "web-pages/product-site/build.py",
+        "runtime/docs/onnxruntime_binary_output.md"
+      ]
+    },
+    {
+      "id": "FA-PLN-101",
+      "path": "docs/superpowers/plans/2026-07-26-funasr-product-deployment-hub-implementation.md",
+      "kind": "plan",
+      "document_status": "historical",
+      "correspondence": "可定位站点/协议现行实现；原计划勾选、合并、发布状态未在本轮重验。",
+      "implementation_sources": [
+        "web-pages/product-site/build.py",
+        "runtime/docs/onnxruntime_binary_output.md"
+      ]
+    },
+    {
+      "id": "FA-PLN-102",
+      "path": "docs/superpowers/plans/2026-07-27-rtx4090-community-benchmark.md",
+      "kind": "plan",
+      "document_status": "historical",
+      "correspondence": "可定位站点/协议现行实现；原计划勾选、合并、发布状态未在本轮重验。",
+      "implementation_sources": [
+        "web-pages/product-site/build.py",
+        "runtime/docs/onnxruntime_binary_output.md"
+      ]
+    },
+    {
+      "id": "FA-PLN-103",
+      "path": "docs/superpowers/plans/2026-08-03-funasr-binary-json-timestamps.md",
+      "kind": "plan",
+      "document_status": "historical",
+      "correspondence": "可定位站点/协议现行实现；原计划勾选、合并、发布状态未在本轮重验。",
+      "implementation_sources": [
+        "web-pages/product-site/build.py",
+        "runtime/docs/onnxruntime_binary_output.md"
+      ]
+    },
+    {
+      "id": "FA-PLN-104",
+      "path": "docs/superpowers/plans/2026-08-05-ecosystem-evidence-refresh.md",
+      "kind": "plan",
+      "document_status": "historical",
+      "correspondence": "可定位站点/协议现行实现；原计划勾选、合并、发布状态未在本轮重验。",
+      "implementation_sources": [
+        "web-pages/product-site/build.py",
+        "runtime/docs/onnxruntime_binary_output.md"
+      ]
+    },
+    {
+      "id": "FA-PLN-105",
+      "path": "docs/superpowers/plans/2026-09-06-comprehensive-documentation.md",
+      "kind": "plan",
+      "document_status": "historical",
+      "correspondence": "可定位站点/协议现行实现；原计划勾选、合并、发布状态未在本轮重验。",
+      "implementation_sources": [
+        "web-pages/product-site/build.py",
+        "runtime/docs/onnxruntime_binary_output.md"
+      ]
+    },
+    {
+      "id": "FA-PLN-106",
+      "path": "docs/superpowers/plans/2026-09-06-docs-product-redesign.md",
+      "kind": "plan",
+      "document_status": "historical",
+      "correspondence": "可定位站点/协议现行实现；原计划勾选、合并、发布状态未在本轮重验。",
+      "implementation_sources": [
+        "web-pages/product-site/build.py",
+        "runtime/docs/onnxruntime_binary_output.md"
+      ]
+    },
+    {
+      "id": "FA-RPT-003",
+      "path": "docs/vllm_native_funasr_validation.md",
+      "kind": "report",
+      "document_status": "snapshot",
+      "correspondence": "当期历史/证据材料；本轮不重跑原实验、不确认线上发布状态。",
+      "implementation_sources": []
+    },
+    {
+      "id": "FA-RPT-004",
+      "path": "docs/vllm_official_native_validation.md",
+      "kind": "report",
+      "document_status": "snapshot",
+      "correspondence": "当期历史/证据材料；本轮不重跑原实验、不确认线上发布状态。",
+      "implementation_sources": []
+    },
+    {
+      "id": "FA-RPT-005",
+      "path": "docs/vllm_official_native_validation_zh.md",
+      "kind": "report",
+      "document_status": "snapshot",
+      "correspondence": "当期历史/证据材料；本轮不重跑原实验、不确认线上发布状态。",
+      "implementation_sources": []
+    },
+    {
+      "id": "FA-RPT-006",
+      "path": "runtime/llama.cpp/BENCHMARKS.md",
+      "kind": "report",
+      "document_status": "historical",
+      "correspondence": "当期历史/证据材料；本轮不重跑原实验、不确认线上发布状态。",
+      "implementation_sources": []
+    },
+    {
+      "id": "FA-RPT-007",
+      "path": "benchmarks/benchmark_pipeline_cer.md",
+      "kind": "report",
+      "document_status": "historical",
+      "correspondence": "当期历史/证据材料；本轮不重跑原实验、不确认线上发布状态。",
+      "implementation_sources": []
+    },
+    {
+      "id": "FA-DES-002",
+      "path": "runtime/llama.cpp/DESIGN.md",
+      "kind": "design",
+      "document_status": "maintained",
+      "correspondence": "当期历史/证据材料；本轮不重跑原实验、不确认线上发布状态。",
+      "implementation_sources": []
+    },
+    {
+      "id": "FA-REV-002",
+      "path": "examples/REALTIME_ASR_FIX.md",
+      "kind": "review",
+      "document_status": "historical",
+      "correspondence": "当期历史/证据材料；本轮不重跑原实验、不确认线上发布状态。",
+      "implementation_sources": []
+    },
+    {
+      "id": "FA-RPT-201",
+      "path": "docs/benchmark/historical_asr.md",
+      "kind": "report",
+      "document_status": "historical",
+      "correspondence": "当期历史/证据材料；本轮不重跑原实验、不确认线上发布状态。",
+      "implementation_sources": []
+    },
+    {
+      "id": "FA-RPT-202",
+      "path": "docs/benchmark/historical_asr_ja.md",
+      "kind": "report",
+      "document_status": "historical",
+      "correspondence": "当期历史/证据材料；本轮不重跑原实验、不确认线上发布状态。",
+      "implementation_sources": []
+    },
+    {
+      "id": "FA-RPT-203",
+      "path": "docs/benchmark/historical_asr_ko.md",
+      "kind": "report",
+      "document_status": "historical",
+      "correspondence": "当期历史/证据材料；本轮不重跑原实验、不确认线上发布状态。",
+      "implementation_sources": []
+    },
+    {
+      "id": "FA-RPT-204",
+      "path": "docs/benchmark/historical_asr_zh.md",
+      "kind": "report",
+      "document_status": "historical",
+      "correspondence": "当期历史/证据材料；本轮不重跑原实验、不确认线上发布状态。",
+      "implementation_sources": []
+    },
+    {
+      "id": "FA-RPT-211",
+      "path": "runtime/docs/benchmark_libtorch.md",
+      "kind": "report",
+      "document_status": "historical",
+      "correspondence": "当期历史/证据材料；本轮不重跑原实验、不确认线上发布状态。",
+      "implementation_sources": []
+    },
+    {
+      "id": "FA-RPT-212",
+      "path": "runtime/docs/benchmark_libtorch_cpp.md",
+      "kind": "report",
+      "document_status": "historical",
+      "correspondence": "当期历史/证据材料；本轮不重跑原实验、不确认线上发布状态。",
+      "implementation_sources": []
+    },
+    {
+      "id": "FA-RPT-213",
+      "path": "runtime/docs/benchmark_onnx.md",
+      "kind": "report",
+      "document_status": "historical",
+      "correspondence": "当期历史/证据材料；本轮不重跑原实验、不确认线上发布状态。",
+      "implementation_sources": []
+    },
+    {
+      "id": "FA-RPT-214",
+      "path": "runtime/docs/benchmark_onnx_cpp.md",
+      "kind": "report",
+      "document_status": "historical",
+      "correspondence": "当期历史/证据材料；本轮不重跑原实验、不确认线上发布状态。",
+      "implementation_sources": []
+    },
+    {
+      "id": "IM-DES-001",
+      "path": "iMeeting/DESIGN.md",
+      "kind": "design",
+      "document_status": "historical",
+      "correspondence": "历史初始设计；目前已有更丰富的Python/React功能，不作为当前字段/API清单。",
+      "implementation_sources": []
+    },
+    {
+      "id": "IM-DES-002",
+      "path": "iMeeting/docs/architecture/project-structure.md",
+      "kind": "design",
+      "document_status": "maintained",
+      "correspondence": "当前api/application/engine及前端分层可定位；不是所有依赖方向的穷尽证明。",
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/api/http/router.py",
+        "iMeeting/frontend/src/app/App.tsx"
+      ]
+    },
+    {
+      "id": "IM-DES-003",
+      "path": "iMeeting/docs/architecture/native-rewrite-plan.md",
+      "kind": "design",
+      "document_status": "proposed",
+      "correspondence": "Go/C++重写仍为提案；现行后端为Python，不能将提案工期视为已执行。",
+      "implementation_sources": []
+    },
+    {
+      "id": "IM-REV-001",
+      "path": "iMeeting/OPTIMIZATION.md",
+      "kind": "review",
+      "document_status": "historical",
+      "correspondence": "早期优化历史；部分建议后来已实现，不能据此认定仍缺录音/续会/限流。",
+      "implementation_sources": []
+    },
+    {
+      "id": "IM-REV-002",
+      "path": "iMeeting/docs/production-review-2026-10-29.md",
+      "kind": "review",
+      "document_status": "snapshot",
+      "correspondence": "当期复核有回归依据；新增人员/模板路径发现权限和状态反例，不能外推为当前所有路径通过。",
+      "implementation_sources": [
+        "iMeeting/backend/tests/test_production_regressions.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ]
+    },
+    {
+      "id": "IM-REV-003",
+      "path": "iMeeting/docs/production-readiness.md",
+      "kind": "review",
+      "document_status": "maintained",
+      "correspondence": "当期复核有回归依据；新增人员/模板路径发现权限和状态反例，不能外推为当前所有路径通过。",
+      "implementation_sources": [
+        "iMeeting/backend/tests/test_production_regressions.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ]
+    },
+    {
+      "id": "IM-EVD-001",
+      "path": "iMeeting/docs/audits/2026-10-29/README.md",
+      "kind": "evidence",
+      "document_status": "snapshot",
+      "correspondence": "当期历史/证据材料；本轮不重跑原实验、不确认线上发布状态。",
+      "implementation_sources": []
+    },
+    {
+      "id": "IM-REQ-001",
+      "path": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "kind": "requirement",
+      "document_status": "draft",
+      "correspondence": "数据/接口/部分UI已实现，自动接线、同名幂等、标签传播、限流/证据及部分UI未闭环；详见42条映射。",
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/frontend/src/components/ParticipantsPanel.tsx"
+      ]
+    },
+    {
+      "id": "IM-REQ-002",
+      "path": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "kind": "requirement",
+      "document_status": "draft",
+      "correspondence": "模板与冲突组件已实现；确认/停启/作用域/兼容/删除/硬约束及主交互有反例；详见41条映射。",
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py"
+      ]
+    },
+    {
+      "id": "IM-RPT-001",
+      "path": "iMeeting/benchmarks/asr_model_upgrade_20261017/REPORT.md",
+      "kind": "report",
+      "document_status": "snapshot",
+      "correspondence": "当期历史/证据材料；本轮不重跑原实验、不确认线上发布状态。",
+      "implementation_sources": []
+    },
+    {
+      "id": "IM-RPT-002",
+      "path": "iMeeting/docs/reports/2026-10-31-person-voiceprint-progress.md",
+      "kind": "report",
+      "document_status": "snapshot",
+      "correspondence": "原阶段记录中代码位置存在；测试数字是当期结果，不能覆盖本轮发现；真实模型测量未复跑。",
+      "implementation_sources": []
+    },
+    {
+      "id": "FA-RPT-008",
+      "path": "docs/governance/2026-10-31-document-audit.md",
+      "kind": "report",
+      "document_status": "snapshot",
+      "correspondence": "上轮文档规制结果；路径/哈希检查不证明软件功能验收通过。",
+      "implementation_sources": []
+    }
+  ]
+}

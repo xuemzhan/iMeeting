@@ -38,3 +38,5 @@
 | IM-EVD-008 | [模板合并验证证据](reviews/evidence/2026-11-01-template-merge/README.md) | 阶段快照 | 722 项后端回归、Ruff 与合并用例（服务层+接口层） |
 
 报告列表见[报告索引](reports/README.md)，新增和归档规则见[子项目文档规制](governance/README.md)。最新修复结果查 IM-RPT-007、IM-RPT-006 与 IM-RPT-005；旧模型数据与漏洞扫描仍只在各期原范围内有效，本次未生产部署。
+
+联合工作区的核查材料已并入本仓库：修复计划在 [plans/](plans/)，原核查在[代码与文档对应性核查](reviews/2026-10-31-code-document-gap-review.md)，逐条追溯证据在[原始证据](reviews/evidence/2026-10-31-gap-review/)。跨工作区的全量台账（含 FunASR 侧文档）仍由根目录 `docs/governance/` 维护，不随本次迁移。

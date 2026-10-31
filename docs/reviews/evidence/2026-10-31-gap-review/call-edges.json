@@ -1,0 +1,26 @@
+{
+  "date": "2026-10-31",
+  "scope": "AST direct-call names in imeeting runtime Python; interpreted together with source searches and caller review",
+  "calls": [
+    {
+      "path": "iMeeting/backend/src/imeeting/api/http/routes/persons.py",
+      "line": 123,
+      "callee": "extract_people"
+    },
+    {
+      "path": "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py",
+      "line": 189,
+      "callee": "evaluate_confirm"
+    },
+    {
+      "path": "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py",
+      "line": 216,
+      "callee": "apply_decision"
+    },
+    {
+      "path": "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py",
+      "line": 289,
+      "callee": "apply_decision"
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "date": "2026-10-31",
+  "runs": [
+    {
+      "scope": "existing iMeeting targeted backend",
+      "cwd": "iMeeting",
+      "passed": 126,
+      "warnings": 32,
+      "seconds": 76.21,
+      "exit_code": 0
+    },
+    {
+      "scope": "existing FunASR boundaries and import",
+      "cwd": ".",
+      "passed": 51,
+      "warnings": 1,
+      "seconds": 22.85,
+      "exit_code": 0
+    },
+    {
+      "scope": "iMeeting frontend",
+      "cwd": "iMeeting/frontend",
+      "passed": 86,
+      "test_files": 11,
+      "exit_code": 0
+    },
+    {
+      "scope": "iMeeting frontend typecheck",
+      "exit_code": 0
+    },
+    {
+      "scope": "explicit audit probes --runxfail",
+      "failed": 15,
+      "passed": 1,
+      "warnings": 4,
+      "seconds": 10.8,
+      "exit_code": 1,
+      "raw": "iMeeting/docs/reviews/evidence/2026-10-31/gap-probes-observed.xml"
+    }
+  ],
+  "commands_documented_in": "docs/reviews/evidence/2026-10-31/README.md",
+  "unverified": [
+    "real models and annotated acceptance corpora",
+    "GPU",
+    "Docker/TLS",
+    "new vulnerability-database scan",
+    "target concurrency and 24h stability"
+  ]
+}

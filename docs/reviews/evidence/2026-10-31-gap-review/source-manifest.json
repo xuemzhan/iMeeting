@@ -1,0 +1,290 @@
+{
+  "date": "2026-10-31",
+  "scope": "reviewed source/document anchors and referenced tests, before subsequent status-index annotations; not a released commit",
+  "files": [
+    {
+      "path": "benchmarks/benchmark_pipeline_cer.md",
+      "sha256": "537a385c9e685d472172a0ae185e13db3b8fa446c36209cf3e838efd00499c5a"
+    },
+    {
+      "path": "docs/architecture/funasr-refactor.md",
+      "sha256": "92dba04a91ec83da6ef56a3e36caf6c3b790be3d747767f499837494b1d50f28"
+    },
+    {
+      "path": "docs/benchmark/historical_asr.md",
+      "sha256": "d62be016836104095a5445393bc14e74a62e2f1a05f0a5046bd7d0eddf585704"
+    },
+    {
+      "path": "docs/benchmark/historical_asr_ja.md",
+      "sha256": "51ec3ff4dbf7e07e94811960770660c591e31c136c8232e30a3fc7791431488c"
+    },
+    {
+      "path": "docs/benchmark/historical_asr_ko.md",
+      "sha256": "9362a3c2017f3df12cb9b158c5473b6ef43e18002e855a182706531ebf20f414"
+    },
+    {
+      "path": "docs/benchmark/historical_asr_zh.md",
+      "sha256": "1d59cdf7903c30ce932f1faecf9598265abd200bbb6a6f9490e36b202ea2dcfa"
+    },
+    {
+      "path": "docs/community_growth_20k.md",
+      "sha256": "7d8812fb033e5ac2d78f865614429551dd3c332b2462db7bffb1f835270f0369"
+    },
+    {
+      "path": "docs/governance/2026-10-31-document-audit.md",
+      "sha256": "ec8782e852aadd784c7332eaf79514888125a42ea957146f51d662af45ef7fd5"
+    },
+    {
+      "path": "docs/operations/funasr-com-site-release.md",
+      "sha256": "6820eccce6f93c60c8b575d9be6a903169032f703bdb80ef45837f1122809364"
+    },
+    {
+      "path": "docs/production-evidence/prepush-review.md",
+      "sha256": "3bb8c70f088256a2ff8c3b7fd2b2f29a1ec51c5366050d1031416d4a72557baf"
+    },
+    {
+      "path": "docs/production-evidence/README.md",
+      "sha256": "9a3c3bafae4dd2427fcd4fad934685d9d8c468fcd299ccd469c14e4a31c32e7e"
+    },
+    {
+      "path": "docs/production-optimization-plan.md",
+      "sha256": "1f76ede76fa767d7addf1eafb32599b344741181658fe683d111583542234017"
+    },
+    {
+      "path": "docs/rust-audio-optimization.md",
+      "sha256": "d09918fc1c18c6319c52c4c434cd95d3ec93ca8f55d5bfa4d0f9d85858f4d135"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-07-26-funasr-product-deployment-hub-implementation.md",
+      "sha256": "d9b0cc00ec591e07b806088f5c7973e35b74b99ad27e94e26452b08a209b1afb"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-07-27-rtx4090-community-benchmark.md",
+      "sha256": "bbe8ca25d58d31a8384039135f35c5bf18244c54634d23b6dab6b19350e7122a"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-08-03-funasr-binary-json-timestamps.md",
+      "sha256": "f163cc10545afbf2c3ae0cdcb39c814c16f862b1b44fb6c08a6ccd9862782112"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-08-05-ecosystem-evidence-refresh.md",
+      "sha256": "61df05f59f5f532e731e234ca16d8bf83733c0391baaa2d52ab706473c8b66f7"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-09-06-comprehensive-documentation.md",
+      "sha256": "6c2fc6fd59c5494b63b9744d769c06addaedea68fe0c0c81c1c04c3cde4d3b4a"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-09-06-docs-product-redesign.md",
+      "sha256": "a653c78af7044cee7a8ee1fdcc975c04aacec7a3829bd64565f4c3108be72285"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-07-26-funasr-product-deployment-hub-design.md",
+      "sha256": "c72f59ac8db69a1f16583c4fcbab0ec98a1c73ddefe5a460263610e7b62503ac"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-07-27-rtx4090-community-benchmark-design.md",
+      "sha256": "80a82e70666e33b4a77ea320d3ae295ff8f4d91c6e55d83a2c0fb618615933c2"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-08-03-funasr-binary-json-timestamps-design.md",
+      "sha256": "959f76500f029fa5d4eeb8dfd0a5ce33d1757f74152c368ea14fdfec92338278"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-09-06-comprehensive-documentation.md",
+      "sha256": "b497790a3fedf83b13359b85a250623757a4a17d62d7d17426164b0dd387e29e"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-09-06-docs-product-redesign.md",
+      "sha256": "95c975379402892dd4728ec51797fdbf924062bd3855b812e6bae9532b4fbc1e"
+    },
+    {
+      "path": "docs/vllm_native_funasr_validation.md",
+      "sha256": "e8f348b0f473769e1ece224d881edcd03ce897e99bcd17918068ab97fbeb1583"
+    },
+    {
+      "path": "docs/vllm_official_native_validation.md",
+      "sha256": "e8d9c5d15ba73596653d49cecacf2843c1bb472a0ff48ebfe1d435107039d97c"
+    },
+    {
+      "path": "docs/vllm_official_native_validation_zh.md",
+      "sha256": "29716d13e7f80cfbe3bd8b65f91102890fd701885a63cae817d0b085ef95a8cf"
+    },
+    {
+      "path": "examples/REALTIME_ASR_FIX.md",
+      "sha256": "55f8a66738c26bf8f0f105ae722d75d0138d44b7c743802782e12275b47d091b"
+    },
+    {
+      "path": "funasr/__init__.py",
+      "sha256": "2e14bea49617caf22b22db64c51da367ee15f686d23cade0c905b1bf5c43d64c"
+    },
+    {
+      "path": "funasr/register.py",
+      "sha256": "996e9043491bbc8b7fd2047b01f8fd2274c48cfa999f79c5c5273daa345606d8"
+    },
+    {
+      "path": "funasr/utils/asgi_limits.py",
+      "sha256": "c9e96552441ac0de8153e22dcf4bcfd983943f002214a76fc3936f69a97fea7b"
+    },
+    {
+      "path": "funasr/utils/audio_buffer.py",
+      "sha256": "c7c774ef0daf17bc71e66e8a87d4b88308370cf9bbd6e043aa3af77a8362c72e"
+    },
+    {
+      "path": "funasr/utils/safe_parse.py",
+      "sha256": "6e709c7cfcdd28da3196a64d6c1f05a4e7a95d8868da95481975784a3dda350c"
+    },
+    {
+      "path": "iMeeting/backend/src/imeeting/api/http/routes/persons.py",
+      "sha256": "b60a1667f7f1fef6a5fe312aba3ee9b70c3460de061a10ac043ed95a0f03ff0c"
+    },
+    {
+      "path": "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py",
+      "sha256": "183be1a694544434769b1fbba3737d8ff5bcb7a0babc1a061def11f6305d9534"
+    },
+    {
+      "path": "iMeeting/backend/src/imeeting/api/http/routes/voiceprints.py",
+      "sha256": "7438f0467c2d610b0128303bf1d4fa7e5401fca169f8579ff765164fea8b111d"
+    },
+    {
+      "path": "iMeeting/backend/src/imeeting/api/ws/stream.py",
+      "sha256": "324f13b151632e7d274480bba138e1fdecdd6a395fb09209bcadac754d4b05f7"
+    },
+    {
+      "path": "iMeeting/backend/src/imeeting/application/jobs.py",
+      "sha256": "0f45e5a5e9921f25cda9a532df21e7116859db48532fb4f380e832cab800172f"
+    },
+    {
+      "path": "iMeeting/backend/src/imeeting/db.py",
+      "sha256": "871875915db0135e33487c20550990271f3e7c408776b4dc0573cc4598621b64"
+    },
+    {
+      "path": "iMeeting/backend/src/imeeting/engine/speaker.py",
+      "sha256": "dc38fca09091cf152b4dbcdc132f0aafe129725110fc6e72b337b21e518ba5a5"
+    },
+    {
+      "path": "iMeeting/backend/src/imeeting/engine/voice_match.py",
+      "sha256": "a83e521c242edffe6a8ce0824cd094110a7e884b8bd634dee4eb32bfe928fa82"
+    },
+    {
+      "path": "iMeeting/backend/src/imeeting/engine/voice_template.py",
+      "sha256": "c068329d7c0a12d687def0d1f4a78a4cf01b6ff8f7df1e7343a08d4c8f6db9af"
+    },
+    {
+      "path": "iMeeting/backend/src/imeeting/meeting_meta.py",
+      "sha256": "66dd6b3ae9e9dc06583b7e5c3551fc9d0d2a98f29086aef655f9f0fbcf219b72"
+    },
+    {
+      "path": "iMeeting/backend/src/imeeting/models.py",
+      "sha256": "86bdff3c1c5ffacdf4f478885862a822131dc7f844818ce2944c7da226f29940"
+    },
+    {
+      "path": "iMeeting/backend/src/imeeting/person_extract.py",
+      "sha256": "4a2d1b622b1cc4dca0704d46b9a388269d7cc4a63c3adf0af24e2ce21022f753"
+    },
+    {
+      "path": "iMeeting/backend/src/imeeting/persons.py",
+      "sha256": "86fc50ed66f1034c8bcb86ff68aa034ac03b7a7143a5916d297326294dbf1023"
+    },
+    {
+      "path": "iMeeting/backend/src/imeeting/settings.py",
+      "sha256": "7e7be52a7b0b2f21b60f4e422da0c40d619eb35f6a1415ca7098fe4d7cd6a125"
+    },
+    {
+      "path": "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py",
+      "sha256": "2f0b32f971db2f3ad9e84a26066822e4a093fbb141e239d82f21663b324cdd35"
+    },
+    {
+      "path": "iMeeting/backend/tests/test_person_ontology.py",
+      "sha256": "d21afb20c54899ace9052e771b038e64d36d651580577fdb7759d88b428a94a8"
+    },
+    {
+      "path": "iMeeting/backend/tests/test_voice_templates.py",
+      "sha256": "103da85fe8d52118b98ef8594f3ce80934bad1c4c30bac3f5a86406597e619d0"
+    },
+    {
+      "path": "iMeeting/benchmarks/asr_model_upgrade_20261017/REPORT.md",
+      "sha256": "ff78591c02413671ceccf55b737b2bbb2048437e201a90b0b22692dde53613ff"
+    },
+    {
+      "path": "iMeeting/DESIGN.md",
+      "sha256": "2fe0b2427061993f226cf45297db8e2c0dd7c2bbb22d60b143a733f269677511"
+    },
+    {
+      "path": "iMeeting/docs/architecture/native-rewrite-plan.md",
+      "sha256": "12baaf6ab449053ddb317ac27982870291f13edcaf0c20a09c079f529a656e83"
+    },
+    {
+      "path": "iMeeting/docs/architecture/project-structure.md",
+      "sha256": "7f5ba229e4de2d0ac7d28597b8fabf5ca2de68fd1767f926b412a2dabae07e07"
+    },
+    {
+      "path": "iMeeting/docs/audits/2026-10-29/README.md",
+      "sha256": "36ee8d52457c76b6898fb24db0c10ceb438bbf265f192faf6de712f51d809e64"
+    },
+    {
+      "path": "iMeeting/docs/production-readiness.md",
+      "sha256": "53370f39edd06b6226cf00fae619624cda3b5bafffccc99cc95fb4c50ddac429"
+    },
+    {
+      "path": "iMeeting/docs/production-review-2026-10-29.md",
+      "sha256": "2d687de6fe21446361c8ac94b388d8b731a0b8bbf4fdbbfc656be1778dea510a"
+    },
+    {
+      "path": "iMeeting/docs/reports/2026-10-31-person-voiceprint-progress.md",
+      "sha256": "321ffcbd1dc47141ef0200b3d3a308774cc6b191d9e04374187a03ee20817d33"
+    },
+    {
+      "path": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "sha256": "777ab064f48153f16026376d4c102be60e0e415ced34ba061ad4eb2df75a36d4"
+    },
+    {
+      "path": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "sha256": "54baf19e7c76259e2e7c33e65f78fb026987be63b6a52a3bbdc5196dbdda8310"
+    },
+    {
+      "path": "iMeeting/frontend/src/api/client.ts",
+      "sha256": "cb69c0700803ff7fb3250b0ffeeb857def836de924e5dffce62f0542cac3af5b"
+    },
+    {
+      "path": "iMeeting/frontend/src/components/ParticipantsPanel.tsx",
+      "sha256": "fc2c4183acf7ece1378039ac36eb9cf16bc0ed42456870ab7bfe656f7e0d240b"
+    },
+    {
+      "path": "iMeeting/frontend/src/components/VoiceprintConflictList.tsx",
+      "sha256": "1e1d8d1856fb1187f6df0ed8a65ab41af3100b80e7ca6f127eea485b28c9c092"
+    },
+    {
+      "path": "iMeeting/OPTIMIZATION.md",
+      "sha256": "6694a85ae95037c6ce0ffae138fd891b4b42747d562198d175dd184933656b9a"
+    },
+    {
+      "path": "portable/extract_from_split.py",
+      "sha256": "ac4af6a7ab7b4fe11c20833eb29f332acb74bcb03ca5c4b0626ad521a4cf9b7e"
+    },
+    {
+      "path": "runtime/docs/benchmark_libtorch.md",
+      "sha256": "599580937e2e36033a337d09178469bc6a663d8a6b0b594c28577287f6808e58"
+    },
+    {
+      "path": "runtime/docs/benchmark_libtorch_cpp.md",
+      "sha256": "552d0520701e4c24d3c266a3157933d3e4d7c3f0233371ae5f789c90fb791aa6"
+    },
+    {
+      "path": "runtime/docs/benchmark_onnx.md",
+      "sha256": "3d37f3715ac868600cfbdb2f488e49bb8026ada7f048dffebb3330cdb2c90645"
+    },
+    {
+      "path": "runtime/docs/benchmark_onnx_cpp.md",
+      "sha256": "c7a1682c249d265002bb63a39b76d3f3a102d6293e7d3ece9c50470fe1a94bc0"
+    },
+    {
+      "path": "runtime/llama.cpp/BENCHMARKS.md",
+      "sha256": "9f5fba3eef82a2ce711a2a2f30bcb52a0ca3398d64a0928faa5cd40c928e156d"
+    },
+    {
+      "path": "runtime/llama.cpp/DESIGN.md",
+      "sha256": "dec8dcb4f4c54bb4f87f552095c7b4b950bfc11fb876c3364963d7c283fe3b1e"
+    }
+  ]
+}

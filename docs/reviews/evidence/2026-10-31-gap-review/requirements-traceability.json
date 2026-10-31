@@ -1,0 +1,1817 @@
+{
+  "date": "2026-10-31",
+  "scope": "83 explicitly numbered FR/AC table rows; prose, non-numbered requirements and original performance claims are discussed separately in review",
+  "status_note": "implemented-component does not mean full requirement accepted",
+  "rows": [
+    {
+      "requirement": "REQ-001",
+      "clause": "FR-1.1",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 129,
+      "original_row": "| FR-1.1 | 开场窗口结束时触发一次抽取（沿用 `meeting.metadata_capture_minutes`，默认 3 分钟） | 窗口内转写 ≥ `meeting.metadata_min_chars`（30 字）时必定触发一次 |",
+      "status": "missing-integration",
+      "assessment": "开场/定稿/周期均未接抽取主链路；0间隔语义需统一。",
+      "gaps": [
+        "GAP-02"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-001",
+      "clause": "FR-1.2",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 130,
+      "original_row": "| FR-1.2 | 会中增量触发：命中介绍句式且该片段为定稿（`is_final`）时，追加一次抽取 | 句式表：`我是/我叫/这位是/这是/给大家介绍/介绍一下/来自/负责` + 姓名候选；同一 `speaker_key` 5 分钟内不重复触发 |",
+      "status": "missing-integration",
+      "assessment": "开场/定稿/周期均未接抽取主链路；0间隔语义需统一。",
+      "gaps": [
+        "GAP-02"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-001",
+      "clause": "FR-1.3",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 131,
+      "original_row": "| FR-1.3 | 会中每 N 分钟（新配置 `person.extract_interval_minutes`，默认 5，0=关闭）兜底扫描一次新转写 | 关闭后不再自动抽取，手动按钮仍可用 |",
+      "status": "missing-integration",
+      "assessment": "开场/定稿/周期均未接抽取主链路；0间隔语义需统一。",
+      "gaps": [
+        "GAP-02"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-001",
+      "clause": "FR-1.4",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 132,
+      "original_row": "| FR-1.4 | 手动“重新识别参会人”按钮 | 单场会议手动触发限流：≤1 次 / 30 秒，≤10 次 / 场 |",
+      "status": "missing",
+      "assessment": "手动接口无30秒和10次限流，连续两次均200。",
+      "gaps": [
+        "GAP-09"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-001",
+      "clause": "FR-1.5",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 133,
+      "original_row": "| FR-1.5 | 抽取只看“介绍上下文”，不做全文扫描 | 每次送入 LLM 的文本 ≤3000 字符：窗口内文本 + 命中句式前后各 2 句 |",
+      "status": "partial",
+      "assessment": "上下文与3000字符裁剪存在；先读取全场，无增量游标。",
+      "gaps": [
+        "GAP-02"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-001",
+      "clause": "FR-2.1",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 162,
+      "original_row": "| FR-2.1 | `name` 长度 2–32，必须出现在 evidence 的 `quote` 原文里（防幻觉）；否则整条丢弃 |",
+      "status": "partial",
+      "assessment": "简单证据检查存在；长quote能插入原文没有的姓名；长度与规范不同。",
+      "gaps": [
+        "GAP-07",
+        "GAP-08"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-001",
+      "clause": "FR-2.2",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 163,
+      "original_row": "| FR-2.2 | `evidence.segment_id` 必须属于本场会议，且 `quote` 与片段文本有 ≥80% 的字符重合（去标点后子串匹配） |",
+      "status": "partial",
+      "assessment": "简单证据检查存在；长quote能插入原文没有的姓名；长度与规范不同。",
+      "gaps": [
+        "GAP-07",
+        "GAP-08"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-001",
+      "clause": "FR-2.3",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 164,
+      "original_row": "| FR-2.3 | 属性值长度 ≤64，`category`/`key` 必须在白名单内，超白名单丢弃属性而非整条 |",
+      "status": "partial",
+      "assessment": "有白名单，属性裁剪128而非64；嵌套字段缺严格schema。",
+      "gaps": [
+        "GAP-08"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-001",
+      "clause": "FR-2.4",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 165,
+      "original_row": "| FR-2.4 | `confidence` 由 LLM 给出，服务端再与“证据完整度”相乘（有 evidence=×1.0，无=×0.5）；最终 <0.4 的记录进入 `pending` 且默认不展示，仅在“查看全部候选”里可见 |",
+      "status": "missing",
+      "assessment": "confidence_floor未使用，前端仅过滤rejected。",
+      "gaps": [],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-001",
+      "clause": "FR-2.5",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 166,
+      "original_row": "| FR-2.5 | LLM 未配置/超时/非法 JSON 时：走规则兜底——正则 `(?:我是|我叫|这位是|这是|介绍一下)[，,]?\\s*([\\u4e00-\\u9fa5]{2,4})` 抽姓名，`confidence=0.3`，`source=rule`，并在日志与本场审计中标注降级 |",
+      "status": "partial",
+      "assessment": "无LLM/顶层非法JSON可回退，内部非法字段仍抛异常。",
+      "gaps": [
+        "GAP-08"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-001",
+      "clause": "FR-2.6",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 167,
+      "original_row": "| FR-2.6 | 单次调用计入 `LLMUsage`，`purpose=\"person_extract\"`，便于成本看板归集 |",
+      "status": "implemented-component",
+      "assessment": "LLM调用有meeting_id及purpose=person_extract；自动触发待接。",
+      "gaps": [
+        "GAP-02"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-001",
+      "clause": "FR-3.1",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 173,
+      "original_row": "| FR-3.1 | 姓名归一：去空格/全角转半角/去称谓后缀（“主任”“工”“老师”“总”） | 归一只用于匹配，展示名保留原样 |",
+      "status": "implemented-component",
+      "assessment": "归一化有函数与测试；展示名也被归一，不是始终保留原样。",
+      "gaps": [],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-001",
+      "clause": "FR-3.2",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 174,
+      "original_row": "| FR-3.2 | 对齐顺序：① 精确展示名 → ② 精确别名 → ③ 拼音相同且同单位 → ④ 同会议 `speaker_key` 已有绑定 → ⑤ 新建 Person | 每步命中即停止，避免过度合并 |",
+      "status": "partial",
+      "assessment": "首次同名不同单位可区分，重复单位乙新增第三人；绑定对齐不完整。",
+      "gaps": [
+        "GAP-06"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-001",
+      "clause": "FR-3.3",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 175,
+      "original_row": "| FR-3.3 | 同名不同人：同名且单位/职务冲突 → `ambiguous=1`，两条均标 `pending`，提示用户“请用单位/职务区分” | 未确认前不自动合并 |",
+      "status": "partial",
+      "assessment": "首次同名不同单位可区分，重复单位乙新增第三人；绑定对齐不完整。",
+      "gaps": [
+        "GAP-06"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-001",
+      "clause": "FR-3.4",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 176,
+      "original_row": "| FR-3.4 | 生成 `pinyin` 字段（声母+韵母，无声调）供检索与模糊匹配 | 无需引入新依赖：可用 `pypinyin`，或退化为字符 bigram |",
+      "status": "partial",
+      "assessment": "有依赖时使用拼音，缺失时退化规范字符键；完整检索待验。",
+      "gaps": [],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-001",
+      "clause": "FR-3.5",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 177,
+      "original_row": "| FR-3.5 | 每位 Person 的展示名唯一性：全局唯一约束只在 `status=active` 范围内生效 | 避免与已合并/已删除实体撞名 |",
+      "status": "contradiction",
+      "assessment": "全状态owner+display_name唯一，不是仅active的部分索引。",
+      "gaps": [],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-001",
+      "clause": "FR-4.1",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 183,
+      "original_row": "| FR-4.1 | 幂等：同一 `(meeting_id, person_id, attribute category+key)` 重复抽取只更新时间与置信度，不新增行 |",
+      "status": "partial",
+      "assessment": "普通幂等测试通过，同名不同单位反例不幂等。",
+      "gaps": [
+        "GAP-06"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-001",
+      "clause": "FR-4.2",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 184,
+      "original_row": "| FR-4.2 | 所有属性写入必须带 `source`、`confidence`、`evidence`、`meeting_id`；无证据的人工修改标 `source=manual` |",
+      "status": "implemented-component",
+      "assessment": "属性含source/confidence/evidence/meeting_id，来源链有待场景验收。",
+      "gaps": [],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-001",
+      "clause": "FR-4.3",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 185,
+      "original_row": "| FR-4.3 | 写库前先写 `AuditLog`（`action=\"person_extract\"` / `\"person_confirm\"` / `\"person_merge\"`），payload 含 person_id 与变更字段 |",
+      "status": "partial",
+      "assessment": "业务写入后再添加审计；先审计要求和事务语义需澄清。",
+      "gaps": [],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-001",
+      "clause": "FR-4.4",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 186,
+      "original_row": "| FR-4.4 | 兼容字段回写：抽取成功后按 `PERSON.display_name` 拼接回写 `Meeting.participants`（≤1000 字符，超出截断并记录日志），保证老前端与导出不受影响 |",
+      "status": "partial",
+      "assessment": "sync存在，meeting_meta/backfill另行写字符串，缺唯一投影写入者。",
+      "gaps": [
+        "GAP-10"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-001",
+      "clause": "FR-4.5",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 187,
+      "original_row": "| FR-4.5 | 事务边界：单场会议的一次抽取作为一个事务；失败整体回滚，不产生半条人员 |",
+      "status": "implemented-component",
+      "assessment": "session_scope内写入事务存在；LLM期间持有会话，并发/重试待验。",
+      "gaps": [],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-001",
+      "clause": "FR-5.1",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 193,
+      "original_row": "| FR-5.1 | LLM 必须区分“介绍人”与“被介绍人”：`introduced_by_speaker` 记录介绍者，被介绍者不默认为介绍者 |",
+      "status": "partial",
+      "assessment": "提示词区分介绍者，validate未保留introduced_by_speaker字段。",
+      "gaps": [],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-001",
+      "clause": "FR-5.2",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 194,
+      "original_row": "| FR-5.2 | 绑定来源优先级：人工指定 > LLM 明确指名（“张主任您先说”这类同句指代，P1）> 声纹相似（REQ-002）> 无绑定 |",
+      "status": "partial",
+      "assessment": "人工bind可改已有段，人物/声纹/实时resolver未统一。",
+      "gaps": [
+        "GAP-10"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-001",
+      "clause": "FR-5.3",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 195,
+      "original_row": "| FR-5.3 | 绑定落 `MEETING_PARTICIPANT.speaker_key`；绑定后本场转写该 key 的标签展示为 `person.display_name` |",
+      "status": "partial",
+      "assessment": "人工bind可改已有段，人物/声纹/实时resolver未统一。",
+      "gaps": [
+        "GAP-10"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-001",
+      "clause": "FR-5.4",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 196,
+      "original_row": "| FR-5.4 | 解绑/改绑必须回溯更新本场片段标签（复用现有 `relabel` 语义），并在审计中记录 |",
+      "status": "partial",
+      "assessment": "rename后已有标签不变，解绑/活跃会话传播未闭环。",
+      "gaps": [
+        "GAP-10"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-001",
+      "clause": "FR-5.5",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 197,
+      "original_row": "| FR-5.5 | 一个 `speaker_key` 在同一会议内只能绑定一位 Person；冲突时以最后一次人工操作为准并提示 |",
+      "status": "implemented-component",
+      "assessment": "绑定清理同key前一人，有会议+key唯一约束与普通重绑测试。",
+      "gaps": [],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-001",
+      "clause": "FR-6.1",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 203,
+      "original_row": "| FR-6.1 | 横幅逐条展示：姓名 + 首要属性（单位·职务）+ 状态徽标（待确认/已确认/有歧义）+ 证据跳转 |",
+      "status": "partial",
+      "assessment": "有紧凑姓名/属性摘要，缺完整属性编辑与证据跳转。",
+      "gaps": [
+        "GAP-16"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-001",
+      "clause": "FR-6.2",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 204,
+      "original_row": "| FR-6.2 | 单条操作：确认、编辑（姓名/属性）、删除（`state=rejected`，不再出现在横幅，但保留审计） |",
+      "status": "partial",
+      "assessment": "可确认、改名和reject，尚无完整属性编辑。",
+      "gaps": [
+        "GAP-16"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-001",
+      "clause": "FR-6.3",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 205,
+      "original_row": "| FR-6.3 | 批量操作：全部确认；把两条候选合并为同一 Person；把一条候选拆分为新 Person |",
+      "status": "missing",
+      "assessment": "无批量确认/合并/拆分主UI；拆分P1范围需统一。",
+      "gaps": [
+        "GAP-16"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-001",
+      "clause": "FR-6.4",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 206,
+      "original_row": "| FR-6.4 | 编辑姓名触发别名逻辑：旧名写入 `PERSON_ALIAS`（`source=manual`），展示名更新 |",
+      "status": "implemented-component",
+      "assessment": "改名保存旧名manual别名，标签传播另有缺口。",
+      "gaps": [
+        "GAP-10"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-001",
+      "clause": "FR-6.5",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 207,
+      "original_row": "| FR-6.5 | 已确认（`confirmed`）的记录再次抽取时不得被自动改写，只允许人工再次修改 |",
+      "status": "partial",
+      "assessment": "确认状态不降级和manual属性保护存在；confirmed但原LLM属性仍可被更新。",
+      "gaps": [],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-001",
+      "clause": "FR-6.6",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 208,
+      "original_row": "| FR-6.6 | 任何人工操作即时生效（`<500ms` 界面反馈），网络失败回滚并提示 |",
+      "status": "needs-validation",
+      "assessment": "有乐观更新/错误提示，500ms及并发回滚未验。",
+      "gaps": [],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-001",
+      "clause": "AC-1",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 275,
+      "original_row": "| AC-1 | 开场抽取 | 识别出 4 位介绍对象，姓名召回 ≥ 90%，且不得把寒暄句里的人名风格词当成姓名（误建 Person ≤ 1） |",
+      "status": "needs-validation",
+      "assessment": "未重验12分钟标注fixture的召回/属性正确率，不能用mock替代。",
+      "gaps": [],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-001",
+      "clause": "AC-2",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 276,
+      "original_row": "| AC-2 | 属性正确性 | 单位/职务字段与 fixture 标注一致率 ≥ 80% |",
+      "status": "needs-validation",
+      "assessment": "未重验12分钟标注fixture的召回/属性正确率，不能用mock替代。",
+      "gaps": [],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-001",
+      "clause": "AC-3",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 277,
+      "original_row": "| AC-3 | 幻觉防护 | 构造“LLM 返回原文没有的姓名”的 mock，该条必须被丢弃，且审计记录 `declined_reason=evidence_mismatch` |",
+      "status": "partial",
+      "assessment": "简单幻觉测试通过；长quote插入姓名失败。",
+      "gaps": [
+        "GAP-07"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-001",
+      "clause": "AC-4",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 278,
+      "original_row": "| AC-4 | 幂等 | 对同一场会议连续执行抽取 3 次，`person` 与 `person_attribute` 行数不增长 |",
+      "status": "partial",
+      "assessment": "普通幂等/首次冲突有测试，重复单位乙新增人员。",
+      "gaps": [
+        "GAP-06"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-001",
+      "clause": "AC-5",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 279,
+      "original_row": "| AC-5 | 别名 | 把“王工”改为“王建国”后，`王工` 出现在该 Person 的 `person_alias`，再次抽取命中同一 Person，不新建 |",
+      "status": "implemented-component",
+      "assessment": "改名/别名复用有函数测试，完整UI链路待验。",
+      "gaps": [],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-001",
+      "clause": "AC-6",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 280,
+      "original_row": "| AC-6 | 同名歧义 | 两条“李伟”均置 `ambiguous`，未确认时不被合并；补充单位确认后拆分为两个 Person |",
+      "status": "partial",
+      "assessment": "普通幂等/首次冲突有测试，重复单位乙新增人员。",
+      "gaps": [
+        "GAP-06"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-001",
+      "clause": "AC-7",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 281,
+      "original_row": "| AC-7 | 绑定 | 确认“张三”并绑定 `spk_a` 后，本场该 key 的片段标签变为“张三”，历史片段同步更新 |",
+      "status": "partial",
+      "assessment": "显式bind可回写已有段，rename后不同步，后续实时定稿待统一。",
+      "gaps": [
+        "GAP-10"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-001",
+      "clause": "AC-8",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 282,
+      "original_row": "| AC-8 | 降级 | 配置无 LLM key 时执行抽取，规则兜底给出姓名，接口 200，日志含 `degraded=true` |",
+      "status": "implemented-component",
+      "assessment": "规则兜底测试通过；内部非法值另有失败反例。",
+      "gaps": [
+        "GAP-08"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-001",
+      "clause": "AC-9",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 283,
+      "original_row": "| AC-9 | 兼容 | `GET /meetings/{id}` 的 `participants` 字符串与本体一致（顺序按重要程度、姓名） |",
+      "status": "partial",
+      "assessment": "sync可用，但多写入者交叉操作未验。",
+      "gaps": [
+        "GAP-10"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-001",
+      "clause": "AC-10",
+      "document": "iMeeting/docs/requirements/REQ-001-person-ontology.md",
+      "line": 284,
+      "original_row": "| AC-10 | 权限 | `REQUIRE_AUTH=1` 且未登录时接口 401；`=0` 时匿名可用，行为与现有接口一致 |",
+      "status": "partial",
+      "assessment": "登录门禁存在，对象归属未覆盖直接人员删/合并。",
+      "gaps": [
+        "GAP-01"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/person_extract.py",
+        "iMeeting/backend/src/imeeting/persons.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/persons.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_person_ontology.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-002",
+      "clause": "FR-1.1",
+      "document": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "line": 98,
+      "original_row": "| FR-1.1 | 每位 Person/Voiceprint 最多 **5 条**模板；达到上限时新增必须走“替换”流程并记录 `superseded_by` |",
+      "status": "partial",
+      "assessment": "应用最多五活跃槽，DB可直接插入slot5。",
+      "gaps": [
+        "GAP-14"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py",
+        "iMeeting/backend/src/imeeting/engine/speaker.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_voice_templates.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-002",
+      "clause": "FR-1.2",
+      "document": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "line": 99,
+      "original_row": "| FR-1.2 | 单人模板两两余弦相似度必须 **≤ 0.92**（`spk.template_merge_sim`）；超过则合并为质量更高的那条，不做第二条 |",
+      "status": "partial",
+      "assessment": ">=max(align,merge)更新行；未做全模板集合差异化验收。",
+      "gaps": [],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py",
+        "iMeeting/backend/src/imeeting/engine/speaker.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_voice_templates.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-002",
+      "clause": "FR-1.3",
+      "document": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "line": 100,
+      "original_row": "| FR-1.3 | 场景标签由**信号特征**推导，不允许让 LLM 猜（不可靠）：设备/信道来自采集参数；距离来自能量与 VAD；噪声来自 `segment.snr_db` / `noise_floor`；发声状态来自语速、能量方差、基频粗估 |",
+      "status": "partial",
+      "assessment": "按SNR/RMS/字速生成部分场景，设备/基频及实时场景未贯通。",
+      "gaps": [
+        "GAP-13"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py",
+        "iMeeting/backend/src/imeeting/engine/speaker.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_voice_templates.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-002",
+      "clause": "FR-1.4",
+      "document": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "line": 101,
+      "original_row": "| FR-1.4 | 每条模板必须带：`quality`、`sample_ms`、`snr_db`、`source_meeting_id`、`source_segment_id`、`confirmed_by`/`confirmed_at` |",
+      "status": "partial",
+      "assessment": "字段存在；source/confirmed_by允许缺失，确认sample_ms=0。",
+      "gaps": [],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py",
+        "iMeeting/backend/src/imeeting/engine/speaker.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_voice_templates.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-002",
+      "clause": "FR-1.5",
+      "document": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "line": 102,
+      "original_row": "| FR-1.5 | 未人工确认的模板 `confirmed=0`，只能在该会议作用域参与匹配（与现有 `provisional` 语义一致） |",
+      "status": "failed",
+      "assessment": "模板confirmed未限制跨会议查询。",
+      "gaps": [
+        "GAP-03"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py",
+        "iMeeting/backend/src/imeeting/engine/speaker.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_voice_templates.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "targeted-counterexample"
+    },
+    {
+      "requirement": "REQ-002",
+      "clause": "FR-2.1",
+      "document": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "line": 119,
+      "original_row": "| FR-2.1 | 只取定稿片段，且满足 `speech_ms ≥ spk.min_speech_ms`（1200ms）、`snr_db ≥ 10`、非纯噪声 |",
+      "status": "contradiction",
+      "assessment": "实测调整为SNR floor0、质量排序；应补决策更新需求。",
+      "gaps": [],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py",
+        "iMeeting/backend/src/imeeting/engine/speaker.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_voice_templates.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-002",
+      "clause": "FR-2.2",
+      "document": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "line": 120,
+      "original_row": "| FR-2.2 | 对同一 `speaker_key` 的向量做层次聚类（average linkage，cosine 距离，距离阈值 0.35 即相似度 0.65）；簇数 **k ≤ 5**，超出时用 farthest-first 保留 5 个中心簇 |",
+      "status": "contradiction",
+      "assessment": "质心相似度聚类及近簇合并，不是average-linkage/farthest-first。",
+      "gaps": [],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py",
+        "iMeeting/backend/src/imeeting/engine/speaker.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_voice_templates.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-002",
+      "clause": "FR-2.3",
+      "document": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "line": 121,
+      "original_row": "| FR-2.3 | 每簇质心 = 质量加权平均，权重 `w = min(1, speech_ms/3000) × snr_factor × (confirmed ? 1.2 : 1.0)` |",
+      "status": "partial",
+      "assessment": "质量为时长/SNR加权，不是规范乘积及confirmed系数。",
+      "gaps": [],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py",
+        "iMeeting/backend/src/imeeting/engine/speaker.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_voice_templates.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-002",
+      "clause": "FR-2.4",
+      "document": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "line": 122,
+      "original_row": "| FR-2.4 | 与新质心与已有模板对齐：`cos ≥ 0.85` 视为同场景 → 按样本数衰减滚动更新；否则作为新的场景候选 |",
+      "status": "contradiction",
+      "assessment": "对齐条件max(align,merge)，默认0.92而非0.85。",
+      "gaps": [],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py",
+        "iMeeting/backend/src/imeeting/engine/speaker.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_voice_templates.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-002",
+      "clause": "FR-2.5",
+      "document": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "line": 123,
+      "original_row": "| FR-2.5 | 超过 5 条时按 farthest-first 保留覆盖度最高的一组；被淘汰模板置 `superseded_by`（保留可回滚，不物理删除） |",
+      "status": "partial",
+      "assessment": "退役留痕存在；替换最低质量而非覆盖度算法。",
+      "gaps": [],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py",
+        "iMeeting/backend/src/imeeting/engine/speaker.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_voice_templates.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-002",
+      "clause": "FR-2.6",
+      "document": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "line": 124,
+      "original_row": "| FR-2.6 | 跨人暴露：任意两人的模板对 `cos ≥ 0.60` 时记为 `weak_pair`，写入校准报表（不阻塞） |",
+      "status": "missing",
+      "assessment": "未发现weak_pair校准报表生成链路。",
+      "gaps": [],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py",
+        "iMeeting/backend/src/imeeting/engine/speaker.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_voice_templates.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-002",
+      "clause": "FR-2.7",
+      "document": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "line": 125,
+      "original_row": "| FR-2.7 | 聚类是**幂等**的：同一场会议重复执行不改变最终模板集合（以 `source_meeting_id + 场景标签` 去重） |",
+      "status": "failed",
+      "assessment": "同来源重复store会继续混合质心。",
+      "gaps": [
+        "GAP-11"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py",
+        "iMeeting/backend/src/imeeting/engine/speaker.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_voice_templates.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "targeted-counterexample"
+    },
+    {
+      "requirement": "REQ-002",
+      "clause": "FR-3.1",
+      "document": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "line": 131,
+      "original_row": "| FR-3.1 | Stage 0 上下文短路：本会话该 `speaker_key` 已绑定 person 且 `bound_confidence ≥ 0.9` 时直接命中，不做向量计算 |",
+      "status": "missing-integration",
+      "assessment": "无Person绑定置信度驱动的Stage0短路。",
+      "gaps": [
+        "GAP-10",
+        "GAP-13"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py",
+        "iMeeting/backend/src/imeeting/engine/speaker.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_voice_templates.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-002",
+      "clause": "FR-3.2",
+      "document": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "line": 132,
+      "original_row": "| FR-3.2 | Stage 1 粗筛：模板数 ≥ `spk.stage1_min_templates`（默认 50）时，先按场景桶过滤（同桶优先、允许回退），再算向量点积；输出候选 ≤ 200（`spk.stage1_topk`） |",
+      "status": "partial",
+      "assessment": "先全矩阵点乘再筛选；没有大库P95验收。",
+      "gaps": [
+        "GAP-13"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py",
+        "iMeeting/backend/src/imeeting/engine/speaker.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_voice_templates.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-002",
+      "clause": "FR-3.3",
+      "document": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "line": 133,
+      "original_row": "| FR-3.3 | Stage 2 融合打分：`score = w1*s_emb + w2*s_scene + w3*s_dur + w4*s_ctx`，默认 `w1=0.85, w2=0.05, w3=0.05, w4=0.05` |",
+      "status": "partial",
+      "assessment": "函数有融合维度，实时封装未传场景/时长/上下文。",
+      "gaps": [
+        "GAP-13"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py",
+        "iMeeting/backend/src/imeeting/engine/speaker.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_voice_templates.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-002",
+      "clause": "FR-3.4",
+      "document": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "line": 134,
+      "original_row": "| FR-3.4 | `s_emb` 取该人所有模板的最大余弦；`s_scene` 为场景桶匹配度（全匹配 1.0，一维不同 0.6，全不同 0）；`s_dur` 按有效语音时长归一（<1s 记 0）；`s_ctx` 为上一句同人（+1）与姓名提及（+1，P1） |",
+      "status": "partial",
+      "assessment": "函数有融合维度，实时封装未传场景/时长/上下文。",
+      "gaps": [
+        "GAP-13"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py",
+        "iMeeting/backend/src/imeeting/engine/speaker.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_voice_templates.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-002",
+      "clause": "FR-3.5",
+      "document": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "line": 135,
+      "original_row": "| FR-3.5 | 决策：`≥τ_high(0.68)` 命中；`≤τ_low(0.55)` 未知；中间区间输出“疑似 X”并置 `speaker_low_confidence=1`，前端可一键确认 |",
+      "status": "partial",
+      "assessment": "有高低阈值；默认低阈值0.58而非0.55，主确认协议未接。",
+      "gaps": [
+        "GAP-13",
+        "GAP-16"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py",
+        "iMeeting/backend/src/imeeting/engine/speaker.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_voice_templates.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-002",
+      "clause": "FR-3.6",
+      "document": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "line": 136,
+      "original_row": "| FR-3.6 | Early-exit：Stage 1 的最佳候选 `≥ τ_high + 0.06` 且与次优差 `≥ spk.arbitration_margin(0.03)` 时跳过 Stage 2 |",
+      "status": "contradiction",
+      "assessment": "early-exit位于融合计算之后，不是跳过Stage2。",
+      "gaps": [],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py",
+        "iMeeting/backend/src/imeeting/engine/speaker.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_voice_templates.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-002",
+      "clause": "FR-3.7",
+      "document": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "line": 137,
+      "original_row": "| FR-3.7 | 所有阈值进配置（见 §10），改动后无需重启（沿用现有 `get_config` 热读） |",
+      "status": "implemented-component",
+      "assessment": "关键配置热读；wrapper未使用调用者threshold。",
+      "gaps": [
+        "GAP-13"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py",
+        "iMeeting/backend/src/imeeting/engine/speaker.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_voice_templates.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-002",
+      "clause": "FR-3.8",
+      "document": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "line": 138,
+      "original_row": "| FR-3.8 | 兼容：`match_enrolled` 保留为薄封装（当库内每人仅 1 条模板时行为与旧实现逐位一致，用回归用例锁定） |",
+      "status": "failed",
+      "assessment": "单模板余弦0.70旧命中，新融合0.62变疑似。",
+      "gaps": [
+        "GAP-13"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py",
+        "iMeeting/backend/src/imeeting/engine/speaker.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_voice_templates.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "targeted-counterexample"
+    },
+    {
+      "requirement": "REQ-002",
+      "clause": "FR-4.1",
+      "document": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "line": 159,
+      "original_row": "| FR-4.1 | `diverge and conflict` → **高冲突**：弹出阻塞式确认（不可静默通过），必须三选一 |",
+      "status": "missing-integration",
+      "assessment": "评估API存在，旧relabel未进入协议，confirmSample无组件调用者。",
+      "gaps": [
+        "GAP-16"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py",
+        "iMeeting/backend/src/imeeting/engine/speaker.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_voice_templates.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-002",
+      "clause": "FR-4.2",
+      "document": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "line": 160,
+      "original_row": "| FR-4.2 | 仅 `diverge` 或仅 `conflict` → **建议核对**：非阻塞黄色提示，默认动作需二次点击确认 |",
+      "status": "missing-integration",
+      "assessment": "评估API存在，旧relabel未进入协议，confirmSample无组件调用者。",
+      "gaps": [
+        "GAP-16"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py",
+        "iMeeting/backend/src/imeeting/engine/speaker.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_voice_templates.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-002",
+      "clause": "FR-4.3",
+      "document": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "line": 161,
+      "original_row": "| FR-4.3 | 都不成立 → 静默确认，直接更新/新增模板并写审计 |",
+      "status": "missing-integration",
+      "assessment": "评估API存在，旧relabel未进入协议，confirmSample无组件调用者。",
+      "gaps": [
+        "GAP-16"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py",
+        "iMeeting/backend/src/imeeting/engine/speaker.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_voice_templates.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-002",
+      "clause": "FR-4.4",
+      "document": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "line": 162,
+      "original_row": "| FR-4.4 | 提示必须给出：`s_self`、`s_other`、对方姓名、样本来源（会议标题 + 时间 + 片段链接）、双方场景标签差异 |",
+      "status": "partial",
+      "assessment": "有分数/对方名，缺完整来源跳转及场景差异。",
+      "gaps": [
+        "GAP-16"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py",
+        "iMeeting/backend/src/imeeting/engine/speaker.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_voice_templates.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-002",
+      "clause": "FR-4.5",
+      "document": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "line": 163,
+      "original_row": "| FR-4.5 | 三选一：①确认为本人（模板 <5 时新建；=5 时提示选择替换哪条，默认淘汰覆盖度最低）②其实是别人（选择目标人，或新建 Person）③取消 |",
+      "status": "partial",
+      "assessment": "有三选一API，缺满槽位选择、新建Person和主UI闭环。",
+      "gaps": [
+        "GAP-16"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py",
+        "iMeeting/backend/src/imeeting/engine/speaker.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_voice_templates.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-002",
+      "clause": "FR-4.6",
+      "document": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "line": 164,
+      "original_row": "| FR-4.6 | 取消/重定向的样本写入 `voiceprint_conflict`（`status=cancelled/reassigned`），**不得**进入正式模板库 |",
+      "status": "contradiction",
+      "assessment": "cancel不入模板，reassign入目标模板；与AC-5语义冲突待裁定。",
+      "gaps": [],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py",
+        "iMeeting/backend/src/imeeting/engine/speaker.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_voice_templates.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-002",
+      "clause": "FR-4.7",
+      "document": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "line": 165,
+      "original_row": "| FR-4.7 | 对同一 `(person, other_person)` 组合连续两次选择“确认为本人”后，该组合标记 `tolerated`，后续同类不再弹高冲突（仍记录，可在设置里重置） |",
+      "status": "partial",
+      "assessment": "计数可降级为medium，仍生成pending；重置和UI未验。",
+      "gaps": [],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py",
+        "iMeeting/backend/src/imeeting/engine/speaker.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_voice_templates.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-002",
+      "clause": "FR-4.8",
+      "document": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "line": 166,
+      "original_row": "| FR-4.8 | 入模板前必须过质量门槛：`speech_ms ≥ 1200`、`snr_db ≥ 10`、非静音；人工确认的样本 `quality=1.0` |",
+      "status": "missing",
+      "assessment": "显式embedding可直接提交，未统一执行时长/SNR/非静音质量门槛。",
+      "gaps": [],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py",
+        "iMeeting/backend/src/imeeting/engine/speaker.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_voice_templates.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-002",
+      "clause": "FR-4.9",
+      "document": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "line": 167,
+      "original_row": "| FR-4.9 | 所有确认/重定向/替换写 `AuditLog`（`action`：`voiceprint_confirm` / `voiceprint_reassign` / `template_replace`），payload 含分数与选择结果 |",
+      "status": "partial",
+      "assessment": "确认路由有审计；template_replace与内部提前commit闭环不足。",
+      "gaps": [],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py",
+        "iMeeting/backend/src/imeeting/engine/speaker.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_voice_templates.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-002",
+      "clause": "FR-4.10",
+      "document": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "line": 168,
+      "original_row": "| FR-4.10 | 临时身份（provisional）确认同样走上述流程；确认后转正式身份，模板继承，`provisional=False` |",
+      "status": "failed",
+      "assessment": "confirm_self不更新父Voiceprint.provisional。",
+      "gaps": [
+        "GAP-05"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py",
+        "iMeeting/backend/src/imeeting/engine/speaker.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_voice_templates.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "targeted-counterexample"
+    },
+    {
+      "requirement": "REQ-002",
+      "clause": "AC-1",
+      "document": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "line": 283,
+      "original_row": "| AC-1 | 差异化模板 | 同一人 5 场景确认后模板数 ≤5，两两余弦 ≤0.92，Top-1 识别率 ≥95% |",
+      "status": "needs-validation",
+      "assessment": "五场景/近声纹/5000人库准确率、误报率、P95和历史回放未在本轮验收。",
+      "gaps": [],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py",
+        "iMeeting/backend/src/imeeting/engine/speaker.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_voice_templates.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-002",
+      "clause": "AC-2",
+      "document": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "line": 284,
+      "original_row": "| AC-2 | 上限与替换 | 第 6 次确认必须提示替换；替换后总数为 5，旧模板 `superseded_by` 非空且可回滚 |",
+      "status": "partial",
+      "assessment": "应用五槽替换留痕有测试，用户替换/恢复未闭环。",
+      "gaps": [
+        "GAP-04",
+        "GAP-16"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py",
+        "iMeeting/backend/src/imeeting/engine/speaker.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_voice_templates.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-002",
+      "clause": "AC-3",
+      "document": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "line": 285,
+      "original_row": "| AC-3 | 高冲突提示 | 对②中 A 的样本确认成 B 时，100% 触发高冲突，且提示里的“更像的人”必须是 A |",
+      "status": "partial",
+      "assessment": "高冲突函数模拟通过，真实相近声音和主入口阻断待验。",
+      "gaps": [
+        "GAP-16"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py",
+        "iMeeting/backend/src/imeeting/engine/speaker.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_voice_templates.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-002",
+      "clause": "AC-4",
+      "document": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "line": 286,
+      "original_row": "| AC-4 | 同人误报 | 同一人跨场景样本（s_self≈0.55 ≥0.45）不得触发高冲突，最多黄色建议；误报率 ≤10% |",
+      "status": "needs-validation",
+      "assessment": "五场景/近声纹/5000人库准确率、误报率、P95和历史回放未在本轮验收。",
+      "gaps": [],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py",
+        "iMeeting/backend/src/imeeting/engine/speaker.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_voice_templates.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-002",
+      "clause": "AC-5",
+      "document": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "line": 287,
+      "original_row": "| AC-5 | 重定向 | 选择“其实是别人”后，样本归入目标声纹，原声纹模板数不变，审计有记录 |",
+      "status": "implemented-component",
+      "assessment": "组件reassign/cancel测试通过；跨账号与主UI另有缺口。",
+      "gaps": [
+        "GAP-01",
+        "GAP-16"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py",
+        "iMeeting/backend/src/imeeting/engine/speaker.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_voice_templates.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-002",
+      "clause": "AC-6",
+      "document": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "line": 288,
+      "original_row": "| AC-6 | 取消不污染 | 取消后模板数与识别结果均不变，`voiceprint_conflict.status=cancelled` |",
+      "status": "implemented-component",
+      "assessment": "组件reassign/cancel测试通过；跨账号与主UI另有缺口。",
+      "gaps": [
+        "GAP-01",
+        "GAP-16"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py",
+        "iMeeting/backend/src/imeeting/engine/speaker.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_voice_templates.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-002",
+      "clause": "AC-7",
+      "document": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "line": 289,
+      "original_row": "| AC-7 | 性能 | ③库上识别 P95 ≤12ms；`confirm-sample` P95 ≤300ms（用脚本压测，结果贴进 PR） |",
+      "status": "needs-validation",
+      "assessment": "五场景/近声纹/5000人库准确率、误报率、P95和历史回放未在本轮验收。",
+      "gaps": [],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py",
+        "iMeeting/backend/src/imeeting/engine/speaker.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_voice_templates.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-002",
+      "clause": "AC-8",
+      "document": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "line": 290,
+      "original_row": "| AC-8 | 兼容回归 | 迁移后历史会议回放，Top-1 不得低于迁移前（逐条对比，允许 ±0.5% 抖动） |",
+      "status": "needs-validation",
+      "assessment": "五场景/近声纹/5000人库准确率、误报率、P95和历史回放未在本轮验收。",
+      "gaps": [],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py",
+        "iMeeting/backend/src/imeeting/engine/speaker.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_voice_templates.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-002",
+      "clause": "AC-9",
+      "document": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "line": 291,
+      "original_row": "| AC-9 | 临时身份 | `provisional` 声纹只在同会议命中；确认后跨会议生效，模板继承正确 |",
+      "status": "failed",
+      "assessment": "临时父身份过滤存在，确认未转正，不能跨会议。",
+      "gaps": [
+        "GAP-05"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py",
+        "iMeeting/backend/src/imeeting/engine/speaker.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_voice_templates.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "targeted-counterexample"
+    },
+    {
+      "requirement": "REQ-002",
+      "clause": "AC-10",
+      "document": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "line": 292,
+      "original_row": "| AC-10 | 离线与降级 | 模型未加载时识别返回未知且接口 200；断网全链路可用 |",
+      "status": "needs-validation",
+      "assessment": "基础无模型/边界检查存在；真实断网全链路与模型异常未验。",
+      "gaps": [],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py",
+        "iMeeting/backend/src/imeeting/engine/speaker.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_voice_templates.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "source-and-existing-tests; full business acceptance not implied"
+    },
+    {
+      "requirement": "REQ-002",
+      "clause": "AC-11",
+      "document": "iMeeting/docs/requirements/REQ-002-voiceprint-multiscene.md",
+      "line": 293,
+      "original_row": "| AC-11 | ≤5 硬约束 | 绕过服务层直接写库（模拟脚本）时，DB 层 `UNIQUE(voiceprint_id, slot)` 必须拒绝第 6 条 |",
+      "status": "failed",
+      "assessment": "DB可插入六个不同活跃slot。",
+      "gaps": [
+        "GAP-14"
+      ],
+      "implementation_sources": [
+        "iMeeting/backend/src/imeeting/engine/voice_template.py",
+        "iMeeting/backend/src/imeeting/engine/voice_match.py",
+        "iMeeting/backend/src/imeeting/engine/speaker.py",
+        "iMeeting/backend/src/imeeting/api/http/routes/voiceprint_templates.py"
+      ],
+      "test_sources": [
+        "iMeeting/backend/tests/test_voice_templates.py",
+        "iMeeting/backend/tests/audit_doc_code_gaps_20261031.py"
+      ],
+      "evidence_level": "targeted-counterexample"
+    }
+  ]
+}
