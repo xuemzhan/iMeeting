@@ -72,7 +72,7 @@ node scripts/responsive-probe.mjs --strict `
 
 - `npx playwright test e2e/responsive.spec.ts` → **14 passed**（会中断点用例自带登录取 token 与首次改密轮换，不再需要环境变量开关）。
 - 会中断点用例断言：1024 有 `role="separator"`、1023 双栏但无分隔条、390 只有当前标签且标签栏 3 项。
-- 全量 `npx playwright test` → **20 passed / 2 failed / 0 skipped**（两条失败为既有问题，已在改造前 HEAD 上复现）。
+- 全量 `npx playwright test` → **22 passed / 0 failed**（第五轮清掉了两条长期红的用例：chip `×` 直接删除属产品缺口、「取消声纹确认」属断言过期）。
 - CI：`.github/workflows/ci.yml` 的 frontend job 新增 `Responsive gate` 步骤（`vite preview --port 5173`
   + `npm run verify:responsive`）。该步骤只用构建产物、不依赖后端；本地已用同样方式（5174 端口）复跑通过。
 

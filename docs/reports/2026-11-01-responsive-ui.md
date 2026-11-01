@@ -21,6 +21,11 @@ admin 表格首列吸附。
 第三轮：字号 codemod（`scripts/codemod-font-scale.mjs`，408 处）、长列表性能实测与结论、
 `SharedMeeting`/`ChangePassword` 的 compact 内边距对齐。
 
+第四轮：History 筛选抽屉、详情页第四标签「导图」、会中断点 e2e 在 CI 真跑。
+
+第五轮：清掉两条长期红的 e2e —— 参会人 chip 补回 `×` 直接删除（产品缺口），
+「取消声纹确认」用例改为断言「不发写请求」（断言过期）；全量 e2e 首次 22 passed / 0 failed。
+
 关键结果：
 
 - 6 档视口 × 5 个页面（`/`、`/login`、`/history`、`/knowledge`、`/voiceprints`）**横向溢出全部为 0**；
@@ -61,6 +66,7 @@ admin 表格首列吸附。
 | 登录页（compact） | 内联 36px 主按钮 + 18px 文字按钮 | 44px，错误提示 `role="alert"` 且可换行 |
 | 详情页（compact） | 转写 + 纪要并排堆叠、待办/复核在下面，一屏要滚很久；脑图要点按钮开弹窗 | 底部四标签（转写 / 纪要 / 待办 / 导图），一次只显示一块；参会人并入「纪要」；脑图内嵌成一页 |
 | History 筛选行（compact） | 搜索 + 4 个下拉/输入折成三行 | 搜索常驻 +「筛选」按钮（显示生效计数）+ 可折叠面板；桌面仍是同一行（`md:contents`） |
+| 参会人 chip（各档） | chip 只能点确认；删除要先展开「明细」 | chip 内嵌 `×` 直接删除（`state=rejected`），不展开也能删；提示文案写明「点姓名确认，点 × 删除」 |
 | 会议页提示条（compact） | 三条提示全部展开，最多吃掉 3 行 | 折成一行 +「详情」展开，`role`/`aria-expanded` 齐全 |
 | History 批量条（compact） | 列表顶部，选中后要往上滚才点得到 | `sticky bottom-2` 浮层，滚动时始终可达 |
 | 后台审计表（≤1023） | 横向滚动后看不到「谁/哪一条」 | 首列 `position: sticky` 吸附 |
@@ -88,7 +94,7 @@ admin 表格首列吸附。
 | 构建 | `npm run build` | 通过（8.4s，产物 `dist/`） |
 | 响应式门禁 | `node scripts/responsive-probe.mjs --strict --paths /,/login,/history,/knowledge,/voiceprints` | **全部通过**（见 IM-EVD-012） |
 | 桌面功能验收 | `BASE_URL=http://localhost:5175 API_URL=http://127.0.0.1:8021 node scripts/verify-features.mjs` | **14/14**（临时 e2e 栈，`ASR_MODE=echo`） |
-| e2e 全量 | `npx playwright test` | **20 passed / 2 failed / 0 skipped**；两条失败在**改造前 HEAD 上同样复现**（`git stash` 对照），属既有问题 |
+| e2e 全量 | `npx playwright test` | **22 passed / 0 failed**（原 2 条既有失败已在本轮处理：一条是产品缺口、一条是用例断言过期，见 4.2） |
 | 响应式 e2e | `npx playwright test e2e/responsive.spec.ts` | 首页 6 档 + 登录页 6 档 + 顶栏折叠 + **会中断点**共 14 条全部通过（无溢出、CTA 唯一且 ≥56、触控 ≥40、输入 16px、1024 有分隔条 / 1023 双栏无分隔条 / 390 三标签） |
 | 详情页四标签（真机仿真） | 390×844 + 1440×900 实测 | 390：一次只显示一块、标签栏可见、溢出 0；1440：四块同时可见、标签栏不渲染 |
 | CI 门禁 | `.github/workflows/ci.yml` 的 `Responsive gate`（`vite preview` + `npm run verify:responsive`） | 已在本地用 `vite preview`（5174）复跑通过，确认不依赖后端 |
@@ -98,7 +104,18 @@ admin 表格首列吸附。
 
 后端未改一行代码，因此未重跑后端 766 项测试（本轮改动面 100% 在 `frontend/`）。
 
-### 4.1 本轮发现并修复的一处回归
+### 4.2 两条既有 e2e 失败的处理
+
+这两条从本轮之前就一直红，本轮查清并分别处理：
+
+| 用例 | 真实原因 | 处理 |
+|---|---|---|
+| `participant-controls: 参会人一行可直接删除识别错的人` | **产品缺口**：`docs/reports/2026-11-01-participant-controls.md` 写明「chip 内增加 × 删除，不展开明细也能删」，但代码里 chip 只有确认、删除仍只在展开的明细行 —— 文档描述的行为后来丢了 | 按文档意图实现：chip 改为容器 + 姓名按钮 + `×` 删除按钮（`aria-label="删除参会人 X"`，写入 `state=rejected`）。compact 下 chip 32px、`×` 32px；桌面保持 20px chip |
+| `identity-confirmation: cancel` | **用例断言过期**：`client.ts` 在 0f189b4 里改成「取消在发请求之前就拦下」（后端不识别 cancel），所以取消不会产生任何写请求，而用例仍断言会发 `decision: 'cancel'` | 改用例：取消时断言 `decisions == []`，其余（弹窗关闭、说话人保持「原说话人」）不变 |
+
+处理后全量 e2e 首次全绿（22 passed / 0 failed）。
+
+### 4.3 本轮发现并修复的另一处回归
 
 新增详情页第四标签时，`MindMapPanel` 直接把接口返回值交给 `<MindMap>`；而 e2e 的兜底路由
 对未知接口会返回 `[]`，导致 `MindMap` 读 `root.label` 抛错、整页掉进错误边界
@@ -113,7 +130,7 @@ admin 表格首列吸附。
 | 仍写死的字号 | **少量残留** | codemod 按护栏跳过了 21 处「同一 className 里已有 `md:`/`max-md:` 字号」的写法（如 `text-[11px] max-md:text-[12px]`）。这些位置已经各自处理过窄屏值，语义化收益为零，保持原样更安全 |
 | 长会议虚拟滚动（方案 4.6） | **实测后不做** | 200/500/1000/2000 段实测：挂载 13–23ms、滚动帧间隔 p95 = 11ms（≈90fps）、无长任务，未达方案设定的「<50fps 或长任务 >200ms」门槛。harness 是临时的（测完已删），设备为桌面 Chrome 引擎仿真，真机仍需按 A10 复核 |
 | 真机 iOS Safari / Android Chrome（A10） | **未做** | 无真机。已用 Chromium 设备仿真 + 假麦克风覆盖布局与三标签，真机仍需按第 4 节的清单人工过一遍 |
-| 会中断点 e2e 的账号前提 | **已自动化** | 用例自己按「测试账号阶梯」用 API 登录；遇到首次改密状态会顺手轮换口令再重登，因此不依赖 auth 用例的执行顺序，CI 可直接跑（全量 20 passed / 2 failed / 0 skipped） |
+| 会中断点 e2e 的账号前提 | **已自动化** | 用例自己按「测试账号阶梯」用 API 登录；遇到首次改密状态会顺手轮换口令再重登，因此不依赖 auth 用例的执行顺序，CI 可直接跑（全量 22 passed / 0 failed） |
 | 平板横屏 1024×768 归 wide 档 | **已知取舍** | 1024 按方案归 wide（32px 控件）。iPad 横屏用鼠标/触控笔没问题，纯手指操作时控件偏小；若要覆盖，需把 1024 单独成档，属方案变更 |
 ## 6 回滚
 

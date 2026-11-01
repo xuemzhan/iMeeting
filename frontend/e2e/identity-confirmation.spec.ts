@@ -52,7 +52,9 @@ for (const mode of ['cancel', 'confirm_self', 'reassign', 'confirm_self_full', '
     else if (decision === 'confirm_self') await dialog.getByRole('button', { name: '确认为本人', exact: true }).click()
     else await dialog.getByRole('button', { name: '改为选中的人', exact: true }).click()
     await expect(dialog).not.toBeVisible()
-    expect(decisions).toEqual([decision])
+    // 「取消」在 client.ts 里于发请求之前就被拦下（后端只把 decision 当「跳过 409 检查」
+    // 的开关，不识别 cancel），因此取消不该产生任何写请求。
+    expect(decisions).toEqual(decision === 'cancel' ? [] : [decision])
     const expected = decision === 'cancel' ? '原说话人' : decision === 'reassign' ? '另一位参会人' : '张三'
     await expect(page.getByTitle('点击可改为真实姓名')).toHaveText(expected)
     await page.getByRole('button', { name: '展开明细', exact: true }).click()

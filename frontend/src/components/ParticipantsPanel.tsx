@@ -131,6 +131,7 @@ export function ParticipantsPanel({ meetingId, pollMs = 0, compact = false }: Pr
               key={row.person_id}
               row={row}
               onConfirm={() => void controller.setState(row.person_id, 'confirmed')}
+              onReject={() => void controller.setState(row.person_id, 'rejected')}
             />
           ))}
         </span>
@@ -280,29 +281,53 @@ function IconButton({
  * 高度走类而不是内联：桌面仍是 20px（与改造前一致），compact 抬到 32，
  * 横滑时更容易点中。
  */
-function ParticipantChip({ row, onConfirm }: { row: MeetingParticipantItem; onConfirm: () => void }) {
+function ParticipantChip({
+  row,
+  onConfirm,
+  onReject,
+}: {
+  row: MeetingParticipantItem
+  onConfirm: () => void
+  onReject: () => void
+}) {
   const isPending = row.state === 'pending'
   const label = row.speaker.length > 8 ? `${row.speaker.slice(0, 8)}…` : row.speaker
+  const summary = summarizeAttributes(row.attributes)
   return (
-    <button
-      type="button"
-      onClick={isPending ? onConfirm : undefined}
-      title={
-        isPending
-          ? `${row.speaker}｜点击确认是参会人`
-          : `${row.speaker}${summarizeAttributes(row.attributes) ? `（${summarizeAttributes(row.attributes)}）` : ''}`
-      }
-
-      className="chip h-5 max-w-[120px] truncate max-md:h-8"
+    <span
+      className="chip h-5 max-w-[140px] gap-1 pl-2 pr-1 max-md:h-8"
       style={{
         background: isPending ? 'var(--warn-soft)' : 'var(--accent-soft)',
         color: isPending ? 'var(--warn-text)' : 'var(--accent-text)',
-        cursor: isPending ? 'pointer' : 'default',
         textDecoration: row.ambiguous ? 'underline dotted' : undefined,
       }}
+      title={
+        isPending
+          ? `${row.speaker}｜点姓名确认，点 × 删除`
+          : `${row.speaker}${summary ? `（${summary}）` : ''}`
+      }
     >
-      {label}
-    </button>
+      <button
+        type="button"
+        onClick={isPending ? onConfirm : undefined}
+        className="min-w-0 truncate text-left"
+        style={{ background: 'transparent', color: 'inherit', cursor: isPending ? 'pointer' : 'default' }}
+      >
+        {label}
+      </button>
+      {/* 不展开明细也能删：现场最常见的就是「识别错了一个人」，要求用户先展开再说
+          是多此一举（2026-11-01 参会人控件修复里定下的行为）。 */}
+      <button
+        type="button"
+        onClick={onReject}
+        aria-label={`删除参会人 ${row.speaker}`}
+        title={`不是参会人：删除「${row.speaker}」`}
+        className="flex size-4 shrink-0 items-center justify-center rounded-full max-md:size-8"
+        style={{ background: 'transparent', color: 'inherit', opacity: 0.65 }}
+      >
+        <X size={10} />
+      </button>
+    </span>
   )
 }
 
