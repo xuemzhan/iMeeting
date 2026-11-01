@@ -16,6 +16,7 @@ import { useSession, formatDuration } from '../store/session'
 import { Waveform } from './Waveform'
 import { BrandMark } from './BrandMark'
 import { SettingsPanel } from './SettingsPanel'
+import { OverflowMenu } from './OverflowMenu'
 
 export function TopBar() {
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -36,13 +37,13 @@ export function TopBar() {
 
   return (
     <header
-      className="flex h-14 shrink-0 items-center gap-3 px-4"
+      className="flex h-14 shrink-0 items-center gap-3 px-4 max-md:gap-2 max-md:px-2.5"
       style={{ borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-surface)' }}
     >
-      {/* 品牌 */}
+      {/* 品牌：手机上只留图标（整串文字 15px 需要约 130px，挤掉标题与状态） */}
       <Link
         to="/"
-        className="flex items-center gap-2 text-[13px] font-medium no-underline"
+        className="flex min-w-0 items-center gap-2 text-[13px] font-medium no-underline"
         title="返回会议首页"
         onClick={() => {
           // 会议已结束时清掉上一次会话的片段与 meetingId，确保 Logo
@@ -52,18 +53,22 @@ export function TopBar() {
       >
         <BrandMark size={26} />
         <span
-          className="text-[15px] font-semibold tracking-tight"
+          className="truncate text-[15px] font-semibold tracking-tight max-md:hidden"
           style={{ color: 'var(--text-primary)' }}
         >
           总师会议智能伙伴
         </span>
       </Link>
 
-      <span className="h-4 w-px" style={{ background: 'var(--border-default)' }} aria-hidden />
+      <span
+        className="h-4 w-px max-md:hidden"
+        style={{ background: 'var(--border-default)' }}
+        aria-hidden
+      />
 
       {/* 会议标题（开始后可编辑） */}
       {status === 'idle' ? (
-        <span className="text-[13px] text-tertiary">未开始</span>
+        <span className="text-[13px] text-tertiary max-md:hidden">未开始</span>
       ) : (
         <input
           value={title}
@@ -72,7 +77,7 @@ export function TopBar() {
           onKeyDown={(e) => {
             if (e.key === 'Enter') e.currentTarget.blur()
           }}
-          className="max-w-[280px] rounded-md border border-transparent bg-transparent px-1.5 py-0.5 text-[13px] outline-none transition-colors hover:border-[var(--border-subtle)] focus:border-[var(--border-default)]"
+          className="max-w-[280px] rounded-md border border-transparent bg-transparent px-1.5 py-0.5 text-[13px] outline-none transition-colors hover:border-[var(--border-subtle)] focus:border-[var(--border-default)] max-md:min-w-0 max-md:flex-1 max-md:max-w-none max-md:text-[14px]"
           style={{ color: 'var(--text-primary)' }}
           aria-label="会议标题"
         />
@@ -90,33 +95,38 @@ export function TopBar() {
 
       <div className="flex-1" />
 
-      {/* 波形 */}
-      {(isRecording || isPaused) && <Waveform level={level} active={isRecording} />}
+      {/* 波形：手机上收起（与计时一起挤占标题宽度，且状态胶囊已表达「正在识别」） */}
+      {(isRecording || isPaused) && (
+        <span className="max-md:hidden">
+          <Waveform level={level} active={isRecording} />
+        </span>
+      )}
 
       {/* 麦克风信号指示：把「没声音」这件最容易误判的事显式说出来 */}
       {(isRecording || isPaused) && micAlive === false && (
         <span
-          className="flex items-center gap-1.5 rounded-full px-2 py-1 text-[11px] font-medium"
+          className="flex items-center gap-1.5 rounded-full px-2 py-1 text-[11px] font-medium max-md:size-2 max-md:shrink-0 max-md:p-0"
           style={{ background: 'var(--danger-soft)', color: 'var(--danger-text)' }}
           title="已连续数秒未采集到声音，请检查麦克风设备与静音开关"
         >
           <span className="size-1.5 rounded-full" style={{ background: 'var(--danger)' }} aria-hidden />
-          无声音输入
+          <span className="max-md:hidden">无声音输入</span>
         </span>
       )}
 
       {/* 状态胶囊 */}
       <StatusPill status={status} />
 
-      <Link to="/history" className="btn btn-ghost no-underline" title="历史会议">
+      {/* 导航入口：>=768 常驻；手机收进「更多」菜单（390px 下 5 个图标放不下） */}
+      <Link to="/history" className="btn btn-ghost no-underline max-md:hidden" title="历史会议">
         <History size={14} />
       </Link>
 
-      <Link to="/knowledge" className="btn btn-ghost no-underline" title="会议知识库">
+      <Link to="/knowledge" className="btn btn-ghost no-underline max-md:hidden" title="会议知识库">
         <BookOpen size={14} />
       </Link>
 
-      <Link to="/voiceprints" className="btn btn-ghost no-underline" title="声纹管理">
+      <Link to="/voiceprints" className="btn btn-ghost no-underline max-md:hidden" title="声纹管理">
         <AudioLines size={14} />
       </Link>
 
@@ -125,14 +135,20 @@ export function TopBar() {
       <button
         type="button"
         onClick={() => setSettingsOpen(true)}
-        className="btn btn-ghost"
+        className="btn btn-ghost max-md:hidden"
         title="设置"
         aria-label="设置"
       >
         <Settings size={14} />
       </button>
 
-      <AccountEntry user={user} />
+      <span className="max-md:hidden">
+        <AccountEntry user={user} />
+      </span>
+
+      <div className="md:hidden">
+        <OverflowMenu onOpenSettings={() => setSettingsOpen(true)} user={user} />
+      </div>
 
       <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </header>

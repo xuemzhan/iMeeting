@@ -1,7 +1,8 @@
-import { History, X } from 'lucide-react'
+import { History } from 'lucide-react'
 
 import type { Minutes } from '../api/types'
 import { MinutesVersionsPanel } from './MinutesVersionsPanel'
+import { Sheet } from './Sheet'
 
 /**
  * 纪要历史版本弹窗。
@@ -20,28 +21,24 @@ export function MinutesVersionsDialog({
   onClose: () => void
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-3">
-      <div
-        className="panel flex max-h-[86vh] w-full max-w-[1120px] flex-col overflow-hidden"
-        role="dialog"
-        aria-label="纪要历史版本"
-      >
-        <div className="panel-header">
+    <Sheet
+      onClose={onClose}
+      title={
+        <>
           <History size={14} style={{ color: 'var(--text-tertiary)' }} />
-          <h2>纪要历史版本</h2>
-          <span className="text-[11px] text-tertiary">
-            {versions.length > 0 ? `共 ${versions.length} 版` : '暂无版本'}
-          </span>
-          <button
-            type="button"
-            onClick={onClose}
-            className="btn btn-ghost ml-auto p-1"
-            aria-label="关闭"
-          >
-            <X size={15} />
-          </button>
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto">
+          纪要历史版本
+        </>
+      }
+      actions={
+        <span className="text-[11px] text-tertiary">
+          {versions.length > 0 ? `共 ${versions.length} 版` : '暂无版本'}
+        </span>
+      }
+      ariaLabel="纪要历史版本"
+      maxWidth={1120}
+      desktopHeight="86vh"
+      fullScreen
+    >
           <MinutesVersionsPanel
             versions={versions}
             embedded
@@ -50,8 +47,6 @@ export function MinutesVersionsDialog({
               onClose()
             }}
           />
-        </div>
-      </div>
-    </div>
+    </Sheet>
   )
 }

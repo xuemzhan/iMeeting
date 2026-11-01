@@ -13,6 +13,7 @@
 | IM-DES-003 | [Go + C++ 渐进式重写](architecture/native-rewrite-plan.md) | 提案 | 尚不能据此认定已迁移；排期是估算 |
 | IM-REQ-001 | [人员本体](requirements/REQ-001-person-ontology.md) | 需求草案 | P0 已有阶段实现，评审/验收与实现分别记录 |
 | IM-REQ-002 | [多场景声纹库](requirements/REQ-002-voiceprint-multiscene.md) | 需求草案 | 模板及 UI 已有实现；实时模板匹配仍默认关闭 |
+| IM-PLN-001 | [手机 / 平板自适应改造方案](plans/2026-11-01-responsive-ui-adaptation.md) | 已实施（P0–P3、P5 主体） | 断点/令牌/逐页改造/验收口径；落地结果见 IM-RPT-009 |
 
 需求依赖和未决问题见[需求索引](requirements/README.md)。新实施计划放入 `docs/plans/YYYY-MM-DD-topic.md`，关联需求与设计，阶段结果另写报告。
 
@@ -42,6 +43,9 @@
 | IM-EVD-009 | [全面审查验证证据](reviews/evidence/2026-11-01-comprehensive-review/README.md) | 阶段快照 | 审查当时的 743 项后端测试原始输出（2 失败）、Ruff、前端四项检查与 4 个独立探针 |
 | IM-RPT-008 | [2026-11-01 全面审查问题修复](reports/2026-11-01-comprehensive-review-fixes.md) | 阶段快照 | 11 项逐条处置、行为变化与影响面、未完成项 |
 | IM-EVD-010 | [修复验证证据](reviews/evidence/2026-11-01-comprehensive-review-fixes/README.md) | 阶段快照 | 修复后的后端 765 项全绿、Ruff、前端四项检查与 0 断链结果 |
+| IM-RPT-009 | [2026-11-01 手机/平板自适应改造](reports/2026-11-01-responsive-ui.md) | 阶段快照 | P0–P3、P5 主体落地；6 档视口零溢出、触控 ≥44、1440 验收 14/14；未完成项逐条列出 |
+| IM-EVD-011 | [改造前基线](reviews/evidence/2026-11-01-responsive-baseline/README.md) | 阶段快照 | 改造前四视口量测（390px 溢出 +25px、CTA 2 个）与 4 张截图 |
+| IM-EVD-012 | [改造后验证证据](reviews/evidence/2026-11-01-responsive/README.md) | 阶段快照 | 6 档 × 5 页探针输出、会中 390px 三标签截图、门禁与桌面验收结果 |
 
 报告列表见[报告索引](reports/README.md)，新增和归档规则见[子项目文档规制](governance/README.md)。最新修复结果查 IM-RPT-007、IM-RPT-006 与 IM-RPT-005；旧模型数据与漏洞扫描仍只在各期原范围内有效，本次未生产部署。
 

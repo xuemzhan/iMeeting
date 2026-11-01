@@ -26,14 +26,20 @@ export function ControlBar() {
     <div className="flex w-full flex-wrap items-center justify-center gap-3">
       {isIdle && (
         <>
-          {/* 开始前也能选设备：避免「开始会议→发现没声音→退出重来」 */}
-          <DeviceSelector />
+          {/* 开始前也能选设备：避免「开始会议→发现没声音→退出重来」。
+              手机上收起：设备选择器 + 主按钮在 360px 会折成两行，把页脚撑到 125px；
+              窄屏改从「更多 → 设置 → 麦克风」选设备，页脚只留一个大按钮。 */}
+          <span className="max-md:hidden">
+            <DeviceSelector />
+          </span>
 
+          {/* 手机档（<=767）：这块按钮是唯一入口，拇指可达；
+              >=768 交给 IdleHero 的大 CTA，避免同屏出现两个「开始会议」。 */}
           <button
             type="button"
             onClick={() => void start()}
             disabled={isBusy}
-            className="group flex items-center gap-3 rounded-full py-2.5 pr-6 pl-2.5 transition-transform active:scale-[0.97] disabled:opacity-60"
+            className="group flex items-center gap-3 rounded-full py-2.5 pr-6 pl-2.5 transition-transform active:scale-[0.97] disabled:opacity-60 md:hidden"
             style={{ background: 'var(--accent)', color: '#fff' }}
           >
             <span className="flex size-9 items-center justify-center rounded-full bg-white/15">
@@ -41,7 +47,7 @@ export function ControlBar() {
             </span>
             <span className="text-left">
               <span className="block text-[14px] font-medium">开始会议</span>
-              <span className="block text-[11px] opacity-75">点击即可，无需任何配置</span>
+              <span className="block text-[11px] opacity-75 max-md:text-[12px]">点击即可，无需任何配置</span>
             </span>
           </button>
         </>
@@ -65,15 +71,18 @@ export function ControlBar() {
 
       {(isRecording || isPaused) && (
         <>
-          {/* 设备选择器：会议中也能切，选错设备时用户不必退出重来 */}
-          <DeviceSelector />
+          {/* 设备选择器：会议中也能切，选错设备时用户不必退出重来。
+              手机上同样收进「更多 → 设置 → 麦克风」，避免底栏折成两行。 */}
+          <span className="max-md:hidden">
+            <DeviceSelector />
+          </span>
 
           {/* 主操作组 */}
           <button
             type="button"
             onClick={togglePause}
             className="btn"
-            style={{ height: 40, paddingInline: 18 }}
+            style={{ height: 'var(--control-h)', paddingInline: 18 }}
             title={isPaused ? '继续 (Space)' : '暂停 (Space)'}
           >
             {isPaused ? <Play size={15} /> : <Pause size={15} />}
@@ -87,7 +96,7 @@ export function ControlBar() {
             type="button"
             onClick={finalizeCurrent}
             className="btn"
-            style={{ height: 40, paddingInline: 16 }}
+            style={{ height: 'var(--control-h)', paddingInline: 16 }}
             title="立即结束当前句，触发出稿 (F)"
           >
             <Scissors size={15} />
@@ -106,7 +115,7 @@ export function ControlBar() {
             onClick={() => void stop()}
             className="btn"
             style={{
-              height: 40,
+              height: 'var(--control-h)',
               paddingInline: 20,
               background: 'var(--danger)',
               borderColor: 'var(--danger)',

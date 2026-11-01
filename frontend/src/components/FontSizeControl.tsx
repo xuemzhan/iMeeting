@@ -29,7 +29,7 @@ export function FontSizeControl({ value, onChange, label, disabled }: Props) {
 
   return (
     <div
-      className="flex shrink-0 items-center gap-0.5"
+      className="font-size-control flex shrink-0 items-center gap-0.5"
       role="group"
       aria-label={`${label}字号`}
     >

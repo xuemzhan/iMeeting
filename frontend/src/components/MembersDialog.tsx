@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Loader2, Plus, Trash2, Users, X } from 'lucide-react'
+import { Loader2, Plus, Trash2, Users } from 'lucide-react'
 import { meetingApi } from '../api/client'
+import { Sheet } from './Sheet'
 
 interface Member {
   user_id: number
@@ -33,16 +34,16 @@ export function MembersDialog({
   }, [meetingId])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
-      <div className="panel w-full max-w-[520px] p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-[14px] font-medium">
-            <Users size={14} /> 会议协作权限
-          </h2>
-          <button type="button" onClick={onClose} className="p-1 text-tertiary" aria-label="关闭">
-            <X size={15} />
-          </button>
-        </div>
+    <Sheet
+      onClose={onClose}
+      title={
+        <>
+          <Users size={14} /> 会议协作权限
+        </>
+      }
+      ariaLabel="会议协作权限"
+      maxWidth={520}
+    >
         <div className="mb-3 flex gap-2">
           <input
             value={username}
@@ -113,7 +114,6 @@ export function MembersDialog({
             </div>
           ))}
         </div>
-      </div>
-    </div>
+    </Sheet>
   )
 }

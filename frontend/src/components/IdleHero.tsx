@@ -66,7 +66,7 @@ export function IdleHero() {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col items-center overflow-y-auto px-6 py-8">
+    <div className="flex min-h-0 flex-1 flex-col items-center overflow-y-auto px-6 py-8 max-md:px-4 max-md:py-5">
       {/* 主体 */}
       <div className="w-full max-w-[640px]">
         {/* 标题区 */}
@@ -75,7 +75,7 @@ export function IdleHero() {
             <BrandMark size={48} />
           </div>
           <h1
-            className="text-[28px] font-semibold leading-tight tracking-tight"
+            className="text-[28px] font-semibold leading-tight tracking-tight max-md:text-[24px]"
             style={{ color: 'var(--text-primary)' }}
           >
             总师会议智能伙伴
@@ -90,7 +90,7 @@ export function IdleHero() {
         </div>
 
         {/* 特性卡片 */}
-        <div className="mb-6 grid grid-cols-3 gap-3">
+        <div className="mb-6 grid grid-cols-3 gap-3 max-md:mb-4 max-md:grid-cols-1 max-md:gap-2">
           <FeatureCard
             icon={<Mic size={16} />}
             title="实时转写"
@@ -109,10 +109,11 @@ export function IdleHero() {
         </div>
 
         {/* 开始按钮 */}
+        {/* 开始按钮：>=768 用这块大 CTA；手机隐藏，改由底部控制条承担（拇指可达，且避免两个相同按钮） */}
         <button
           type="button"
           onClick={() => void start()}
-          className="group flex w-full items-center justify-center gap-3 rounded-xl py-4 transition-all active:scale-[0.98] hover:shadow-md"
+          className="group flex w-full items-center justify-center gap-3 rounded-xl py-4 transition-all active:scale-[0.98] hover:shadow-md max-md:hidden"
           style={{
             background: 'var(--accent)',
             color: '#fff',
@@ -125,6 +126,14 @@ export function IdleHero() {
           <span className="text-[15px] font-medium">开始会议</span>
           <span className="text-[12px] opacity-70">点击即可，无需配置</span>
         </button>
+
+        {/* 手机端提示：真正的按钮在底部控制条 */}
+        <p
+          className="mb-4 hidden text-center text-[12px] max-md:block"
+          style={{ color: 'var(--text-tertiary)' }}
+        >
+          点下方「开始会议」即可，无需任何配置
+        </p>
 
         {scheduled.length > 0 && (
           <div className="mt-6">
@@ -234,7 +243,7 @@ export function IdleHero() {
         )}
 
         {/* 提示 */}
-        <div className="mt-6 flex items-center justify-center gap-4 text-[11px]" style={{ color: 'var(--text-tertiary)' }}>
+        <div className="mt-6 flex items-center justify-center gap-4 text-[11px] max-md:hidden" style={{ color: 'var(--text-tertiary)' }}>
           <span className="flex items-center gap-1">
             <span className="kbd">Space</span>
             暂停/继续
@@ -252,25 +261,29 @@ export function IdleHero() {
     </div>
   )
 }
-
 function FeatureCard({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
   return (
     <div
-      className="panel flex flex-col gap-1.5 px-3 py-3"
+      className="panel flex flex-col gap-1.5 px-3 py-3 max-md:flex-row max-md:items-center max-md:gap-2.5"
       style={{ borderRadius: 'var(--radius-card)' }}
     >
       <span
-        className="flex size-7 items-center justify-center rounded-lg"
+        className="flex size-7 shrink-0 items-center justify-center rounded-lg"
         style={{ background: 'var(--accent-soft)', color: 'var(--accent-text)' }}
       >
         {icon}
       </span>
-      <p className="text-[12px] font-medium" style={{ color: 'var(--text-primary)' }}>
-        {title}
-      </p>
-      <p className="text-[11px] leading-relaxed" style={{ color: 'var(--text-tertiary)' }}>
-        {desc}
-      </p>
+      <div className="min-w-0 max-md:flex-1">
+        <p className="text-[12px] font-medium max-md:text-[13px]" style={{ color: 'var(--text-primary)' }}>
+          {title}
+        </p>
+        <p
+          className="text-[11px] leading-relaxed max-md:text-[12px]"
+          style={{ color: 'var(--text-tertiary)' }}
+        >
+          {desc}
+        </p>
+      </div>
     </div>
   )
 }

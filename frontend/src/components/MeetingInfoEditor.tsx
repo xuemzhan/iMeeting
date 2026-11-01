@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Loader2, X } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { meetingApi } from '../api/client'
 import type { Meeting } from '../api/types'
+import { Sheet } from './Sheet'
 
 interface Props {
   meeting: Pick<
@@ -55,15 +56,8 @@ export function MeetingInfoEditor({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
-      <div className="panel w-full max-w-[520px] p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-[14px] font-medium">会议信息</h2>
-          <button type="button" onClick={onClose} aria-label="关闭" className="p-1 text-tertiary">
-            <X size={15} />
-          </button>
-        </div>
-        <p className="mb-3 text-[11px] text-tertiary">
+    <Sheet onClose={onClose} title="会议信息" ariaLabel="会议信息" maxWidth={520}>
+        <p className="mb-3 text-[11px] text-tertiary max-md:text-[12px]">
           会议开始后的前 {captureMinutes} 分钟可以说出主题、参会人和议程，
           系统会自动填充；也可以在这里手动修改。手动保存后自动提取不会覆盖。
         </p>
@@ -97,7 +91,6 @@ export function MeetingInfoEditor({
             保存
           </button>
         </div>
-      </div>
-    </div>
+    </Sheet>
   )
 }

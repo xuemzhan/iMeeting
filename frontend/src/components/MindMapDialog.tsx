@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Loader2, Network, Sparkles, X } from 'lucide-react'
+import { Loader2, Network, Sparkles } from 'lucide-react'
 import { meetingApi } from '../api/client'
 import { MindMap } from './MindMap'
+import { Sheet } from './Sheet'
 
 /**
  * 会中/会后共用的脑图查看器。
@@ -43,71 +44,67 @@ export function MindMapDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-3">
-      <div
-        className="panel flex h-[82vh] w-full max-w-[1120px] flex-col overflow-hidden"
-        role="dialog"
-        aria-label="会议纪要脑图"
-      >
-        <div className="panel-header">
+    <Sheet
+      onClose={onClose}
+      title={
+        <>
           <Network size={14} style={{ color: 'var(--text-tertiary)' }} />
-          <h2>会议纪要脑图</h2>
-          {data && (
-            <span className="text-[11px] text-tertiary">
-              基于第 {data.version} 版{data.is_draft ? '实时草稿' : '纪要'}
-            </span>
-          )}
-          <button
-            type="button"
-            onClick={onClose}
-            className="btn btn-ghost ml-auto p-1"
-            aria-label="关闭"
-          >
-            <X size={15} />
-          </button>
-        </div>
-        <div className="min-h-0 flex-1">
-          {isLoading ? (
-            <div className="flex h-full items-center justify-center gap-2 text-[12px] text-tertiary">
-              <Loader2 size={16} className="animate-spin" />
-              正在生成脑图…
-            </div>
-          ) : data ? (
-            <MindMap data={data} onSeek={onSeek} />
-          ) : error ? (
-            <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
-              <Network size={20} style={{ color: 'var(--text-tertiary)' }} />
-              <p className="text-[12px] text-secondary">还没有可用的纪要</p>
-              <p className="max-w-[360px] text-[11px] text-tertiary">
-                会中草稿生成后即可在这里查看主题与结论脑图；也可以现在基于完整转写生成一版。
-              </p>
-              <button
-                type="button"
-                onClick={() => void generate()}
-                disabled={generating}
-                className="btn btn-primary mt-1 text-[12px]"
-              >
-                {generating ? (
-                  <Loader2 size={13} className="animate-spin" />
-                ) : (
-                  <Sparkles size={13} />
-                )}
-                {generating ? '正在生成纪要…' : '生成纪要并创建脑图'}
-              </button>
-              {actionError && (
-                <p className="max-w-[420px] text-[11px]" style={{ color: 'var(--danger-text)' }}>
-                  {actionError}
-                </p>
+          会议纪要脑图
+        </>
+      }
+      actions={
+        data ? (
+          <span className="text-[11px] text-tertiary">
+            第 {data.version} 版{data.is_draft ? '实时草稿' : '纪要'}
+          </span>
+        ) : undefined
+      }
+      ariaLabel="会议纪要脑图"
+      maxWidth={1120}
+      desktopHeight="82vh"
+      fullScreen
+    >
+      <div className="flex h-full min-h-0 flex-col">
+        {isLoading ? (
+          <div className="flex flex-1 items-center justify-center gap-2 text-[12px] text-tertiary">
+            <Loader2 size={16} className="animate-spin" />
+            正在生成脑图…
+          </div>
+        ) : data ? (
+          <MindMap data={data} onSeek={onSeek} />
+        ) : error ? (
+          <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center">
+            <Network size={20} style={{ color: 'var(--text-tertiary)' }} />
+            <p className="text-[12px] text-secondary">还没有可用的纪要</p>
+            <p className="max-w-[360px] text-[11px] text-tertiary">
+              会中草稿生成后即可在这里查看主题与结论脑图；也可以现在基于完整转写生成一版。
+            </p>
+            <button
+              type="button"
+              onClick={() => void generate()}
+              disabled={generating}
+              className="btn btn-primary mt-1 text-[12px]"
+            >
+              {generating ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : (
+                <Sparkles size={13} />
               )}
-            </div>
-          ) : (
-            <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
-              <Network size={20} style={{ color: 'var(--text-tertiary)' }} />
-              <p className="text-[12px] text-secondary">脑图暂时为空</p>
-            </div>
-          )}
-        </div>
+              {generating ? '正在生成纪要…' : '生成纪要并创建脑图'}
+            </button>
+            {actionError && (
+              <p className="max-w-[420px] text-[11px]" style={{ color: 'var(--danger-text)' }}>
+                {actionError}
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center">
+            <Network size={20} style={{ color: 'var(--text-tertiary)' }} />
+            <p className="text-[12px] text-secondary">脑图暂时为空</p>
+          </div>
+        )}
       </div>
-    </div>
+    </Sheet>
   )
 }

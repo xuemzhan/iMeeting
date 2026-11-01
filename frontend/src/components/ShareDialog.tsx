@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Copy, Loader2, Share2, Trash2, X } from 'lucide-react'
+import { Copy, Loader2, Share2, Trash2 } from 'lucide-react'
 import { meetingApi } from '../api/client'
 import type { ShareLink } from '../api/types'
+
+import { Sheet } from './Sheet'
 
 export function ShareDialog({ meetingId, onClose }: { meetingId: number; onClose: () => void }) {
   const [items, setItems] = useState<ShareLink[]>([])
@@ -50,16 +52,16 @@ export function ShareDialog({ meetingId, onClose }: { meetingId: number; onClose
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
-      <div className="panel w-full max-w-[560px] p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-[14px] font-medium">
-            <Share2 size={14} /> 分享会议
-          </h2>
-          <button type="button" onClick={onClose} aria-label="关闭" className="p-1 text-tertiary">
-            <X size={15} />
-          </button>
-        </div>
+    <Sheet
+      onClose={onClose}
+      title={
+        <>
+          <Share2 size={14} /> 分享会议
+        </>
+      }
+      ariaLabel="分享会议"
+      maxWidth={560}
+    >
         <div className="mb-3 flex flex-wrap items-end gap-2">
           <label className="text-[11px] text-tertiary">
             有效期
@@ -115,7 +117,6 @@ export function ShareDialog({ meetingId, onClose }: { meetingId: number; onClose
           ))}
         </div>
         <p className="mt-3 text-[10px] text-tertiary">只读页面不会暴露音频文件路径；开启“允许下载音频”后才可下载。</p>
-      </div>
-    </div>
+    </Sheet>
   )
 }

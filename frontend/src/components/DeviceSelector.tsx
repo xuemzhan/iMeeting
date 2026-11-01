@@ -62,7 +62,7 @@ export function DeviceSelector() {
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="btn"
-        style={{ height: 40, paddingInline: 12, maxWidth: 240 }}
+        style={{ height: 'var(--control-h)', paddingInline: 12, maxWidth: 240 }}
         title={label}
       >
         {switching ? (
@@ -144,7 +144,7 @@ function DeviceRow({
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-black/5"
+      className="flex min-h-10 w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-black/5"
     >
       <span className="min-w-0 flex-1 truncate text-[13px]" style={{ color: 'var(--text-primary)' }}>
         {label}

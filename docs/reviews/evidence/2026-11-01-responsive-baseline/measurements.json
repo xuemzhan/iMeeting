@@ -1,0 +1,142 @@
+﻿[
+  {
+    "viewport": "390x844",
+    "layoutWidth": 390,
+    "innerWidth": 415,
+    "visualWidth": 390,
+    "docScrollWidth": 415,
+    "horizontalOverflow": 25,
+    "header": {
+      "w": 390,
+      "h": 56,
+      "right": 390,
+      "needed": 415
+    },
+    "headerOverflow": 25,
+    "footerHeight": 68,
+    "mainScrollable": "auto",
+    "tapTargets": 8,
+    "smallTargets": 5,
+    "smallestTargets": [
+      "40x32",
+      "40x32",
+      "40x32",
+      "40x32",
+      "40x32"
+    ],
+    "startCtaCount": 2,
+    "heroGridColumns": "106px 106px 106px",
+    "featureCardWidths": [
+      106,
+      106,
+      106
+    ],
+    "docHeight": 899,
+    "viewportHeight": 899
+  },
+  {
+    "viewport": "360x780",
+    "layoutWidth": 360,
+    "innerWidth": 415,
+    "visualWidth": 360,
+    "docScrollWidth": 415,
+    "horizontalOverflow": 55,
+    "header": {
+      "w": 360,
+      "h": 56,
+      "right": 360,
+      "needed": 415
+    },
+    "headerOverflow": 55,
+    "footerHeight": 68,
+    "mainScrollable": "auto",
+    "tapTargets": 8,
+    "smallTargets": 5,
+    "smallestTargets": [
+      "40x32",
+      "40x32",
+      "40x32",
+      "40x32",
+      "40x32"
+    ],
+    "startCtaCount": 2,
+    "heroGridColumns": "96px 96px 96px",
+    "featureCardWidths": [
+      96,
+      96,
+      96
+    ],
+    "docHeight": 900,
+    "viewportHeight": 900
+  },
+  {
+    "viewport": "768x1024",
+    "layoutWidth": 768,
+    "innerWidth": 768,
+    "visualWidth": 768,
+    "docScrollWidth": 768,
+    "horizontalOverflow": 0,
+    "header": {
+      "w": 768,
+      "h": 56,
+      "right": 768,
+      "needed": 768
+    },
+    "headerOverflow": 0,
+    "footerHeight": 68,
+    "mainScrollable": "auto",
+    "tapTargets": 8,
+    "smallTargets": 5,
+    "smallestTargets": [
+      "40x32",
+      "40x32",
+      "40x32",
+      "40x32",
+      "40x32"
+    ],
+    "startCtaCount": 2,
+    "heroGridColumns": "205.328px 205.328px 205.328px",
+    "featureCardWidths": [
+      205,
+      205,
+      205
+    ],
+    "docHeight": 1024,
+    "viewportHeight": 1024
+  },
+  {
+    "viewport": "1024x768",
+    "layoutWidth": 1024,
+    "innerWidth": 1024,
+    "visualWidth": 1024,
+    "docScrollWidth": 1024,
+    "horizontalOverflow": 0,
+    "header": {
+      "w": 1024,
+      "h": 56,
+      "right": 1024,
+      "needed": 1024
+    },
+    "headerOverflow": 0,
+    "footerHeight": 68,
+    "mainScrollable": "auto",
+    "tapTargets": 8,
+    "smallTargets": 5,
+    "smallestTargets": [
+      "40x32",
+      "40x32",
+      "40x32",
+      "40x32",
+      "40x32"
+    ],
+    "startCtaCount": 2,
+    "heroGridColumns": "205.328px 205.328px 205.328px",
+    "featureCardWidths": [
+      205,
+      205,
+      205
+    ],
+    "docHeight": 768,
+    "viewportHeight": 768
+  }
+]

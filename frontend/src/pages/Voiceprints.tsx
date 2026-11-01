@@ -45,7 +45,7 @@ export default function Voiceprints() {
     <div className="flex h-full flex-col">
       <TopBar />
 
-      <main className="min-h-0 flex-1 overflow-y-auto px-4 py-5">
+      <main className="voiceprint-admin min-h-0 flex-1 overflow-y-auto px-4 py-5 max-md:px-3 max-md:py-4">
         <div className="mx-auto w-full max-w-[720px]">
           <div className="mb-4 flex items-center gap-2">
             <Link to="/" className="btn btn-ghost no-underline" style={{ height: 28, padding: '0 8px' }}>

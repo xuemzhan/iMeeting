@@ -66,8 +66,12 @@ export function SettingsPanel({ open, onClose }: { open: boolean; onClose: () =>
       />
 
       <aside
-        className="panel relative flex h-full w-full max-w-[380px] flex-col overflow-y-auto p-5"
-        style={{ borderRadius: 0, borderRight: 'none' }}
+        className="panel relative flex h-full w-full max-w-[380px] flex-col overflow-y-auto overscroll-contain p-5 max-md:max-w-none max-md:p-4"
+        style={{
+          borderRadius: 0,
+          borderRight: 'none',
+          paddingBottom: 'calc(20px + var(--safe-bottom))',
+        }}
         role="dialog"
         aria-label="设置"
       >
@@ -78,7 +82,7 @@ export function SettingsPanel({ open, onClose }: { open: boolean; onClose: () =>
           <button
             type="button"
             onClick={onClose}
-            className="btn btn-ghost"
+            className="btn btn-ghost dialog-close"
             style={{ height: 28, width: 28, padding: 0 }}
             aria-label="关闭"
           >

@@ -112,6 +112,50 @@
   --shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 16px rgba(0, 0, 0, 0.25);
 }
 
+/* ---------------------------------------------------------------------------
+   响应式令牌（默认值 = 桌面，保持既有视觉；窄屏按档位覆写）
+
+   为什么用令牌而不是在每个组件写 max-md: 样式：字号/触控高度遍布 400+ 处硬编码，
+   令牌是唯一能在不改桌面观感的前提下整体抬升窄屏可用性的入口。
+   档位与 docs/plans/2026-11-01-responsive-ui-adaptation.md 的 4.1 一致：
+   >=1024 wide / 768–1023 medium / <=767 compact。
+--------------------------------------------------------------------------- */
+:root {
+  --tap-min: 30px;
+  --btn-height: 32px;
+  --chip-height: 22px;
+  --control-h: 40px;
+  --panel-header-h: 40px;
+  --fs-body: 15px;
+  --fs-ui: 13px;
+  --fs-meta: 11px;
+  --safe-bottom: 0px;
+}
+
+@media (max-width: 1023px) {
+  :root {
+    /* 平板档也是手指操作：可点区一律 44，别为了「更紧凑」牺牲命中率 */
+    --tap-min: 44px;
+    --btn-height: 44px;
+    --panel-header-h: 44px;
+  }
+}
+
+@media (max-width: 767px) {
+  :root {
+    --tap-min: 44px;
+    --btn-height: 44px;
+    --chip-height: 24px;
+    --control-h: 48px;
+    --panel-header-h: 48px;
+    /* 手机正文 16px：低于 16 既难读，iOS 聚焦输入框时还会自动放大整页 */
+    --fs-body: 16px;
+    --fs-ui: 14px;
+    --fs-meta: 12px;
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
+
 @layer base {
   * {
     border-color: var(--border-subtle);
@@ -122,6 +166,17 @@
   #root {
     height: 100%;
   }
+
+  /* 移动端浏览器地址栏伸缩会让 100% 变成「看不见的高度」：
+     用 dvh 跟随可视视口；老内核不支持时上面的 100% 继续兜底。 */
+  @supports (height: 100dvh) {
+    html,
+    body,
+    #root {
+      height: 100dvh;
+    }
+  }
+
 
   body {
     margin: 0;
@@ -184,7 +239,7 @@
     align-items: center;
     justify-content: center;
     gap: 6px;
-    height: 32px;
+    height: var(--btn-height);
     padding: 0 12px;
     font-size: 13px;
     font-weight: 500;
@@ -264,7 +319,7 @@
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    height: 22px;
+    height: var(--chip-height);
     padding: 0 9px;
     border-radius: 11px;
     font-size: 11px;
@@ -275,7 +330,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    height: 40px;
+    height: var(--panel-header-h);
     padding: 0 16px;
     flex-shrink: 0;
     border-bottom: 1px solid var(--border-subtle);
@@ -346,7 +401,7 @@
   }
 
   .reader-body {
-    font-size: calc(15px * var(--reader-scale, 1));
+    font-size: calc(var(--fs-body) * var(--reader-scale, 1));
     line-height: 1.65;
   }
 
@@ -428,12 +483,14 @@
 }
 
 /* ---------------------------------------------------------------------------
-   响应式：移动端标签切换时隐藏转写面板。
-   用媒体查询而非内联 display，是为了在 lg 以上不被覆盖，
-   保证桌面端两侧面板始终并排显示。
+   响应式：compact 档只显示当前标签对应的那一块面板。
+
+   medium/wide 靠 flex 并排，不需要隐藏逻辑，所以这里只在 <=767 生效，
+   并且在媒体查询里而不是内联 display —— 否则旋转到平板后会被内联样式卡住。
+   （旧机制 data-hidden-mobile 只在 <=1023 隐藏转写，无法表达三标签，已移除。）
 --------------------------------------------------------------------------- */
-@media (max-width: 1023px) {
-  [data-hidden-mobile='true'] {
+@media (max-width: 767px) {
+  [data-pane][data-pane-active='false'] {
     display: none;
   }
 }
@@ -477,5 +534,95 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   窄屏增强（只作用于 <=767px，桌面端零影响）
+
+   - 可点区抬到 --tap-min（44）：`.btn` 之外的图标按钮也都带 `.btn`/`.chip`，
+     这里统一加 min-width，避免手机上一排「32×32」点不中。
+   - 输入类 16px：iOS 对 <16px 的输入框会在聚焦时放大整页。
+--------------------------------------------------------------------------- */
+@media (max-width: 767px) {
+  .btn {
+    min-width: var(--tap-min);
+    padding-inline: 10px;
+  }
+
+  .btn-ghost {
+    min-width: var(--tap-min);
+  }
+
+  .input {
+    height: var(--tap-min);
+  }
+
+  input:not([type='checkbox']):not([type='radio']):not([type='range']),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+
+  .reader-body-sm,
+  .reader-body-xs {
+    font-size: calc(var(--fs-ui) * var(--reader-scale, 1));
+  }
+
+  /* 底栏里的键盘提示（Space/F/Esc）在手机上无意义，还占宽度把按钮挤成两行 */
+  .app-footer .kbd {
+    display: none;
+  }
+
+  /* 手机页脚允许换行：设备选择器 + 主按钮在 360px 下会占两行，
+     固定高度会把第二行裁掉，所以这里改成「最小高度 + 自适应」 */
+  .app-footer {
+    height: auto;
+    min-height: calc(64px + var(--safe-bottom));
+    padding-block: 8px;
+    padding-bottom: calc(8px + var(--safe-bottom));
+  }
+}
+
+
+/* ---------------------------------------------------------------------------
+   手指操作档（<=1023，含平板）的「内联写死高度」补救。
+
+   这些按钮的高度来自内联 style，压过了 .btn / 令牌，只能在媒体查询里用
+   !important 覆盖。桌面（>=1024）不受影响，视觉零变化。
+--------------------------------------------------------------------------- */
+@media (max-width: 1023px) {
+  /* 声纹管理页：行内按钮密集（26–30px），平板/手机上统一抬到 --tap-min */
+  .voiceprint-admin .btn {
+    height: var(--tap-min) !important;
+    min-width: var(--tap-min);
+    padding-inline: 8px !important;
+  }
+
+  .voiceprint-admin button:not(.btn) {
+    min-height: var(--tap-min);
+  }
+
+  /* 弹层右上角关闭按钮：内联 28px，手指点不中 */
+  .dialog-close {
+    height: var(--tap-min) !important;
+    width: var(--tap-min) !important;
+    padding: 0 !important;
+  }
+
+  /* 登录 / 改密页：主按钮原本内联 36px，「去注册」是纯文字按钮 */
+  .login-submit {
+    height: var(--tap-min);
+  }
+
+  .login-switch {
+    min-height: var(--tap-min);
+  }
+
+  /* 面板头里的控件（字号 ±、脑图等）在会议中随手要按：手指档统一 44。
+     字号控件三个按钮都写了内联高度（22px），只能在这里硬覆盖。 */
+  .font-size-control button {
+    height: var(--tap-min) !important;
+    min-width: var(--tap-min) !important;
   }
 }

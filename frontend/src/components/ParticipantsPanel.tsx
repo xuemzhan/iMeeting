@@ -124,7 +124,8 @@ export function ParticipantsPanel({ meetingId, pollMs = 0, compact = false }: Pr
           </span>
         )}
 
-        <span className="flex min-w-0 flex-wrap items-center gap-1">
+        {/* compact：姓名 chips 改成一行横滑，避免把顶栏挤成三四行 */}
+        <span className="flex min-w-0 flex-wrap items-center gap-1 max-md:order-last max-md:w-full max-md:flex-nowrap max-md:overflow-x-auto max-md:overscroll-x-contain">
           {rows.map((row) => (
             <ParticipantChip
               key={row.person_id}
@@ -266,7 +267,7 @@ function IconButton({
       disabled={busy}
       title={label}
       aria-label={label}
-      className="rounded p-1 hover:bg-[var(--bg-hover)]"
+      className="flex items-center justify-center rounded p-1 hover:bg-[var(--bg-hover)] max-md:size-10"
       style={{ color: active ? 'var(--accent-text)' : 'var(--text-tertiary)' }}
     >
       {busy ? <Loader2 size={12} className="animate-spin" /> : children}
@@ -274,7 +275,11 @@ function IconButton({
   )
 }
 
-/** 一行里的小 chip：待确认的点一下就是确认，已确认的只显示。 */
+/** 一行里的小 chip：待确认的点一下就是确认，已确认的只显示。
+ *
+ * 高度走类而不是内联：桌面仍是 20px（与改造前一致），compact 抬到 32，
+ * 横滑时更容易点中。
+ */
 function ParticipantChip({ row, onConfirm }: { row: MeetingParticipantItem; onConfirm: () => void }) {
   const isPending = row.state === 'pending'
   const label = row.speaker.length > 8 ? `${row.speaker.slice(0, 8)}…` : row.speaker
@@ -287,9 +292,9 @@ function ParticipantChip({ row, onConfirm }: { row: MeetingParticipantItem; onCo
           ? `${row.speaker}｜点击确认是参会人`
           : `${row.speaker}${summarizeAttributes(row.attributes) ? `（${summarizeAttributes(row.attributes)}）` : ''}`
       }
-      className="chip max-w-[120px] truncate"
+
+      className="chip h-5 max-w-[120px] truncate max-md:h-8"
       style={{
-        height: 20,
         background: isPending ? 'var(--warn-soft)' : 'var(--accent-soft)',
         color: isPending ? 'var(--warn-text)' : 'var(--accent-text)',
         cursor: isPending ? 'pointer' : 'default',
@@ -371,7 +376,7 @@ function ParticipantRow({
             setDraft(row.speaker)
             setRenaming(true)
           }}
-          className="rounded text-[12px] font-medium"
+          className="rounded py-1 text-left text-[12px] font-medium max-md:text-[14px]"
           style={{ color: 'var(--text-primary)' }}
           title="点击改名"
         >
@@ -421,7 +426,7 @@ function ParticipantRow({
             setKeyDraft(row.speaker_key ?? '')
             setBinding(true)
           }}
-          className="inline-flex items-center gap-0.5 rounded px-1 text-[10px] text-tertiary hover:bg-[var(--bg-hover)]"
+          className="inline-flex items-center gap-0.5 rounded px-1 py-1 text-[10px] text-tertiary hover:bg-[var(--bg-hover)] max-md:text-[12px]"
           title={row.speaker_key ? '已绑定声音，点击修改' : '从本场已识别的说话人中选择'}
         >
           <Link2 size={10} />
@@ -429,7 +434,7 @@ function ParticipantRow({
         </button>
       )}
 
-      <button type="button" className="text-[10px] underline" onClick={() => setEditingDetails((value) => !value)}>编辑单位/职务</button>
+      <button type="button" className="py-1 text-[10px] underline max-md:text-[12px]" onClick={() => setEditingDetails((value) => !value)}>编辑单位/职务</button>
       {editingDetails && <span className="flex gap-1">
         <input aria-label="参会人单位" placeholder="单位" maxLength={64} value={unit} onChange={(e) => setUnit(e.target.value)} className="w-24 rounded border px-1 text-[11px]" />
         <input aria-label="参会人职务" placeholder="职务" maxLength={64} value={title} onChange={(e) => setTitle(e.target.value)} className="w-24 rounded border px-1 text-[11px]" />
@@ -444,7 +449,7 @@ function ParticipantRow({
           <button
             type="button"
             onClick={onConfirm}
-            className="rounded px-1 py-0.5 hover:bg-[var(--bg-hover)]"
+            className="flex items-center justify-center rounded px-1 py-0.5 hover:bg-[var(--bg-hover)] max-md:size-10"
             title="确认是参会人"
             aria-label={`确认参会人 ${row.speaker}`}
             style={{ color: 'var(--accent-text)' }}
@@ -455,7 +460,7 @@ function ParticipantRow({
         <button
           type="button"
           onClick={onReject}
-          className="rounded px-1 py-0.5 hover:bg-[var(--bg-hover)]"
+          className="flex items-center justify-center rounded px-1 py-0.5 hover:bg-[var(--bg-hover)] max-md:size-10"
           title="删除该参会人（不是参会人，删除后不再显示）"
           aria-label={`删除参会人 ${row.speaker}`}
           style={{ color: 'var(--danger-text)' }}

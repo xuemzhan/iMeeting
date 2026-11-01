@@ -59,8 +59,8 @@ export default function Login() {
   }
 
   return (
-    <div className="flex h-full items-center justify-center px-6">
-      <div className="panel w-full max-w-[360px] p-6">
+    <div className="flex h-full items-center justify-center px-6 max-md:px-4">
+      <div className="panel w-full max-w-[360px] p-6 max-md:p-5">
         <Link
           to="/"
           className="mb-4 inline-flex items-center gap-1 text-[12px] no-underline text-tertiary hover:text-secondary"
@@ -136,7 +136,8 @@ export default function Login() {
 
           {error && (
             <p
-              className="rounded-md px-2.5 py-2 text-[12px]"
+              role="alert"
+              className="rounded-md px-2.5 py-2 text-[12px] break-words max-md:text-[13px]"
               style={{ background: 'var(--danger-soft)', color: 'var(--danger-text)' }}
             >
               {error}
@@ -145,8 +146,7 @@ export default function Login() {
 
           <button
             type="submit"
-            className="btn btn-primary w-full"
-            style={{ height: 36 }}
+            className="btn btn-primary login-submit w-full"
             disabled={submitting}
           >
             <LogIn size={14} />
@@ -157,7 +157,7 @@ export default function Login() {
         <button
           type="button"
           onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
-          className="mt-4 w-full text-center text-[12px] text-tertiary hover:text-secondary"
+          className="login-switch mt-4 w-full text-center text-[12px] text-tertiary hover:text-secondary"
         >
           {mode === 'login' ? '没有账号？创建一个' : '已有账号？去登录'}
         </button>
