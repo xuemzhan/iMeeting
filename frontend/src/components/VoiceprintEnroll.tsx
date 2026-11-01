@@ -82,7 +82,7 @@ export function VoiceprintEnroll({
 
       {step === 'name' && (
         <div className="mt-3">
-          <label className="mb-1.5 block text-[11px]" style={{ color: 'var(--text-secondary)' }}>
+          <label className="mb-1.5 block text-meta" style={{ color: 'var(--text-secondary)' }}>
             第 1 步 · 这个人叫什么？
           </label>
           <div className="flex gap-1.5">
@@ -94,7 +94,7 @@ export function VoiceprintEnroll({
               }}
               placeholder="例如：张工"
               maxLength={32}
-              className="flex-1 rounded-lg px-2.5 py-1.5 text-[12px] outline-none"
+              className="flex-1 rounded-lg px-2.5 py-1.5 text-ui outline-none"
               style={{
                 background: 'var(--bg-surface)',
                 color: 'var(--text-primary)',
@@ -117,7 +117,7 @@ export function VoiceprintEnroll({
 
       {step === 'read' && (
         <div className="mt-3">
-          <label className="mb-1.5 block text-[11px]" style={{ color: 'var(--text-secondary)' }}>
+          <label className="mb-1.5 block text-meta" style={{ color: 'var(--text-secondary)' }}>
             第 2 步 · 请用正常语速朗读下面这段话
           </label>
           <div
@@ -130,7 +130,7 @@ export function VoiceprintEnroll({
           >
             {text}
           </div>
-          <p className="mt-1.5 text-[11px]" style={{ color: 'var(--text-tertiary)' }}>
+          <p className="mt-1.5 text-meta" style={{ color: 'var(--text-tertiary)' }}>
             共 {RECORD_SECONDS} 秒。这段话覆盖了普通话的常见音素，念完即可，不必赶时间。
           </p>
           <div className="mt-2 flex items-center gap-1.5">
@@ -166,7 +166,7 @@ export function VoiceprintEnroll({
 
       {(step === 'recording' || step === 'uploading') && (
         <div className="mt-3">
-          <label className="mb-1.5 block text-[11px]" style={{ color: 'var(--text-secondary)' }}>
+          <label className="mb-1.5 block text-meta" style={{ color: 'var(--text-secondary)' }}>
             {step === 'recording' ? `第 3 步 · 正在录音（还剩 ${remain} 秒）` : '正在提取声纹…'}
           </label>
           <div
@@ -194,13 +194,13 @@ export function VoiceprintEnroll({
                   }}
                 />
               </div>
-              <p className="mt-1.5 flex items-center gap-1 text-[11px]" style={{ color: 'var(--text-tertiary)' }}>
+              <p className="mt-1.5 flex items-center gap-1 text-meta" style={{ color: 'var(--text-tertiary)' }}>
                 <span className="size-1.5 animate-pulse rounded-full" style={{ background: 'var(--accent)' }} />
                 请照着上面这段话念，声音太小会录不进去
               </p>
             </>
           ) : (
-            <p className="mt-2 flex items-center gap-1.5 text-[11px]" style={{ color: 'var(--text-tertiary)' }}>
+            <p className="mt-2 flex items-center gap-1.5 text-meta" style={{ color: 'var(--text-tertiary)' }}>
               <Loader2 size={12} className="animate-spin" />
               正在计算声纹特征…
             </p>
@@ -210,7 +210,7 @@ export function VoiceprintEnroll({
 
       {error && (
         <div
-          className="mt-2 rounded-lg px-2.5 py-1.5 text-[11px]"
+          className="mt-2 rounded-lg px-2.5 py-1.5 text-meta"
           style={{ background: 'var(--danger-soft)', color: 'var(--danger-text)' }}
         >
           {error}
@@ -218,7 +218,7 @@ export function VoiceprintEnroll({
       )}
       {ok && (
         <div
-          className="mt-2 flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px]"
+          className="mt-2 flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-meta"
           style={{ background: 'var(--accent-soft)', color: 'var(--accent-text)' }}
         >
           <Check size={12} />
@@ -243,7 +243,7 @@ function Steps({ current }: { current: Step }) {
         return (
           <div key={it.label} className="flex items-center gap-1.5">
             <span
-              className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px]"
+              className="flex items-center gap-1 rounded-full px-2 py-0.5 text-micro"
               style={{
                 background: active || done ? 'var(--accent-soft)' : 'transparent',
                 color: active ? 'var(--accent-text)' : done ? 'var(--text-secondary)' : 'var(--text-tertiary)',
@@ -254,7 +254,7 @@ function Steps({ current }: { current: Step }) {
               {it.label}
             </span>
             {i < items.length - 1 && (
-              <span style={{ color: 'var(--text-tertiary)' }} className="text-[10px]">
+              <span style={{ color: 'var(--text-tertiary)' }} className="text-micro">
                 ·
               </span>
             )}

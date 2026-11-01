@@ -40,7 +40,7 @@ export function HistoryFilters({
           onChange={(e) => onQChange(e.target.value)}
           placeholder="搜索标题或转写内容…"
           aria-label="搜索会议"
-          className="w-full rounded-lg py-2 pl-8 pr-8 text-[12px] outline-none"
+          className="w-full rounded-lg py-2 pl-8 pr-8 text-ui outline-none"
           style={{
             background: 'var(--bg-surface)',
             border: '1px solid var(--border-subtle)',
@@ -62,7 +62,7 @@ export function HistoryFilters({
         value={status}
         onChange={(e) => onStatusChange(e.target.value)}
         aria-label="按状态筛选"
-        className="rounded-lg px-2 py-2 text-[12px] outline-none"
+        className="rounded-lg px-2 py-2 text-ui outline-none"
         style={historySelectStyle}
       >
         <option value="">全部状态</option>
@@ -76,7 +76,7 @@ export function HistoryFilters({
         value={archived}
         onChange={(e) => onArchivedChange(e.target.value)}
         aria-label="归档状态"
-        className="rounded-lg px-2 py-2 text-[12px] outline-none"
+        className="rounded-lg px-2 py-2 text-ui outline-none"
         style={historySelectStyle}
       >
         <option value="false">未归档</option>
@@ -87,7 +87,7 @@ export function HistoryFilters({
         value={range}
         onChange={(e) => onRangeChange(e.target.value)}
         aria-label="按时间筛选"
-        className="rounded-lg px-2 py-2 text-[12px] outline-none"
+        className="rounded-lg px-2 py-2 text-ui outline-none"
         style={historySelectStyle}
       >
         <option value="all">全部时间</option>
@@ -99,7 +99,7 @@ export function HistoryFilters({
         onChange={(e) => onTagChange(e.target.value)}
         placeholder="标签筛选"
         aria-label="标签筛选"
-        className="w-[110px] rounded-lg px-2 py-2 text-[12px] outline-none"
+        className="w-[110px] rounded-lg px-2 py-2 text-ui outline-none"
         style={historySelectStyle}
       />
     </div>

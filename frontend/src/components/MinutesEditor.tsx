@@ -90,21 +90,21 @@ export function MinutesEditor({ meetingId, minutes, onSaved, onClose }: Props) {
     >
       <div className="space-y-4">
           <section>
-            <label className="mb-1 block text-[11px] font-medium text-tertiary">
+            <label className="mb-1 block text-meta font-medium text-tertiary">
               整体摘要
             </label>
             <textarea
               value={summary}
               onChange={(e) => setSummary(e.target.value)}
               rows={5}
-              className="rounded px-2.5 py-2 text-[12px] leading-relaxed outline-none"
+              className="rounded px-2.5 py-2 text-ui leading-relaxed outline-none"
               style={inputStyle}
             />
           </section>
 
           <section>
             <div className="mb-2 flex items-center justify-between">
-              <p className="text-[11px] font-medium text-tertiary">议题与结论</p>
+              <p className="text-meta font-medium text-tertiary">议题与结论</p>
               <button
                 type="button"
                 onClick={() =>
@@ -113,7 +113,7 @@ export function MinutesEditor({ meetingId, minutes, onSaved, onClose }: Props) {
                     { title: '', detail: '', conclusion: '' },
                   ])
                 }
-                className="btn btn-ghost text-[11px]"
+                className="btn btn-ghost text-meta"
               >
                 <Plus size={12} /> 添加议题
               </button>
@@ -130,7 +130,7 @@ export function MinutesEditor({ meetingId, minutes, onSaved, onClose }: Props) {
                       value={topic.title}
                       onChange={(e) => patchTopic(index, { title: e.target.value })}
                       placeholder="议题名称"
-                      className="min-w-0 flex-1 rounded px-2 py-1.5 text-[12px] outline-none"
+                      className="min-w-0 flex-1 rounded px-2 py-1.5 text-ui outline-none"
                       style={inputStyle}
                     />
                     <button
@@ -149,7 +149,7 @@ export function MinutesEditor({ meetingId, minutes, onSaved, onClose }: Props) {
                     onChange={(e) => patchTopic(index, { detail: e.target.value })}
                     placeholder="讨论要点"
                     rows={2}
-                    className="mb-1.5 rounded px-2 py-1.5 text-[12px] outline-none"
+                    className="mb-1.5 rounded px-2 py-1.5 text-ui outline-none"
                     style={inputStyle}
                   />
                   <input
@@ -158,7 +158,7 @@ export function MinutesEditor({ meetingId, minutes, onSaved, onClose }: Props) {
                       patchTopic(index, { conclusion: e.target.value })
                     }
                     placeholder="结论 / 决策"
-                    className="rounded px-2 py-1.5 text-[12px] outline-none"
+                    className="rounded px-2 py-1.5 text-ui outline-none"
                     style={inputStyle}
                   />
                 </div>
@@ -168,7 +168,7 @@ export function MinutesEditor({ meetingId, minutes, onSaved, onClose }: Props) {
 
           <section>
             <div className="mb-2 flex items-center justify-between">
-              <p className="text-[11px] font-medium text-tertiary">待办事项</p>
+              <p className="text-meta font-medium text-tertiary">待办事项</p>
               <button
                 type="button"
                 onClick={() =>
@@ -177,7 +177,7 @@ export function MinutesEditor({ meetingId, minutes, onSaved, onClose }: Props) {
                     { task: '', owner: '', due: '' },
                   ])
                 }
-                className="btn btn-ghost text-[11px]"
+                className="btn btn-ghost text-meta"
               >
                 <Plus size={12} /> 添加待办
               </button>
@@ -193,21 +193,21 @@ export function MinutesEditor({ meetingId, minutes, onSaved, onClose }: Props) {
                     value={todo.task}
                     onChange={(e) => patchTodo(index, { task: e.target.value })}
                     placeholder="事项"
-                    className="min-w-[180px] flex-1 rounded px-2 py-1.5 text-[12px] outline-none"
+                    className="min-w-[180px] flex-1 rounded px-2 py-1.5 text-ui outline-none"
                     style={inputStyle}
                   />
                   <input
                     value={todo.owner}
                     onChange={(e) => patchTodo(index, { owner: e.target.value })}
                     placeholder="责任人"
-                    className="w-[110px] rounded px-2 py-1.5 text-[12px] outline-none"
+                    className="w-[110px] rounded px-2 py-1.5 text-ui outline-none"
                     style={inputStyle}
                   />
                   <input
                     value={todo.due}
                     onChange={(e) => patchTodo(index, { due: e.target.value })}
                     placeholder="截止时间"
-                    className="w-[120px] rounded px-2 py-1.5 text-[12px] outline-none"
+                    className="w-[120px] rounded px-2 py-1.5 text-ui outline-none"
                     style={inputStyle}
                   />
                   <button
@@ -231,18 +231,18 @@ export function MinutesEditor({ meetingId, minutes, onSaved, onClose }: Props) {
           style={{ borderTop: '1px solid var(--border-subtle)' }}
         >
           {error && (
-            <p className="mr-auto text-[11px]" style={{ color: 'var(--danger-text)' }}>
+            <p className="mr-auto text-meta" style={{ color: 'var(--danger-text)' }}>
               {error}
             </p>
           )}
-          <button type="button" onClick={onClose} className="btn text-[12px]">
+          <button type="button" onClick={onClose} className="btn text-ui">
             取消
           </button>
           <button
             type="button"
             onClick={() => void save()}
             disabled={busy}
-            className="btn btn-primary text-[12px]"
+            className="btn btn-primary text-ui"
           >
             {busy && <Loader2 size={12} className="animate-spin" />}
             保存为新版本

@@ -226,7 +226,7 @@ function EmptyState() {
         </div>
       </div>
       <p className="text-[13px] font-medium text-secondary">正在聆听…</p>
-      <p className="max-w-[300px] text-[12px] text-tertiary">
+      <p className="max-w-[300px] text-ui text-tertiary">
         字幕将随说话实时出现。系统会自动断句、区分说话人并补全标点
       </p>
     </div>

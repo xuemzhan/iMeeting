@@ -8,7 +8,7 @@ export function SharedMeetingMinutes({ minutes }: { minutes: Minutes }) {
     <section className="panel mb-3 overflow-hidden">
       <div className="panel-header">
         <h2>会议纪要</h2>
-        <span className="ml-auto text-[11px] text-tertiary">
+        <span className="ml-auto text-meta text-tertiary">
           v{minutes.version}
         </span>
       </div>
@@ -25,24 +25,24 @@ export function SharedMeetingMinutes({ minutes }: { minutes: Minutes }) {
             style={{ background: 'var(--accent-soft)' }}
           >
             <p
-              className="text-[12px] font-medium"
+              className="text-ui font-medium"
               style={{ color: 'var(--accent-text)' }}
             >
               {topic.title}
             </p>
             {topic.detail && (
-              <p className="mt-1 text-[12px] text-secondary">{topic.detail}</p>
+              <p className="mt-1 text-ui text-secondary">{topic.detail}</p>
             )}
             {topic.conclusion && (
               <p
-                className="mt-1 text-[12px]"
+                className="mt-1 text-ui"
                 style={{ color: 'var(--accent-text)' }}
               >
                 结论：{topic.conclusion}
               </p>
             )}
             {topic.evidence?.[0] && (
-              <p className="mt-1 font-mono text-[10px] text-tertiary">
+              <p className="mt-1 font-mono text-micro text-tertiary">
                 原话 {formatTimestamp(topic.evidence[0].start_ms)}
               </p>
             )}
@@ -50,13 +50,13 @@ export function SharedMeetingMinutes({ minutes }: { minutes: Minutes }) {
         ))}
         {minutes.todos.length > 0 && (
           <div>
-            <p className="mb-2 flex items-center gap-1 text-[11px] font-medium text-tertiary">
+            <p className="mb-2 flex items-center gap-1 text-meta font-medium text-tertiary">
               <CheckSquare size={12} /> 待办
             </p>
             {minutes.todos.map((todo, index) => (
               <div
                 key={index}
-                className="mb-1 rounded-lg px-3 py-2 text-[12px]"
+                className="mb-1 rounded-lg px-3 py-2 text-ui"
                 style={{ background: 'var(--warn-soft)', color: 'var(--warn-text)' }}
               >
                 {todo.task}

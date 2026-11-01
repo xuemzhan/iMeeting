@@ -83,7 +83,7 @@ export function DeviceSelector() {
             className="flex items-center justify-between px-3 py-2"
             style={{ borderBottom: '1px solid var(--border-default)' }}
           >
-            <span className="text-[11px] font-medium" style={{ color: 'var(--text-secondary)' }}>
+            <span className="text-meta font-medium" style={{ color: 'var(--text-secondary)' }}>
               选择麦克风
             </span>
             <button
@@ -111,7 +111,7 @@ export function DeviceSelector() {
               />
             ))}
             {devices.length === 0 && (
-              <p className="px-3 py-2 text-[12px]" style={{ color: 'var(--text-tertiary)' }}>
+              <p className="px-3 py-2 text-ui" style={{ color: 'var(--text-tertiary)' }}>
                 未检测到输入设备
               </p>
             )}
@@ -119,7 +119,7 @@ export function DeviceSelector() {
 
           {isRecording && (
             <p
-              className="px-3 py-2 text-[11px]"
+              className="px-3 py-2 text-meta"
               style={{ borderTop: '1px solid var(--border-default)', color: 'var(--text-tertiary)' }}
             >
               会议中切换设备不会中断转写

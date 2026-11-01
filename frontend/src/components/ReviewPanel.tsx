@@ -46,22 +46,22 @@ export function ReviewPanel({
       <div className="panel-header">
         <RefreshCw size={14} />
         <h2>会后音频复核</h2>
-        <span className="ml-auto text-[10px] text-tertiary">
+        <span className="ml-auto text-micro text-tertiary">
           只生成建议，不直接覆盖人工转写
         </span>
-        <button type="button" onClick={() => void run()} disabled={busy} className="btn btn-ghost text-[11px]">
+        <button type="button" onClick={() => void run()} disabled={busy} className="btn btn-ghost text-meta">
           {busy ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
           运行复核
         </button>
       </div>
       <div className="space-y-2 p-3">
-        {message && <p className="text-[11px] text-tertiary">{message}</p>}
+        {message && <p className="text-meta text-tertiary">{message}</p>}
         {reviews.isLoading ? (
           <div className="flex justify-center py-5">
             <Loader2 size={16} className="animate-spin" />
           </div>
         ) : (reviews.data?.length ?? 0) === 0 ? (
-          <p className="py-5 text-center text-[11px] text-tertiary">
+          <p className="py-5 text-center text-meta text-tertiary">
             暂无待确认的复核建议
           </p>
         ) : (
@@ -70,21 +70,21 @@ export function ReviewPanel({
               <button
                 type="button"
                 onClick={() => onSeek?.(review.start_ms)}
-                className="font-mono text-[10px] text-tertiary"
+                className="font-mono text-micro text-tertiary"
               >
                 {Math.floor(review.start_ms / 60000)}:
                 {String(Math.floor((review.start_ms % 60000) / 1000)).padStart(2, '0')}
               </button>
-              <p className="mt-1 text-[11px] text-tertiary line-through">{review.original_text}</p>
-              <p className="mt-1 text-[12px]">{review.suggested_text}</p>
+              <p className="mt-1 text-meta text-tertiary line-through">{review.original_text}</p>
+              <p className="mt-1 text-ui">{review.suggested_text}</p>
               <div className="mt-1 flex items-center gap-2">
-                <span className="text-[10px] text-tertiary">
+                <span className="text-micro text-tertiary">
                   相似度 {Math.round(review.similarity * 100)}%
                 </span>
-                <button type="button" onClick={() => void action(review.id, true)} className="btn btn-ghost text-[10px]">
+                <button type="button" onClick={() => void action(review.id, true)} className="btn btn-ghost text-micro">
                   <Check size={11} /> 采用
                 </button>
-                <button type="button" onClick={() => void action(review.id, false)} className="btn btn-ghost text-[10px]">
+                <button type="button" onClick={() => void action(review.id, false)} className="btn btn-ghost text-micro">
                   <X size={11} /> 忽略
                 </button>
               </div>

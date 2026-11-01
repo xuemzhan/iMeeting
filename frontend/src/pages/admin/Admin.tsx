@@ -55,7 +55,7 @@ export default function Admin() {
         <div className="mx-auto max-w-[860px]">
           <Link
             to="/"
-            className="mb-4 inline-flex items-center gap-1 text-[12px] no-underline text-tertiary hover:text-secondary"
+            className="mb-4 inline-flex items-center gap-1 text-ui no-underline text-tertiary hover:text-secondary"
           >
             <ArrowLeft size={13} />
             返回会议
@@ -72,7 +72,7 @@ export default function Admin() {
                       ? '企业词表'
                     : '审计日志'}
               </h1>
-              <p className="mt-0.5 text-[12px] text-tertiary">
+              <p className="mt-0.5 text-ui text-tertiary">
                 {tab === 'config'
                   ? '修改后立即对所有新会话生效，无需重启（标注的除外）'
                   : tab === 'dashboard'
@@ -121,7 +121,7 @@ export default function Admin() {
                   key={item.key}
                   type="button"
                   onClick={() => setTab(item.key)}
-                  className="flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-[12px] transition-colors"
+                  className="flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-ui transition-colors"
                   style={{
                     background: tab === item.key ? 'var(--bg-surface)' : 'transparent',
                     color:
@@ -154,7 +154,7 @@ export default function Admin() {
 
           {tab === 'config' && error && (
             <div
-              className="rounded-lg px-4 py-3 text-[12px]"
+              className="rounded-lg px-4 py-3 text-ui"
               style={{ background: 'var(--danger-soft)', color: 'var(--danger-text)' }}
             >
               加载配置失败：{error}

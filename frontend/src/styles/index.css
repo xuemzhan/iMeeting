@@ -415,6 +415,41 @@
     line-height: 1.65;
   }
 
+  /* ---------------------------------------------------------------------------
+     语义化字号（方案 IM-PLN-001 §4.2 / P6）
+
+     这三档由 scripts/codemod-font-scale.mjs 从写死的 text-[10|11|12px] 迁过来：
+     桌面像素与迁移前完全一致，compact（<=767）抬 1px。
+     放在 @layer components 而不是无层：这样同元素上的 Tailwind 字号工具类
+     （如 md:text-[14px]）仍然优先，保持与迁移前一致的覆盖语义。
+  --------------------------------------------------------------------------- */
+  .text-micro {
+    font-size: 10px;
+  }
+
+  .text-meta {
+    font-size: 11px;
+  }
+
+  .text-ui {
+    font-size: 12px;
+  }
+
+  @media (max-width: 767px) {
+    .text-micro {
+      font-size: 11px;
+    }
+
+    .text-meta {
+      font-size: 12px;
+    }
+
+    .text-ui {
+      font-size: 13px;
+    }
+  }
+
+
   .reader-title {
     font-size: calc(13px * var(--reader-scale, 1));
     line-height: 1.45;

@@ -23,12 +23,12 @@ export function ConfigGroupFields({
       {fields.map((f) => (
         <div key={f.key}>
           <div className="mb-1 flex items-center gap-1.5">
-            <label htmlFor={f.key} className="text-[12px]" style={{ color: 'var(--text-primary)' }}>
+            <label htmlFor={f.key} className="text-ui" style={{ color: 'var(--text-primary)' }}>
               {f.label}
             </label>
             {f.restart_required && (
               <span
-                className="rounded px-1 py-px text-[10px]"
+                className="rounded px-1 py-px text-micro"
                 style={{ background: 'var(--warn-soft)', color: 'var(--warn-text)' }}
                 title="修改后需重启服务才能生效"
               >
@@ -40,12 +40,12 @@ export function ConfigGroupFields({
           <Control field={f} value={draft[f.key]} onChange={(v) => onChange(f.key, v)} />
 
           {f.help && (
-            <p className="mt-1 text-[11px] leading-snug" style={{ color: 'var(--text-tertiary)' }}>
+            <p className="mt-1 text-meta leading-snug" style={{ color: 'var(--text-tertiary)' }}>
               {f.help}
             </p>
           )}
           {errors[f.key] && (
-            <p className="mt-1 text-[11px]" style={{ color: 'var(--danger-text)' }}>
+            <p className="mt-1 text-meta" style={{ color: 'var(--danger-text)' }}>
               {errors[f.key]}
             </p>
           )}

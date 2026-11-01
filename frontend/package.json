@@ -13,7 +13,8 @@
     "test:coverage": "vitest run --coverage",
     "e2e": "playwright test",
     "verify:features": "node scripts/verify-features.mjs",
-    "verify:responsive": "node scripts/responsive-probe.mjs --strict --paths /,/login,/history,/knowledge,/voiceprints"
+    "verify:responsive": "node scripts/responsive-probe.mjs --strict --paths /,/login,/history,/knowledge,/voiceprints",
+    "codemod:font": "node scripts/codemod-font-scale.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.62.7",

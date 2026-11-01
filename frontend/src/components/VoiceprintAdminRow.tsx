@@ -87,14 +87,14 @@ export function VoiceprintAdminRow({
             <span className="truncate font-medium">{print.name}</span>
             {print.provisional ? (
               <span
-                className="shrink-0 rounded-full px-2 py-0.5 text-[10px]"
+                className="shrink-0 rounded-full px-2 py-0.5 text-micro"
                 style={{ background: 'var(--warn-soft)', color: 'var(--warn-text)' }}
               >
                 待命名
               </span>
             ) : (
               <span
-                className="shrink-0 text-[11px]"
+                className="shrink-0 text-meta"
                 style={{ color: 'var(--text-tertiary)' }}
               >
                 {print.sample_ms > 0 ? `${(print.sample_ms / 1000).toFixed(1)}s` : '来自会议'}
@@ -103,13 +103,13 @@ export function VoiceprintAdminRow({
             {print.source_meeting_id != null && (
               <Link
                 to={`/history/${print.source_meeting_id}`}
-                className="shrink-0 text-[11px] no-underline"
+                className="shrink-0 text-meta no-underline"
                 style={{ color: 'var(--text-tertiary)' }}
               >
                 首次出现于 #{print.source_meeting_id}
               </Link>
             )}
-            <span className="shrink-0 text-[10px] text-tertiary">
+            <span className="shrink-0 text-micro text-tertiary">
               样本 {print.sample_count} · 质量 {Math.round(print.quality_score * 100)}%
             </span>
           </span>
@@ -162,7 +162,7 @@ export function VoiceprintAdminRow({
                 style={{ background: 'var(--bg-surface)' }}
               >
                 <p
-                  className="px-2 py-1 text-[10px]"
+                  className="px-2 py-1 text-micro"
                   style={{ color: 'var(--text-tertiary)' }}
                 >
                   合并到：
@@ -175,7 +175,7 @@ export function VoiceprintAdminRow({
                       setMergeOpen(false)
                       onMerge(other.id)
                     }}
-                    className="block w-full truncate rounded px-2 py-1 text-left text-[12px]"
+                    className="block w-full truncate rounded px-2 py-1 text-left text-ui"
                     style={{ color: 'var(--text-primary)' }}
                   >
                     {other.name}

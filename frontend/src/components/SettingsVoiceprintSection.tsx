@@ -21,7 +21,7 @@ export function SettingsVoiceprintSection({
 }) {
   return (
     <SettingsSection title="声纹">
-      <p className="mb-2 text-[11px] leading-relaxed" style={{ color: 'var(--text-tertiary)' }}>
+      <p className="mb-2 text-meta leading-relaxed" style={{ color: 'var(--text-tertiary)' }}>
         录入后，会议转写会直接显示说话人姓名，而不是「说话人 1」。
       </p>
 
@@ -29,7 +29,7 @@ export function SettingsVoiceprintSection({
 
       {voiceprints.error && (
         <div
-          className="mt-2 rounded-lg px-2.5 py-1.5 text-[11px]"
+          className="mt-2 rounded-lg px-2.5 py-1.5 text-meta"
           style={{ background: 'var(--danger-soft)', color: 'var(--danger-text)' }}
         >
           {voiceprints.error}
@@ -37,7 +37,7 @@ export function SettingsVoiceprintSection({
       )}
       {voiceprints.ok && !voiceprints.error && (
         <div
-          className="mt-2 rounded-lg px-2.5 py-1.5 text-[11px]"
+          className="mt-2 rounded-lg px-2.5 py-1.5 text-meta"
           style={{ background: 'var(--accent-soft)', color: 'var(--accent-text)' }}
         >
           {voiceprints.ok}
@@ -45,7 +45,7 @@ export function SettingsVoiceprintSection({
       )}
 
       <div className="mt-4 mb-1.5 flex items-center justify-between">
-        <span className="text-[11px]" style={{ color: 'var(--text-secondary)' }}>
+        <span className="text-meta" style={{ color: 'var(--text-secondary)' }}>
           已录入 {voiceprints.prints.length} 个
         </span>
         <span className="flex items-center gap-1">
@@ -71,7 +71,7 @@ export function SettingsVoiceprintSection({
       </div>
 
       {voiceprints.prints.length === 0 ? (
-        <p className="text-[11px]" style={{ color: 'var(--text-tertiary)' }}>
+        <p className="text-meta" style={{ color: 'var(--text-tertiary)' }}>
           还没有任何声纹
         </p>
       ) : (
@@ -89,7 +89,7 @@ export function SettingsVoiceprintSection({
       )}
 
       {voiceprints.prints.some((print) => print.provisional) && (
-        <p className="mt-2 text-[11px] leading-relaxed" style={{ color: 'var(--text-tertiary)' }}>
+        <p className="mt-2 text-meta leading-relaxed" style={{ color: 'var(--text-tertiary)' }}>
           标「待命名」的是开会时自动发现的说话人。改成真实姓名后，
           以后所有会议都会直接认出这个人。
         </p>
@@ -138,7 +138,7 @@ function PrintRow({
 
   return (
     <li
-      className="flex items-center justify-between gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px]"
+      className="flex items-center justify-between gap-1.5 rounded-lg px-2.5 py-1.5 text-ui"
       style={{ background: 'var(--bg-subtle)' }}
     >
       {editing ? (
@@ -156,7 +156,7 @@ function PrintRow({
           onBlur={() => void submit()}
           maxLength={32}
           disabled={busy}
-          className="min-w-0 flex-1 rounded px-1.5 py-0.5 text-[12px] outline-none"
+          className="min-w-0 flex-1 rounded px-1.5 py-0.5 text-ui outline-none"
           style={{
             background: 'var(--bg-surface)',
             color: 'var(--text-primary)',
@@ -174,7 +174,7 @@ function PrintRow({
           <span className="truncate">{print.name}</span>
           {print.provisional ? (
             <span
-              className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px]"
+              className="shrink-0 rounded-full px-1.5 py-0.5 text-micro"
               style={{ background: 'var(--warn-soft)', color: 'var(--warn-text)' }}
             >
               待命名

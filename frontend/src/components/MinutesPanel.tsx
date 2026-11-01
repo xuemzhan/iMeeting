@@ -97,7 +97,7 @@ export function MinutesPanel({
         </button>
 
         {!hasContent && (
-          <p className="mt-2 text-center text-[11px] text-tertiary">会议结束后可生成纪要</p>
+          <p className="mt-2 text-center text-meta text-tertiary">会议结束后可生成纪要</p>
         )}
       </div>
     </div>
@@ -113,8 +113,8 @@ function MinutesContent({ minutes }: { minutes: Minutes }) {
       >
         <AlertCircle size={14} className="mt-0.5 shrink-0" />
         <div>
-          <p className="text-[12px] font-medium">纪要生成失败</p>
-          <p className="text-[11px] opacity-85">{minutes.error || '未知错误'}</p>
+          <p className="text-ui font-medium">纪要生成失败</p>
+          <p className="text-meta opacity-85">{minutes.error || '未知错误'}</p>
         </div>
       </div>
     )
@@ -124,7 +124,7 @@ function MinutesContent({ minutes }: { minutes: Minutes }) {
     <div className="space-y-4">
       {minutes.is_draft && (
         <div
-          className="flex items-center gap-2 rounded-lg px-3 py-2 text-[11px]"
+          className="flex items-center gap-2 rounded-lg px-3 py-2 text-meta"
           style={{ background: 'var(--accent-soft)', color: 'var(--accent-text)' }}
         >
           <Sparkles size={12} />
@@ -137,14 +137,14 @@ function MinutesContent({ minutes }: { minutes: Minutes }) {
       )}
       {minutes.summary && (
         <section>
-          <p className="mb-1.5 text-[11px] font-medium text-tertiary">整体摘要</p>
+          <p className="mb-1.5 text-meta font-medium text-tertiary">整体摘要</p>
           <p className="reader-body-sm text-secondary">{minutes.summary}</p>
         </section>
       )}
 
       {minutes.topics.length > 0 && (
         <section>
-          <p className="mb-2 flex items-center gap-1.5 text-[11px] font-medium text-tertiary">
+          <p className="mb-2 flex items-center gap-1.5 text-meta font-medium text-tertiary">
             <Lightbulb size={12} />
             议题与结论
           </p>
@@ -179,7 +179,7 @@ function MinutesContent({ minutes }: { minutes: Minutes }) {
 
       {minutes.todos.length > 0 && (
         <section>
-          <p className="mb-2 flex items-center gap-1.5 text-[11px] font-medium text-tertiary">
+          <p className="mb-2 flex items-center gap-1.5 text-meta font-medium text-tertiary">
             <CheckSquare size={12} />
             待办事项
           </p>
@@ -219,8 +219,8 @@ function LoadingState() {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-3">
       <Loader2 size={20} className="animate-spin" style={{ color: 'var(--accent)' }} />
-      <p className="text-[12px] text-secondary">正在分析会议内容…</p>
-      <p className="text-[11px] text-tertiary">长会议会分段处理，请稍候</p>
+      <p className="text-ui text-secondary">正在分析会议内容…</p>
+      <p className="text-meta text-tertiary">长会议会分段处理，请稍候</p>
     </div>
   )
 }
@@ -234,16 +234,16 @@ function IdleState({ hasContent, finalCount }: { hasContent: boolean; finalCount
       >
         <Sparkles size={17} style={{ color: 'var(--accent-text)' }} />
       </div>
-      <p className="text-[12px] text-secondary">
+      <p className="text-ui text-secondary">
         {hasContent ? '已转写 ' : '会议纪要'}
       </p>
       {hasContent && (
-        <p className="text-[11px] text-tertiary">
+        <p className="text-meta text-tertiary">
           已转写 {finalCount} 段，点击下方按钮生成结构化纪要
         </p>
       )}
       {!hasContent && (
-        <p className="text-[11px] text-tertiary">
+        <p className="text-meta text-tertiary">
           会议结束后将自动提取议题、结论与待办事项
         </p>
       )}

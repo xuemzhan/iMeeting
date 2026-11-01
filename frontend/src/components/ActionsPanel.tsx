@@ -37,7 +37,7 @@ export function ActionsPanel({
 
   if (items.length === 0) {
     return (
-      <p className="px-4 py-3 text-[11px] text-tertiary">
+      <p className="px-4 py-3 text-meta text-tertiary">
         终稿纪要生成后，待办会自动同步到这里，可在应用内跟踪状态。
       </p>
     )
@@ -68,7 +68,7 @@ export function ActionsPanel({
           </button>
           <div className="min-w-0 flex-1">
             <p
-              className="text-[12px]"
+              className="text-ui"
               style={{
                 textDecoration: item.status === 'done' ? 'line-through' : 'none',
                 color: item.status === 'done' ? 'var(--text-tertiary)' : 'var(--text-primary)',
@@ -76,7 +76,7 @@ export function ActionsPanel({
             >
               {item.task}
             </p>
-            <p className="mt-0.5 text-[10px] text-tertiary">
+            <p className="mt-0.5 text-micro text-tertiary">
               {item.owner && `责任人：${item.owner}`}
               {item.owner && item.due && ' · '}
               {item.due && `截止：${item.due}`}
@@ -91,7 +91,7 @@ export function ActionsPanel({
                   <button
                     type="button"
                     onClick={() => onSeek(evidence[0].start_ms)}
-                    className="mt-0.5 text-[10px] underline-offset-2 hover:underline"
+                    className="mt-0.5 text-micro underline-offset-2 hover:underline"
                     style={{ color: 'var(--accent-text)' }}
                   >
                     查看原话

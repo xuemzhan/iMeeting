@@ -48,7 +48,7 @@ export function FontSizeControl({ value, onChange, label, disabled }: Props) {
         type="button"
         onClick={() => onChange(1)}
         disabled={disabled || !reset}
-        className="rounded px-1 py-0.5 font-mono text-[10px] tabular-nums transition-colors disabled:cursor-default"
+        className="rounded px-1 py-0.5 font-mono text-micro tabular-nums transition-colors disabled:cursor-default"
         style={{
           color: reset ? 'var(--text-secondary)' : 'var(--text-tertiary)',
           minWidth: 34,

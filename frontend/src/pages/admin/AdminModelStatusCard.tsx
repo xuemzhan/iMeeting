@@ -44,11 +44,11 @@ export function AdminModelStatusCard({ health }: { health: Health }) {
                       : 'var(--warn)',
                 }}
               />
-              <span className="text-[12px] font-medium">
+              <span className="text-ui font-medium">
                 {model.name === 'streaming' ? '流式模型' : '离线模型'}
               </span>
             </div>
-            <p className="mt-0.5 text-[11px] text-tertiary">
+            <p className="mt-0.5 text-meta text-tertiary">
               {model.error
                 ? model.error.slice(0, 60)
                 : model.loaded
@@ -59,7 +59,7 @@ export function AdminModelStatusCard({ health }: { health: Health }) {
         ))}
       </div>
 
-      <p className="mt-2 text-[11px] text-tertiary">
+      <p className="mt-2 text-meta text-tertiary">
         活跃会话 {health.active_sessions} 个 · 版本 {health.version}
       </p>
     </div>

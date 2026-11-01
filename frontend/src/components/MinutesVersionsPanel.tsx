@@ -36,7 +36,7 @@ export function MinutesVersionsPanel({
     >
         <div className="space-y-1.5">
           {versions.length === 0 && (
-            <p className="py-6 text-center text-[11px] text-tertiary">
+            <p className="py-6 text-center text-meta text-tertiary">
               还没有纪要版本
             </p>
           )}
@@ -47,24 +47,24 @@ export function MinutesVersionsPanel({
               style={{ background: 'var(--bg-subtle)' }}
             >
               <div className="flex items-center gap-1.5">
-                <span className="text-[11px] font-medium">v{row.version}</span>
+                <span className="text-meta font-medium">v{row.version}</span>
                 <span className="chip" style={{ height: 18 }}>
                   {row.edited ? '人工修订' : row.is_draft ? '会中草稿' : '自动终稿'}
                 </span>
-                <span className="ml-auto text-[10px] text-tertiary">
+                <span className="ml-auto text-micro text-tertiary">
                   {new Date(row.created_at).toLocaleTimeString('zh-CN', {
                     hour: '2-digit',
                     minute: '2-digit',
                   })}
                 </span>
               </div>
-              <p className="mt-1 line-clamp-2 text-[10px] leading-relaxed text-tertiary">
+              <p className="mt-1 line-clamp-2 text-micro leading-relaxed text-tertiary">
                 {row.summary || '无摘要'}
               </p>
               <button
                 type="button"
                 onClick={() => onEdit(row)}
-                className="mt-1 text-[10px] underline-offset-2 hover:underline"
+                className="mt-1 text-micro underline-offset-2 hover:underline"
                 style={{ color: 'var(--accent-text)' }}
               >
                 基于此版修订
@@ -75,7 +75,7 @@ export function MinutesVersionsPanel({
         <div>
           {versions.length >= 2 ? (
             <>
-              <div className="mb-2 flex items-center gap-2 text-[11px] text-tertiary">
+              <div className="mb-2 flex items-center gap-2 text-meta text-tertiary">
                 <select
                   value={versionA?.version ?? ''}
                   onChange={(event) => setCompareA(Number(event.target.value))}
@@ -115,15 +115,15 @@ export function MinutesVersionsPanel({
                     className="max-h-[320px] overflow-y-auto rounded-lg p-3"
                     style={{ background: 'var(--bg-subtle)' }}
                   >
-                    <p className="mb-2 text-[11px] font-medium">
+                    <p className="mb-2 text-meta font-medium">
                       v{row?.version ?? '—'} ·{' '}
                       {row?.edited ? '人工修订' : row?.is_draft ? '草稿' : '终稿'}
                     </p>
-                    <p className="whitespace-pre-wrap text-[11px] leading-relaxed text-secondary">
+                    <p className="whitespace-pre-wrap text-meta leading-relaxed text-secondary">
                       {row?.summary || '无摘要'}
                     </p>
                     {row?.topics.map((topic, topicIndex) => (
-                      <p key={topicIndex} className="mt-2 text-[11px] text-tertiary">
+                      <p key={topicIndex} className="mt-2 text-meta text-tertiary">
                         · {topic.title}
                         {topic.conclusion ? `：${topic.conclusion}` : ''}
                       </p>
@@ -133,7 +133,7 @@ export function MinutesVersionsPanel({
               </div>
             </>
           ) : (
-            <p className="py-8 text-center text-[11px] text-tertiary">
+            <p className="py-8 text-center text-meta text-tertiary">
               至少需要两个版本才能对比
             </p>
           )}
@@ -148,7 +148,7 @@ export function MinutesVersionsPanel({
       <div className="panel-header">
         <History size={14} style={{ color: 'var(--text-tertiary)' }} />
         <h2>纪要版本与对比</h2>
-        <span className="ml-auto text-[11px] text-tertiary">
+        <span className="ml-auto text-meta text-tertiary">
           自动草稿、终稿与人工修订均保留
         </span>
       </div>

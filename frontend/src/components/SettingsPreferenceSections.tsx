@@ -44,7 +44,7 @@ export function SettingsAppearanceSection({
               key={key}
               type="button"
               onClick={() => onThemeChange(key)}
-              className="flex flex-col items-center gap-1.5 rounded-lg py-2.5 text-[11px] transition-colors"
+              className="flex flex-col items-center gap-1.5 rounded-lg py-2.5 text-meta transition-colors"
               style={{
                 background: active ? 'var(--accent-soft)' : 'var(--bg-subtle)',
                 color: active ? 'var(--accent-text)' : 'var(--text-secondary)',
@@ -59,9 +59,9 @@ export function SettingsAppearanceSection({
       </div>
 
       <div className="mt-3 space-y-2">
-        <p className="text-[11px] font-medium text-tertiary">阅读字号</p>
+        <p className="text-meta font-medium text-tertiary">阅读字号</p>
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[12px] text-secondary">实时转写</span>
+          <span className="text-ui text-secondary">实时转写</span>
           <FontSizeControl
             value={transcriptScale}
             onChange={setTranscriptScale}
@@ -69,25 +69,25 @@ export function SettingsAppearanceSection({
           />
         </div>
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[12px] text-secondary">会议纪要</span>
+          <span className="text-ui text-secondary">会议纪要</span>
           <FontSizeControl
             value={minutesScale}
             onChange={setMinutesScale}
             label="会议纪要"
           />
         </div>
-        <p className="text-[10px] leading-relaxed text-tertiary">
+        <p className="text-micro leading-relaxed text-tertiary">
           面板标题栏里也有同样的 −/+ 按钮；点百分比可恢复 100%。
         </p>
         <button
           type="button"
-          className="btn btn-ghost h-7 px-2 text-[11px]"
+          className="btn btn-ghost h-7 px-2 text-meta"
           onClick={() => setMinutesPaneWidth(PANE_WIDTH_DEFAULT)}
           title="把会议纪要栏宽度恢复为默认值"
         >
           恢复默认分栏宽度
         </button>
-        <p className="text-[10px] leading-relaxed text-tertiary">
+        <p className="text-micro leading-relaxed text-tertiary">
           会议页中「实时转写 / 会议纪要」之间的分隔条可拖动调整宽度，双击复位。
         </p>
       </div>
@@ -117,7 +117,7 @@ export function SettingsMicrophoneSection({
         <select
           value={activeDeviceId ?? ''}
           onChange={(e) => onSelectDevice(e.target.value || null)}
-          className="flex-1 rounded-lg px-2.5 py-1.5 text-[12px] outline-none"
+          className="flex-1 rounded-lg px-2.5 py-1.5 text-ui outline-none"
           style={{
             background: 'var(--bg-subtle)',
             color: 'var(--text-primary)',
@@ -147,7 +147,7 @@ export function SettingsMicrophoneSection({
         href="/mic-check.html"
         target="_blank"
         rel="noreferrer"
-        className="flex items-center gap-1.5 text-[12px] no-underline"
+        className="flex items-center gap-1.5 text-ui no-underline"
         style={{ color: 'var(--accent-text)' }}
       >
         <Mic size={13} />
@@ -155,7 +155,7 @@ export function SettingsMicrophoneSection({
         <ExternalLink size={11} />
       </a>
       <p
-        className="mt-1.5 text-[11px] leading-relaxed"
+        className="mt-1.5 text-meta leading-relaxed"
         style={{ color: 'var(--text-tertiary)' }}
       >
         若转写一直没有字幕，自检页会逐项测出是权限、设备还是系统「音频增强」的问题。
@@ -200,7 +200,7 @@ export function SettingsAdminSection({ onClose }: { onClose: () => void }) {
       <Link
         to="/admin"
         onClick={onClose}
-        className="flex items-center gap-1.5 text-[12px] no-underline"
+        className="flex items-center gap-1.5 text-ui no-underline"
         style={{ color: 'var(--accent-text)' }}
       >
         <ShieldCheck size={13} />

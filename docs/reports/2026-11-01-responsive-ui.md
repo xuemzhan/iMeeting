@@ -9,13 +9,17 @@
 
 ## 结论
 
-按方案 IM-PLN-001 的 P0–P5 **已全部落地**，P6 做了「先做」部分（语义类字号在 compact 抬一档）；
-只剩「423 处硬编码字号的 codemod」与「长列表虚拟滚动」两项按第 5 节的理由未做。
+按方案 IM-PLN-001 的 P0–P6 **全部落地**：字号 codemod 已把 408 处独立硬编码字号迁移为语义类
+（桌面像素不变、compact 抬 1px），长列表按方案「先测后定」的要求实测后**决定不引入虚拟滚动**
+（2000 段滚动 p95 = 11ms）。剩下的只有真机验收与两处交互型重排（见第 5 节）。
 
 第二轮（同日追加）补齐了首轮列为遗留的项：`e2e/responsive.spec.ts` + CI 响应式门禁、
 剩余 3 个弹窗迁移（`MinutesEditor`/`CompliancePanel` 迁到 `Sheet`，`VoiceConfirmationDialog`
 做 compact 适配）、会议页提示条折叠、History 批量条改底部浮层、MeetingDetail 手机三标签、
 admin 表格首列吸附。
+
+第三轮：字号 codemod（`scripts/codemod-font-scale.mjs`，408 处）、长列表性能实测与结论、
+`SharedMeeting`/`ChangePassword` 的 compact 内边距对齐。
 
 关键结果：
 
@@ -37,7 +41,7 @@ admin 表格首列吸附。
 | **P3** | `PaneSplitter` 只在 wide（≥1024）挂载；medium（768–1023）双栏 60/40（转写 `flex 2`、纪要 `flex 1`，纪要 `min-width: 280px`） | `pages/Meeting.tsx` |
 | **P4** | `/voiceprints` 行内 26–30px 按钮与纯文字按钮在 ≤1023 统一抬到 44（93 个）→ 0；`/login` 主按钮与「去注册」抬到 44（2 个）→ 0；`/history` 批量操作条改 compact 底部吸附浮层；admin 表格首列在横向滚动时吸附 | `pages/Voiceprints.tsx`、`pages/Login.tsx`、`pages/HistoryBulkActions.tsx`、`pages/admin/AdminAuditLog.tsx`、`styles/index.css` |
 | **P5** | 新增 `Sheet`（compact 底部升起：圆角 16、抓手、`92dvh` 上限、下拉关闭、背景滚动锁；md+ 保持原居中卡片）；迁移 `ShareDialog`/`MindMapDialog`/`SegmentEditDialog`/`MeetingInfoEditor`/`MembersDialog`/`MinutesVersionsDialog`/`MinutesEditor`/`CompliancePanel` 共 8 个弹窗；`SettingsPanel` compact 全宽 + 安全区；`VoiceConfirmationDialog` 保留自身焦点陷阱，只做 compact 高度/内边距适配 | `components/Sheet.tsx` + 8 个弹窗、`SettingsPanel.tsx`、`VoiceConfirmationDialog.tsx` |
-| **P6** | 语义类字号在 compact 抬一档（`.label` 12→13、`.chip` 11→12、`.panel-header h2` 13→15、`.count-badge` 11→12），桌面保持原值；输入类 16px 覆盖到 ≤1023（含 iPadOS 聚焦放大问题） | `styles/index.css` |
+| **P6** | 字号 codemod 落地：`scripts/codemod-font-scale.mjs` 把 **408 处** 独立写死的 `text-[10/11/12px]` 换成语义类 `.text-micro/.text-meta/.text-ui`（桌面像素不变、compact 抬 1px；21 处带响应式变体的按护栏跳过）；语义类字号另在 compact 抬一档（`.label`/`.chip`/`.panel-header h2`/`.count-badge`）；输入类 16px 覆盖到 ≤1023（含 iPadOS 聚焦放大）；长列表**实测后决定不上虚拟滚动**（见第 4 节） | `scripts/codemod-font-scale.mjs`、`styles/index.css`、60 个组件/页面 |
 | **追加** | 详情页 compact 三标签（转写 / 纪要 / 待办，替代「并排 + 长滚动」）；会议页顶部提示条 compact 折叠为单行 +「详情」 | `pages/MeetingDetail.tsx`、`pages/Meeting.tsx` |
 | **验收工程** | `e2e/responsive.spec.ts`（6 档视口 × 首页/登录页断言 + 会中断点用例）+ CI `Responsive gate` 步骤 + `npm run verify:responsive` | `e2e/responsive.spec.ts`、`playwright.config.ts`、`.github/workflows/ci.yml` |
 
@@ -89,6 +93,8 @@ admin 表格首列吸附。
 | 详情页三标签（真机仿真） | 390×844 + 1440×900 实测 | 390：一次只显示一块、标签栏 55px、溢出 0；1440：四块同时可见、标签栏不渲染 |
 | CI 门禁 | `.github/workflows/ci.yml` 的 `Responsive gate`（`vite preview` + `npm run verify:responsive`） | 已在本地用 `vite preview`（5174）复跑通过，确认不依赖后端 |
 | 会中真机仿真 | Chromium 假麦克风 + 390×844 起会 15s | 三标签切换正常、控制条 65px、溢出 0、正文 16px、无 <40px 控件、无 JS 异常 |
+| 字号迁移效果 | 1440 与 390 实测 `getComputedStyle` | 桌面 `text-meta=11px`、`text-ui=12px`（与迁移前一致）；390 分别 12px / 13px |
+| 长会议渲染（方案 4.6 的「先测」） | 临时 harness 渲染真实 `TranscriptStream`，200/500/1000/2000 段，390×844 视口滚动 1.2s | 挂载 13–23ms；滚动帧间隔 **p50/p95 = 11/11ms（≈90fps）**，长帧 0–2 个，**未触发 <50fps 阈值** → 不引入 `react-window` |
 
 后端未改一行代码，因此未重跑后端 766 项测试（本轮改动面 100% 在 `frontend/`）。
 
@@ -97,8 +103,8 @@ admin 表格首列吸附。
 
 | 项 | 状态 | 原因 / 后续 |
 |---|---|---|
-| 423 处 10–12px 硬编码字号的 codemod | **未做** | 一次性抬到 12–14px 会改变桌面排版（行高、表格列宽、分栏标题不换行），与「桌面零回归」冲突。已改为：令牌覆盖 `.reader-body*` 与输入类 + 语义类（`.label`/`.chip`/`.panel-header h2`/`.count-badge`）在 compact 抬一档；余下按目录分批迁移、逐批回归 |
-| 长会议虚拟滚动（方案 4.6） | **未做** | 需要 500/1000/2000 段真实数据测 FPS 才能决定；本轮没有造这类数据，故不引入 `react-window` |
+| 仍写死的字号 | **少量残留** | codemod 按护栏跳过了 21 处「同一 className 里已有 `md:`/`max-md:` 字号」的写法（如 `text-[11px] max-md:text-[12px]`）。这些位置已经各自处理过窄屏值，语义化收益为零，保持原样更安全 |
+| 长会议虚拟滚动（方案 4.6） | **实测后不做** | 200/500/1000/2000 段实测：挂载 13–23ms、滚动帧间隔 p95 = 11ms（≈90fps）、无长任务，未达方案设定的「<50fps 或长任务 >200ms」门槛。harness 是临时的（测完已删），设备为桌面 Chrome 引擎仿真，真机仍需按 A10 复核 |
 | History 筛选抽屉 / 筛选项折叠 | **未做** | `/history` 6 档视口均无横向溢出，筛选行本身已 `flex-wrap`；做抽屉需要重排交互且收益有限。已做的是批量操作条改底部吸附浮层 |
 | 详情页第四标签「导图」 | **未做** | 导图是纪要栏里的一个切换按钮，不是独立面板；做成第四标签要么复制一份侧栏、要么改组件契约。当前三标签（转写/纪要/待办）已消除长滚动，导图仍从「纪要」标签里打开 |
 | 真机 iOS Safari / Android Chrome（A10） | **未做** | 无真机。已用 Chromium 设备仿真 + 假麦克风覆盖布局与三标签，真机仍需按第 4 节的清单人工过一遍 |

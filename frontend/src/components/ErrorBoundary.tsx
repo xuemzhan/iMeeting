@@ -21,7 +21,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
         <p className="text-[15px] font-medium">页面暂时无法显示</p>
-        <p className="max-w-[460px] text-[12px] text-tertiary">
+        <p className="max-w-[460px] text-ui text-tertiary">
           {this.state.error.message || '发生了未预期的界面错误'}
         </p>
         <div className="flex gap-2">

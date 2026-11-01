@@ -49,13 +49,13 @@ export function MembersDialog({
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             placeholder="用户名"
-            className="min-w-0 flex-1 rounded px-2 py-1.5 text-[12px] outline-none"
+            className="min-w-0 flex-1 rounded px-2 py-1.5 text-ui outline-none"
             style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}
           />
           <select
             value={role}
             onChange={(e) => setRole(e.target.value)}
-            className="rounded px-2 py-1.5 text-[12px]"
+            className="rounded px-2 py-1.5 text-ui"
             style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}
           >
             <option value="viewer">只读</option>
@@ -77,13 +77,13 @@ export function MembersDialog({
               }
             }}
             disabled={busy}
-            className="btn btn-primary text-[12px]"
+            className="btn btn-primary text-ui"
           >
             {busy ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
             添加
           </button>
         </div>
-        {error && <p className="mb-2 text-[11px]" style={{ color: 'var(--danger-text)' }}>{error}</p>}
+        {error && <p className="mb-2 text-meta" style={{ color: 'var(--danger-text)' }}>{error}</p>}
         <div className="space-y-1.5">
           {items.map((item) => (
             <div
@@ -91,9 +91,9 @@ export function MembersDialog({
               className="flex items-center gap-2 rounded-lg px-2.5 py-2"
               style={{ background: 'var(--bg-subtle)' }}
             >
-              <span className="min-w-0 flex-1 truncate text-[12px]">
+              <span className="min-w-0 flex-1 truncate text-ui">
                 {item.display_name || item.username}
-                <span className="ml-1 text-[10px] text-tertiary">@{item.username}</span>
+                <span className="ml-1 text-micro text-tertiary">@{item.username}</span>
               </span>
               <span className="chip">
                 {item.role === 'owner' ? '所有者' : item.role === 'editor' ? '可编辑' : '只读'}

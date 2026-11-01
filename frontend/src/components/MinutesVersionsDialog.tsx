@@ -30,7 +30,7 @@ export function MinutesVersionsDialog({
         </>
       }
       actions={
-        <span className="text-[11px] text-tertiary">
+        <span className="text-meta text-tertiary">
           {versions.length > 0 ? `共 ${versions.length} 版` : '暂无版本'}
         </span>
       }

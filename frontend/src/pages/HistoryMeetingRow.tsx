@@ -96,7 +96,7 @@ export function HistoryMeetingRow({
         <div className="flex items-center gap-1.5">
           <p className="truncate text-[13px] font-medium">
             {meeting.title}
-            <span className="ml-1.5 font-mono text-[10px] font-normal text-tertiary">
+            <span className="ml-1.5 font-mono text-micro font-normal text-tertiary">
               #{meeting.id}
             </span>
           </p>
@@ -109,7 +109,7 @@ export function HistoryMeetingRow({
             </span>
           )}
         </div>
-        <p className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-tertiary">
+        <p className="mt-0.5 flex flex-wrap items-center gap-2 text-meta text-tertiary">
           <span>{new Date(meeting.created_at).toLocaleString('zh-CN')}</span>
           {meeting.duration_ms > 0 && (
             <>
@@ -141,7 +141,7 @@ export function HistoryMeetingRow({
         <button
           type="button"
           onClick={onRestore}
-          className="btn btn-ghost shrink-0 text-[11px]"
+          className="btn btn-ghost shrink-0 text-meta"
           title="恢复会议"
         >
           <RotateCcw size={13} /> 恢复

@@ -98,14 +98,14 @@ export function MindMap({
   return (
     <div className="flex min-h-0 flex-col">
       <div className="flex items-center gap-1.5 px-3 py-2">
-        <span className="mr-auto text-[11px] text-tertiary">
+        <span className="mr-auto text-meta text-tertiary">
           基于纪要 v{data.version}
           {data.is_draft ? '（草稿）' : ''}
         </span>
         <button type="button" onClick={() => setScale((s) => Math.max(0.6, s - 0.1))} className="btn btn-ghost p-1" aria-label="缩小">
           <Minus size={13} />
         </button>
-        <button type="button" onClick={() => setScale(1)} className="btn btn-ghost px-1.5 text-[11px]" aria-label="重置缩放">
+        <button type="button" onClick={() => setScale(1)} className="btn btn-ghost px-1.5 text-meta" aria-label="重置缩放">
           {Math.round(scale * 100)}%
         </button>
         <button type="button" onClick={() => setScale((s) => Math.min(1.6, s + 0.1))} className="btn btn-ghost p-1" aria-label="放大">

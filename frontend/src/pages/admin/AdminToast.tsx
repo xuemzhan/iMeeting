@@ -24,12 +24,12 @@ export function AdminToast({
     <button
       type="button"
       onClick={onClose}
-      className="mb-3 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[12px]"
+      className="mb-3 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-ui"
       style={{ background: palette.bg, color: palette.fg }}
     >
       <Icon size={14} className="shrink-0" />
       <span className="flex-1">{toast.text}</span>
-      <span className="text-[11px] opacity-70">点击关闭</span>
+      <span className="text-meta opacity-70">点击关闭</span>
     </button>
   )
 }

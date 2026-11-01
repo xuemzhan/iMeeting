@@ -42,7 +42,7 @@ export function SpeakerRolesPanel({
 }: Props) {
   if (speakers.length === 0) {
     return (
-      <p className="text-[11px] text-tertiary">
+      <p className="text-meta text-tertiary">
         有说话人之后，可在这里标注关键 / 次要参会人。
       </p>
     )
@@ -58,7 +58,7 @@ export function SpeakerRolesPanel({
 
   return (
     <div>
-      <p className="mb-2 flex items-center gap-1.5 text-[11px] font-medium text-tertiary">
+      <p className="mb-2 flex items-center gap-1.5 text-meta font-medium text-tertiary">
         <Users size={12} />
         参会人重要程度
         <span className="font-normal opacity-80">· 1 最高</span>
@@ -70,7 +70,7 @@ export function SpeakerRolesPanel({
           return (
           <div key={row.key} className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
             <span
-              className="min-w-0 flex-1 truncate text-[11px] text-secondary"
+              className="min-w-0 flex-1 truncate text-meta text-secondary"
               title={`${row.speaker} · 发言 ${formatSpeech(row.speech_ms)} · ${row.segments} 段${row.speakerKey ? ` · ${row.speakerKey}` : ''}`}
             >
               {row.speaker}
@@ -94,7 +94,7 @@ export function SpeakerRolesPanel({
                     disabled={disabled}
                     onClick={() => onChange(row, option.value)}
                     title={option.hint}
-                    className="whitespace-nowrap rounded-md px-1.5 py-0.5 text-[10px] font-medium transition-colors disabled:opacity-60"
+                    className="whitespace-nowrap rounded-md px-1.5 py-0.5 text-micro font-medium transition-colors disabled:opacity-60"
                     style={{
                       background: active ? 'var(--accent-soft)' : 'var(--bg-subtle)',
                       color: active ? 'var(--accent-text)' : 'var(--text-tertiary)',
@@ -115,7 +115,7 @@ export function SpeakerRolesPanel({
                 disabled={!onConfirm}
                 title="确认是参会人（确认后不再显示）"
                 aria-label={`确认参会人 ${row.speaker}${duplicated ? ` #${ordinal}` : ''}`}
-                className="inline-flex items-center gap-0.5 whitespace-nowrap rounded px-1 py-0.5 text-[10px] font-medium transition-colors hover:bg-[var(--bg-hover)] disabled:opacity-50"
+                className="inline-flex items-center gap-0.5 whitespace-nowrap rounded px-1 py-0.5 text-micro font-medium transition-colors hover:bg-[var(--bg-hover)] disabled:opacity-50"
                 style={{ color: 'var(--accent-text)' }}
               >
                 <Check size={11} />
@@ -127,7 +127,7 @@ export function SpeakerRolesPanel({
                 disabled={!onDelete}
                 title="删除该说话人（不是参会人，删除后不再显示）"
                 aria-label={`删除参会人 ${row.speaker}${duplicated ? ` #${ordinal}` : ''}`}
-                className="inline-flex items-center gap-0.5 whitespace-nowrap rounded px-1 py-0.5 text-[10px] font-medium transition-colors hover:bg-[var(--bg-hover)] disabled:opacity-50"
+                className="inline-flex items-center gap-0.5 whitespace-nowrap rounded px-1 py-0.5 text-micro font-medium transition-colors hover:bg-[var(--bg-hover)] disabled:opacity-50"
                 style={{ color: 'var(--danger-text)' }}
               >
                 <Trash2 size={11} />
@@ -139,20 +139,20 @@ export function SpeakerRolesPanel({
         })}
       </div>
       {speakers.length > visible.length && (
-        <p className="mt-1 text-[10px] text-tertiary">
+        <p className="mt-1 text-micro text-tertiary">
           还有 {speakers.length - visible.length} 位说话人（发言较少，未列出）
         </p>
       )}
       {error && (
         <p
-          className="mt-1.5 flex items-center gap-1 text-[10px]"
+          className="mt-1.5 flex items-center gap-1 text-micro"
           style={{ color: 'var(--danger-text)' }}
         >
           <AlertCircle size={10} />
           {error}
         </p>
       )}
-      <p className="mt-1.5 text-[10px] leading-relaxed text-tertiary">
+      <p className="mt-1.5 text-micro leading-relaxed text-tertiary">
         纪要以关键参会人为主干、次要参会人为补充，其余只作背景。确认或删除后，
         该说话人不再显示在这里。
       </p>

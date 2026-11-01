@@ -261,7 +261,7 @@ export default function Meeting() {
 
       {(captureWindowOpen || meetingInfo) && (
         <div
-          className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-[12px]"
+          className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-ui"
           style={{ background: 'var(--accent-soft)', color: 'var(--accent-text)' }}
         >
           <Info size={13} className="shrink-0" />
@@ -391,7 +391,7 @@ export default function Meeting() {
                   type="button"
                   onClick={() => setMindMapOpen(true)}
                   disabled={meetingId === null}
-                  className="btn btn-ghost px-1.5 text-[11px]"
+                  className="btn btn-ghost px-1.5 text-meta"
                   title="查看当前纪要脑图"
                 >
                   <Network size={12} /> 脑图
@@ -453,7 +453,7 @@ export default function Meeting() {
               {tab.icon}
               {tab.label}
               {tab.badge ? (
-                <span className="text-[11px] tabular-nums opacity-70">{tab.badge}</span>
+                <span className="text-meta tabular-nums opacity-70">{tab.badge}</span>
               ) : null}
             </button>
           ))}
@@ -511,7 +511,7 @@ function NoticeBar({
       : { background: 'var(--warn-soft)', color: 'var(--warn-text)' }
 
   return (
-    <div className="shrink-0 px-4 py-2 text-[12px] max-md:px-3" style={palette}>
+    <div className="shrink-0 px-4 py-2 text-ui max-md:px-3" style={palette}>
       <div className="flex items-center gap-2">
         {icon && <span className="shrink-0">{icon}</span>}
         <span className={`min-w-0 flex-1 max-md:text-[13px] ${open ? '' : 'max-md:truncate'}`}>
@@ -521,7 +521,7 @@ function NoticeBar({
           type="button"
           onClick={() => setOpen((value) => !value)}
           aria-expanded={open}
-          className="shrink-0 rounded px-2 py-0.5 text-[12px] underline md:hidden"
+          className="shrink-0 rounded px-2 py-0.5 text-ui underline md:hidden"
         >
           {open ? '收起' : '详情'}
         </button>

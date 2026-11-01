@@ -118,7 +118,7 @@ export default function History() {
         <div className="mx-auto max-w-[960px]">
           <Link
             to="/"
-            className="mb-4 inline-flex items-center gap-1 text-[12px] no-underline text-tertiary hover:text-secondary"
+            className="mb-4 inline-flex items-center gap-1 text-ui no-underline text-tertiary hover:text-secondary"
           >
             <ArrowLeft size={13} />
             返回会议
@@ -130,7 +130,7 @@ export default function History() {
                 {view === 'active' ? '历史会议' : '回收站'}
               </h1>
               {!needsLogin && data && (
-                <p className="text-[11px] text-tertiary">
+                <p className="text-meta text-tertiary">
                   {view === 'trash'
                     ? `共 ${total} 场 · 保留 30 天`
                     : filtered
@@ -143,7 +143,7 @@ export default function History() {
               <button
                 type="button"
                 onClick={() => setView(view === 'active' ? 'trash' : 'active')}
-                className="btn btn-ghost text-[11px]"
+                className="btn btn-ghost text-meta"
               >
                 {view === 'active' ? (
                   <>
@@ -209,7 +209,7 @@ export default function History() {
 
           {opNotice && (
             <div
-              className="mb-3 flex items-center justify-between rounded-lg px-3 py-2 text-[11px]"
+              className="mb-3 flex items-center justify-between rounded-lg px-3 py-2 text-meta"
               style={{
                 background: 'var(--accent-soft)',
                 color: 'var(--accent-text)',
@@ -231,7 +231,7 @@ export default function History() {
             <div className="panel flex flex-col items-center gap-3 py-16">
               <LogIn size={22} style={{ color: 'var(--text-tertiary)' }} />
               <p className="text-[13px] text-secondary">登录后可查看历史会议</p>
-              <p className="max-w-[300px] text-center text-[11px] text-tertiary">
+              <p className="max-w-[300px] text-center text-meta text-tertiary">
                 会议记录与纪要为账号私有数据，需要登录后访问。
               </p>
               <Link to="/login" className="btn btn-primary mt-1 no-underline">
@@ -264,7 +264,7 @@ export default function History() {
 
           {!needsLogin && meetings.length > 0 && (
             <div className="space-y-2">
-              <label className="flex cursor-pointer items-center gap-2 px-1 text-[11px] text-tertiary">
+              <label className="flex cursor-pointer items-center gap-2 px-1 text-meta text-tertiary">
                 <input type="checkbox" checked={allSelected} onChange={toggleAll} aria-label="全选当前页" style={{ accentColor: 'var(--accent)' }} />
                 全选当前页
               </label>
@@ -302,7 +302,7 @@ export default function History() {
 function LoadError({ error }: { error: unknown }) {
   const unauthorized = error instanceof ApiError && error.status === 401
   return (
-    <div className="flex flex-col items-start gap-2 rounded-lg px-4 py-3 text-[12px]" style={{ background: 'var(--danger-soft)', color: 'var(--danger-text)' }}>
+    <div className="flex flex-col items-start gap-2 rounded-lg px-4 py-3 text-ui" style={{ background: 'var(--danger-soft)', color: 'var(--danger-text)' }}>
       <p className="font-medium">{unauthorized ? '登录状态已失效' : '加载失败'}</p>
       <p style={{ color: 'var(--text-secondary)' }}>
         {unauthorized

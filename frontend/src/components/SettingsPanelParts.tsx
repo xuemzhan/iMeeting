@@ -28,14 +28,14 @@ export function CollapsibleSection({
           style={{ transform: open ? 'rotate(90deg)' : 'none', transition: 'transform .15s' }}
         />
         <span
-          className="text-[11px] font-medium tracking-wide"
+          className="text-meta font-medium tracking-wide"
           style={{ color: 'var(--text-tertiary)' }}
         >
           {title}
         </span>
         {count !== undefined && (
           <span
-            className="rounded-full px-1.5 text-[10px] tabular-nums"
+            className="rounded-full px-1.5 text-micro tabular-nums"
             style={{ background: 'var(--bg-subtle)', color: 'var(--text-tertiary)' }}
           >
             {count}
@@ -60,7 +60,7 @@ export function InlineMsg({
     err: { background: 'var(--danger-soft)', color: 'var(--danger-text)' },
   }[kind]
   return (
-    <div className="mb-2 rounded-lg px-2.5 py-1.5 text-[11px]" style={palette}>
+    <div className="mb-2 rounded-lg px-2.5 py-1.5 text-meta" style={palette}>
       {children}
     </div>
   )
@@ -76,7 +76,7 @@ export function SettingsSection({
   return (
     <section className="mb-5">
       <h3
-        className="mb-2 text-[11px] font-medium uppercase tracking-wide"
+        className="mb-2 text-meta font-medium uppercase tracking-wide"
         style={{ color: 'var(--text-tertiary)' }}
       >
         {title}
@@ -88,7 +88,7 @@ export function SettingsSection({
 
 export function SettingsRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between py-1 text-[12px]">
+    <div className="flex items-center justify-between py-1 text-ui">
       <span style={{ color: 'var(--text-secondary)' }}>{label}</span>
       <span style={{ color: 'var(--text-primary)' }}>{value}</span>
     </div>

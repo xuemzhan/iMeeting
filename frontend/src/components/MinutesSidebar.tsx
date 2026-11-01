@@ -84,7 +84,7 @@ export function MinutesSidebar({
           <button
             type="button"
             onClick={onEdit}
-            className="btn btn-ghost px-1.5 text-[11px]"
+            className="btn btn-ghost px-1.5 text-meta"
             title="人工修订并生成新版本"
           >
             <PencilLine size={12} /> 修订
@@ -93,7 +93,7 @@ export function MinutesSidebar({
         <button
           type="button"
           onClick={onToggleVersions}
-          className="btn btn-ghost px-1.5 text-[11px]"
+          className="btn btn-ghost px-1.5 text-meta"
           title="查看纪要历史版本"
         >
           <History size={12} /> {showVersions ? '收起版本' : '版本'}
@@ -101,7 +101,7 @@ export function MinutesSidebar({
         <button
           type="button"
           onClick={onToggleMindMap}
-          className="btn btn-ghost px-1.5 text-[11px]"
+          className="btn btn-ghost px-1.5 text-meta"
           title="用思维导图查看纪要"
         >
           <Network size={12} />
@@ -113,13 +113,13 @@ export function MinutesSidebar({
         {generating ? (
           <div className="flex flex-col items-center gap-2 py-8">
             <Loader2 size={16} className="animate-spin" style={{ color: 'var(--accent)' }} />
-            <p className="text-[12px] text-tertiary">正在分析…</p>
+            <p className="text-ui text-tertiary">正在分析…</p>
           </div>
         ) : minutes ? (
           <div className="space-y-3">
             {minutes.is_draft && (
               <p
-                className="rounded px-2 py-1 text-[11px]"
+                className="rounded px-2 py-1 text-meta"
                 style={{
                   background: 'var(--accent-soft)',
                   color: 'var(--accent-text)',
@@ -130,7 +130,7 @@ export function MinutesSidebar({
             )}
             {minutes.edited && (
               <p
-                className="rounded px-2 py-1 text-[11px]"
+                className="rounded px-2 py-1 text-meta"
                 style={{
                   background: 'var(--bg-subtle)',
                   color: 'var(--text-secondary)',
@@ -175,7 +175,7 @@ export function MinutesSidebar({
                         key={`${evidence.segment_id}-${evidence.start_ms}`}
                         type="button"
                         onClick={() => onSeek(evidence.start_ms)}
-                        className="rounded px-1 py-0.5 font-mono text-[10px]"
+                        className="rounded px-1 py-0.5 font-mono text-micro"
                         style={{
                           background: 'var(--bg-surface)',
                           color: 'var(--accent-text)',
@@ -192,7 +192,7 @@ export function MinutesSidebar({
 
             {minutes.todos.length > 0 && (
               <div>
-                <p className="mb-1.5 flex items-center gap-1 text-[11px] font-medium text-tertiary">
+                <p className="mb-1.5 flex items-center gap-1 text-meta font-medium text-tertiary">
                   <CheckSquare size={11} />
                   待办事项
                 </p>
@@ -211,7 +211,7 @@ export function MinutesSidebar({
                       <button
                         type="button"
                         onClick={() => onSeek(todo.evidence![0].start_ms)}
-                        className="ml-1 font-mono text-[10px] underline-offset-2 hover:underline"
+                        className="ml-1 font-mono text-micro underline-offset-2 hover:underline"
                       >
                         {formatTimestamp(todo.evidence[0].start_ms)}
                       </button>
@@ -224,13 +224,13 @@ export function MinutesSidebar({
         ) : (
           <div className="flex flex-col items-center gap-2 py-8 text-center">
             <Lightbulb size={18} style={{ color: 'var(--text-tertiary)' }} />
-            <p className="text-[12px] text-tertiary">还没有生成纪要</p>
+            <p className="text-ui text-tertiary">还没有生成纪要</p>
           </div>
         )}
 
         {error && (
           <div
-            className="mb-2 rounded-lg px-3 py-2 text-[11px]"
+            className="mb-2 rounded-lg px-3 py-2 text-meta"
             style={{ background: 'var(--danger-soft)', color: 'var(--danger-text)' }}
           >
             {error}
@@ -275,7 +275,7 @@ export function MinutesSidebar({
         </button>
 
         {!hasTranscript && (
-          <p className="mt-2 text-center text-[11px] text-tertiary">
+          <p className="mt-2 text-center text-meta text-tertiary">
             该会议没有转写内容（可能全程未采集到声音），无法生成纪要
           </p>
         )}

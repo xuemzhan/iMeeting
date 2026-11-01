@@ -67,7 +67,7 @@ export function TemplatePicker({ value, onChange }: Props) {
           onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}
           aria-label="纪要模板"
           title="选择纪要模板"
-          className="min-w-0 flex-1 rounded px-1.5 py-1 text-[11px] outline-none"
+          className="min-w-0 flex-1 rounded px-1.5 py-1 text-meta outline-none"
           style={{
             background: 'var(--bg-surface)',
             color: 'var(--text-secondary)',
@@ -113,10 +113,10 @@ export function TemplatePicker({ value, onChange }: Props) {
         />
       </div>
       {selected?.description && (
-        <p className="mt-1 text-[10px] text-tertiary">{selected.description}</p>
+        <p className="mt-1 text-micro text-tertiary">{selected.description}</p>
       )}
       {error && (
-        <p className="mt-1 text-[10px]" style={{ color: 'var(--danger-text)' }}>
+        <p className="mt-1 text-micro" style={{ color: 'var(--danger-text)' }}>
           {error}
         </p>
       )}

@@ -63,7 +63,7 @@ export default function Login() {
       <div className="panel w-full max-w-[360px] p-6 max-md:p-5">
         <Link
           to="/"
-          className="mb-4 inline-flex items-center gap-1 text-[12px] no-underline text-tertiary hover:text-secondary"
+          className="mb-4 inline-flex items-center gap-1 text-ui no-underline text-tertiary hover:text-secondary"
         >
           <ArrowLeft size={13} />
           返回会议
@@ -72,13 +72,13 @@ export default function Login() {
         <h1 className="mb-1 text-[15px] font-medium">
           {mode === 'login' ? '登录管理后台' : '创建账号'}
         </h1>
-        <p className="mb-5 text-[12px] text-tertiary">
+        <p className="mb-5 text-ui text-tertiary">
           {mode === 'login' ? '仅管理员可修改系统配置' : '注册后为普通用户权限'}
         </p>
 
         {mode === 'login' && prefilled && (
           <p
-            className="mb-4 flex items-start gap-1.5 rounded-md px-2.5 py-2 text-[11px] leading-relaxed"
+            className="mb-4 flex items-start gap-1.5 rounded-md px-2.5 py-2 text-meta leading-relaxed"
             style={{ background: 'var(--accent-soft)', color: 'var(--accent-text)' }}
           >
             <Info size={13} className="mt-px shrink-0" />
@@ -157,7 +157,7 @@ export default function Login() {
         <button
           type="button"
           onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
-          className="login-switch mt-4 w-full text-center text-[12px] text-tertiary hover:text-secondary"
+          className="login-switch mt-4 w-full text-center text-ui text-tertiary hover:text-secondary"
         >
           {mode === 'login' ? '没有账号？创建一个' : '已有账号？去登录'}
         </button>

@@ -63,17 +63,17 @@ export function VoiceprintConflictList({
 
   return (
     <section className="panel mb-5 p-3" aria-label="声纹确认冲突">
-      <h2 className="mb-2 flex items-center gap-1.5 text-[12px] font-medium" style={{ color: 'var(--text-secondary)' }}>
+      <h2 className="mb-2 flex items-center gap-1.5 text-ui font-medium" style={{ color: 'var(--text-secondary)' }}>
         <AlertTriangle size={13} style={{ color: 'var(--warn-text)' }} />
         待核对的声纹（{items.length}）
       </h2>
-      <p className="mb-2 text-[11px] leading-relaxed" style={{ color: 'var(--text-tertiary)' }}>
+      <p className="mb-2 text-meta leading-relaxed" style={{ color: 'var(--text-tertiary)' }}>
         这些样本与本人原有声纹差异较大，或与另一个人更像。确认后才会写进模板库，
         取消的样本只用于校准阈值。
       </p>
 
       {loading && (
-        <p className="flex items-center gap-1 text-[11px]" style={{ color: 'var(--text-tertiary)' }}>
+        <p className="flex items-center gap-1 text-meta" style={{ color: 'var(--text-tertiary)' }}>
           <Loader2 size={11} className="animate-spin" /> 读取中…
         </p>
       )}
@@ -86,8 +86,8 @@ export function VoiceprintConflictList({
             style={{ background: 'var(--bg-subtle)' }}
           >
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <span className="text-[12px] font-medium">{item.voiceprint_name ?? '未知'}</span>
-              <span className="text-[11px]" style={{ color: 'var(--text-tertiary)' }}>
+              <span className="text-ui font-medium">{item.voiceprint_name ?? '未知'}</span>
+              <span className="text-meta" style={{ color: 'var(--text-tertiary)' }}>
                 与本人 {formatScore(item.self_score)}
               </span>
               {item.other_name && (
@@ -98,7 +98,7 @@ export function VoiceprintConflictList({
                   更像 {item.other_name}（{formatScore(item.other_score)}）
                 </span>
               )}
-              <span className="ml-auto text-[10px]" style={{ color: 'var(--text-tertiary)' }}>
+              <span className="ml-auto text-micro" style={{ color: 'var(--text-tertiary)' }}>
                 {item.reason === 'both'
                   ? '差异大且像别人'
                   : item.reason === 'diverge'
@@ -112,12 +112,12 @@ export function VoiceprintConflictList({
                 type="button"
                 onClick={() => void decide(item, 'accept')}
                 disabled={busyId === item.conflict_id}
-                className="btn btn-ghost px-1.5 text-[11px]"
+                className="btn btn-ghost px-1.5 text-meta"
               >
                 确认为本人
               </button>
               {prints.length > 0 && (
-                <label className="flex items-center gap-1 text-[11px]" style={{ color: 'var(--text-tertiary)' }}>
+                <label className="flex items-center gap-1 text-meta" style={{ color: 'var(--text-tertiary)' }}>
                   判给别人
                   <select
                     defaultValue=""
@@ -125,7 +125,7 @@ export function VoiceprintConflictList({
                       const value = Number(event.target.value)
                       if (value) void decide(item, 'reassign', value)
                     }}
-                    className="rounded px-1 py-0.5 text-[11px]"
+                    className="rounded px-1 py-0.5 text-meta"
                     style={{
                       background: 'var(--bg-surface)',
                       border: '1px solid var(--border-subtle)',
@@ -147,7 +147,7 @@ export function VoiceprintConflictList({
                 type="button"
                 onClick={() => void decide(item, 'cancel')}
                 disabled={busyId === item.conflict_id}
-                className="btn btn-ghost px-1.5 text-[11px]"
+                className="btn btn-ghost px-1.5 text-meta"
               >
                 <X size={11} /> 取消
               </button>
@@ -157,7 +157,7 @@ export function VoiceprintConflictList({
       </ul>
 
       {error && (
-        <p className="mt-1.5 text-[10px]" style={{ color: 'var(--danger-text)' }}>
+        <p className="mt-1.5 text-micro" style={{ color: 'var(--danger-text)' }}>
           {error}
         </p>
       )}

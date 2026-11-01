@@ -48,7 +48,7 @@ export function MeetingDetailHeader({
     <>
       <Link
         to="/history"
-        className="mb-4 inline-flex items-center gap-1 text-[12px] no-underline text-tertiary hover:text-secondary"
+        className="mb-4 inline-flex items-center gap-1 text-ui no-underline text-tertiary hover:text-secondary"
       >
         <ArrowLeft size={13} />
         返回列表
@@ -57,7 +57,7 @@ export function MeetingDetailHeader({
       <div className="mb-4 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-[16px] font-medium">{meeting.title}</h1>
-          <p className="mt-1 flex items-center gap-2 text-[12px] text-tertiary">
+          <p className="mt-1 flex items-center gap-2 text-ui text-tertiary">
             <span>{new Date(meeting.created_at).toLocaleString('zh-CN')}</span>
             <span aria-hidden>·</span>
             <span>{formatDuration(meeting.duration_ms)}</span>
@@ -71,7 +71,7 @@ export function MeetingDetailHeader({
             )}
           </p>
           {(meeting.participants || meeting.meeting_type || meeting.agenda) && (
-            <p className="mt-1 max-w-[680px] text-[11px] text-tertiary">
+            <p className="mt-1 max-w-[680px] text-meta text-tertiary">
               {meeting.meeting_type && `类型：${meeting.meeting_type} · `}
               {meeting.participants && `参会：${meeting.participants}`}
               {meeting.participants && meeting.agenda && ' · '}
@@ -130,7 +130,7 @@ export function MeetingDetailHeader({
                     key={format.key}
                     type="button"
                     onClick={() => onExport(format.key)}
-                    className="block w-full px-3 py-1.5 text-left text-[12px] transition-colors hover:bg-[var(--bg-hover)]"
+                    className="block w-full px-3 py-1.5 text-left text-ui transition-colors hover:bg-[var(--bg-hover)]"
                   >
                     {format.label}
                   </button>

@@ -55,7 +55,7 @@ export default function Voiceprints() {
             <h1 className="text-[17px] font-semibold" style={{ color: 'var(--text-primary)' }}>
               声纹管理
             </h1>
-            <span className="text-[12px]" style={{ color: 'var(--text-tertiary)' }}>
+            <span className="text-ui" style={{ color: 'var(--text-tertiary)' }}>
               共 {prints.length} 个
             </span>
             <div className="flex-1" />
@@ -83,7 +83,7 @@ export default function Voiceprints() {
 
           {/* 录入 */}
           <section className="mb-5">
-            <h2 className="mb-2 text-[12px] font-medium" style={{ color: 'var(--text-secondary)' }}>
+            <h2 className="mb-2 text-ui font-medium" style={{ color: 'var(--text-secondary)' }}>
               录入新声纹
             </h2>
             <VoiceprintEnroll
@@ -91,7 +91,7 @@ export default function Voiceprints() {
               onDone={enrollDone}
             />
             {devices.length === 0 && (
-              <p className="mt-1.5 text-[11px]" style={{ color: 'var(--text-tertiary)' }}>
+              <p className="mt-1.5 text-meta" style={{ color: 'var(--text-tertiary)' }}>
                 还没有检测到输入设备，请先在设置里选择麦克风。
               </p>
             )}
@@ -99,14 +99,14 @@ export default function Voiceprints() {
 
           {suggestions.length > 0 && (
             <section className="panel mb-5 p-3">
-              <h2 className="mb-2 text-[12px] font-medium" style={{ color: 'var(--text-secondary)' }}>
+              <h2 className="mb-2 text-ui font-medium" style={{ color: 'var(--text-secondary)' }}>
                 可能重复的声纹
               </h2>
               <div className="space-y-1.5">
                 {suggestions.slice(0, 8).map((item) => (
                   <div
                     key={`${item.source.id}-${item.target.id}`}
-                    className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-[11px]"
+                    className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-meta"
                     style={{ background: 'var(--bg-subtle)' }}
                   >
                     <span className="min-w-0 flex-1 truncate">
@@ -116,7 +116,7 @@ export default function Voiceprints() {
                     <button
                       type="button"
                       onClick={() => void merge(item.source, item.target.id)}
-                      className="btn btn-ghost text-[10px]"
+                      className="btn btn-ghost text-micro"
                     >
                       合并
                     </button>
@@ -131,11 +131,11 @@ export default function Voiceprints() {
           {/* 待命名 */}
           {provisional.length > 0 && (
             <section className="mb-5">
-              <h2 className="mb-2 flex items-center gap-1.5 text-[12px] font-medium" style={{ color: 'var(--text-secondary)' }}>
+              <h2 className="mb-2 flex items-center gap-1.5 text-ui font-medium" style={{ color: 'var(--text-secondary)' }}>
                 <Users size={13} />
                 待命名（{provisional.length}）
               </h2>
-              <p className="mb-2 text-[11px] leading-relaxed" style={{ color: 'var(--text-tertiary)' }}>
+              <p className="mb-2 text-meta leading-relaxed" style={{ color: 'var(--text-tertiary)' }}>
                 这些是开会时自动发现的说话人。改成真实姓名后，以后所有会议都会直接认出这个人，
                 历史转写里的旧标签也会一并更新。
               </p>
@@ -164,15 +164,15 @@ export default function Voiceprints() {
 
           {/* 已命名 */}
           <section>
-            <h2 className="mb-2 text-[12px] font-medium" style={{ color: 'var(--text-secondary)' }}>
+            <h2 className="mb-2 text-ui font-medium" style={{ color: 'var(--text-secondary)' }}>
               已命名（{named.length}）
             </h2>
             {loading ? (
-              <p className="text-[12px]" style={{ color: 'var(--text-tertiary)' }}>
+              <p className="text-ui" style={{ color: 'var(--text-tertiary)' }}>
                 加载中…
               </p>
             ) : named.length === 0 ? (
-              <p className="text-[12px]" style={{ color: 'var(--text-tertiary)' }}>
+              <p className="text-ui" style={{ color: 'var(--text-tertiary)' }}>
                 还没有命名的声纹。上面录入一个，或把「待命名」改成真实姓名。
               </p>
             ) : (
@@ -219,7 +219,7 @@ function Banner({
       : { background: 'var(--accent-soft)', color: 'var(--accent-text)' }
   return (
     <div
-      className="mb-3 flex items-center justify-between rounded-lg px-3 py-2 text-[12px]"
+      className="mb-3 flex items-center justify-between rounded-lg px-3 py-2 text-ui"
       style={style}
     >
       <span>{children}</span>

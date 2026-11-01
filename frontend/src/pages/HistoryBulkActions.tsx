@@ -73,11 +73,11 @@ export function HistoryBulkActions({
       }}
     >
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[12px]">已选 {selectedCount} 场</span>
+        <span className="text-ui">已选 {selectedCount} 场</span>
         <button
           type="button"
           onClick={onCancelSelection}
-          className="text-[11px] underline-offset-2 hover:underline"
+          className="text-meta underline-offset-2 hover:underline"
         >
           取消选择
         </button>
@@ -87,7 +87,7 @@ export function HistoryBulkActions({
               value={exportFormat}
               onChange={(e) => onExportFormatChange(e.target.value)}
               aria-label="导出格式"
-              className="rounded px-1.5 py-1 text-[11px]"
+              className="rounded px-1.5 py-1 text-meta"
               style={historySelectStyle}
             >
               <option value="md">Markdown</option>
@@ -102,21 +102,21 @@ export function HistoryBulkActions({
               type="button"
               onClick={onExport}
               disabled={busy}
-              className="btn btn-ghost text-[11px]"
+              className="btn btn-ghost text-meta"
             >
               <Download size={12} /> {exportStatus ?? '导出'}
             </button>
             <button
               type="button"
               onClick={onToggleRename}
-              className="btn btn-ghost text-[11px]"
+              className="btn btn-ghost text-meta"
             >
               批量重命名
             </button>
             <button
               type="button"
               onClick={onToggleTag}
-              className="btn btn-ghost text-[11px]"
+              className="btn btn-ghost text-meta"
             >
               <Tag size={12} /> 标签
             </button>
@@ -124,7 +124,7 @@ export function HistoryBulkActions({
               type="button"
               onClick={() => onArchive(true)}
               disabled={busy}
-              className="btn btn-ghost text-[11px]"
+              className="btn btn-ghost text-meta"
             >
               归档
             </button>
@@ -132,7 +132,7 @@ export function HistoryBulkActions({
               type="button"
               onClick={() => onArchive(false)}
               disabled={busy}
-              className="btn btn-ghost text-[11px]"
+              className="btn btn-ghost text-meta"
             >
               取消归档
             </button>
@@ -162,7 +162,7 @@ export function HistoryBulkActions({
               type="button"
               onClick={onBulkPurge}
               disabled={busy}
-              className="btn btn-ghost text-[11px]"
+              className="btn btn-ghost text-meta"
               style={{ color: 'var(--danger-text)' }}
             >
               <Trash2 size={12} /> 彻底删除
@@ -176,35 +176,35 @@ export function HistoryBulkActions({
             value={renameFind}
             onChange={(e) => onRenameFindChange(e.target.value)}
             placeholder="查找"
-            className="w-[110px] rounded px-1.5 py-1 text-[11px]"
+            className="w-[110px] rounded px-1.5 py-1 text-meta"
             style={historySelectStyle}
           />
           <input
             value={renameReplace}
             onChange={(e) => onRenameReplaceChange(e.target.value)}
             placeholder="替换为"
-            className="w-[110px] rounded px-1.5 py-1 text-[11px]"
+            className="w-[110px] rounded px-1.5 py-1 text-meta"
             style={historySelectStyle}
           />
           <input
             value={renamePrefix}
             onChange={(e) => onRenamePrefixChange(e.target.value)}
             placeholder="前缀"
-            className="w-[90px] rounded px-1.5 py-1 text-[11px]"
+            className="w-[90px] rounded px-1.5 py-1 text-meta"
             style={historySelectStyle}
           />
           <input
             value={renameSuffix}
             onChange={(e) => onRenameSuffixChange(e.target.value)}
             placeholder="后缀"
-            className="w-[90px] rounded px-1.5 py-1 text-[11px]"
+            className="w-[90px] rounded px-1.5 py-1 text-meta"
             style={historySelectStyle}
           />
           <button
             type="button"
             onClick={onApplyRename}
             disabled={busy}
-            className="btn btn-primary text-[11px]"
+            className="btn btn-primary text-meta"
             style={{ height: 26 }}
           >
             应用
@@ -217,14 +217,14 @@ export function HistoryBulkActions({
             value={tagInput}
             onChange={(e) => onTagInputChange(e.target.value)}
             placeholder="标签，多个用逗号分隔"
-            className="w-[220px] rounded px-1.5 py-1 text-[11px]"
+            className="w-[220px] rounded px-1.5 py-1 text-meta"
             style={historySelectStyle}
           />
           <button
             type="button"
             onClick={onApplyTags}
             disabled={busy}
-            className="btn btn-primary text-[11px]"
+            className="btn btn-primary text-meta"
             style={{ height: 26 }}
           >
             添加标签

@@ -138,7 +138,7 @@ export function AudioPlayer({ meetingId }: Props) {
   if (loading) {
     return (
       <div
-        className="flex items-center gap-2 rounded-lg px-3 py-2 text-[12px]"
+        className="flex items-center gap-2 rounded-lg px-3 py-2 text-ui"
         style={{ background: 'var(--bg-subtle)', color: 'var(--text-tertiary)' }}
       >
         <span className="size-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -150,7 +150,7 @@ export function AudioPlayer({ meetingId }: Props) {
   if (error) {
     return (
       <div
-        className="flex items-center gap-2 rounded-lg px-3 py-2 text-[12px]"
+        className="flex items-center gap-2 rounded-lg px-3 py-2 text-ui"
         style={{ background: 'var(--danger-soft)', color: 'var(--danger-text)' }}
       >
         {error}
@@ -179,7 +179,7 @@ export function AudioPlayer({ meetingId }: Props) {
       </button>
 
       {/* 时间 */}
-      <span className="font-mono text-[11px] tabular-nums text-tertiary">
+      <span className="font-mono text-meta tabular-nums text-tertiary">
         {formatDuration(currentMs)}
       </span>
 
@@ -198,7 +198,7 @@ export function AudioPlayer({ meetingId }: Props) {
       />
 
       {/* 总时长 */}
-      <span className="font-mono text-[11px] tabular-nums text-tertiary">
+      <span className="font-mono text-meta tabular-nums text-tertiary">
         {formatDuration(durationMs)}
       </span>
 

@@ -85,7 +85,7 @@ export function VoiceprintTemplateSummary({ voiceprintId }: { voiceprintId: numb
           setOpen(next)
           if (next && data == null) void load()
         }}
-        className="flex items-center gap-1 text-[11px]"
+        className="flex items-center gap-1 text-meta"
         style={{ color: 'var(--text-tertiary)' }}
         aria-expanded={open}
       >
@@ -98,24 +98,24 @@ export function VoiceprintTemplateSummary({ voiceprintId }: { voiceprintId: numb
       {open && (
         <div className="mt-1 space-y-1">
           {loading && (
-            <p className="text-[10px]" style={{ color: 'var(--text-tertiary)' }}>
+            <p className="text-micro" style={{ color: 'var(--text-tertiary)' }}>
               读取中…
             </p>
           )}
           {error && (
-            <p className="text-[10px]" style={{ color: 'var(--danger-text)' }}>
+            <p className="text-micro" style={{ color: 'var(--danger-text)' }}>
               {error}
             </p>
           )}
           {data && active.length === 0 && (
-            <p className="text-[10px]" style={{ color: 'var(--text-tertiary)' }}>
+            <p className="text-micro" style={{ color: 'var(--text-tertiary)' }}>
               还没有模板：录入声纹或开会后确认一次即可生成。
             </p>
           )}
           {displayed.map((item) => (
             <div
               key={item.template_id}
-              className="flex flex-wrap items-center gap-x-2 rounded px-2 py-1 text-[10px]"
+              className="flex flex-wrap items-center gap-x-2 rounded px-2 py-1 text-micro"
               style={{ background: 'var(--bg-subtle)', color: 'var(--text-secondary)' }}
             >
               <span>样本 {item.slot >= 0 ? item.slot + 1 : '（已停用）'}</span>

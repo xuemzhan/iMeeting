@@ -84,7 +84,7 @@ export function IdleHero() {
           <p className="mt-1 text-[13px]" style={{ color: 'var(--text-tertiary)' }}>
             您的硅基伙伴
           </p>
-          <p className="mt-3 text-[12px]" style={{ color: 'var(--text-secondary)' }}>
+          <p className="mt-3 text-ui" style={{ color: 'var(--text-secondary)' }}>
             自动断句 · 说话人区分 · 标点补全 · 结构化纪要
           </p>
         </div>
@@ -124,12 +124,12 @@ export function IdleHero() {
             <Mic size={18} />
           </span>
           <span className="text-[15px] font-medium">开始会议</span>
-          <span className="text-[12px] opacity-70">点击即可，无需配置</span>
+          <span className="text-ui opacity-70">点击即可，无需配置</span>
         </button>
 
         {/* 手机端提示：真正的按钮在底部控制条 */}
         <p
-          className="mb-4 hidden text-center text-[12px] max-md:block"
+          className="mb-4 hidden text-center text-ui max-md:block"
           style={{ color: 'var(--text-tertiary)' }}
         >
           点下方「开始会议」即可，无需任何配置
@@ -139,10 +139,10 @@ export function IdleHero() {
           <div className="mt-6">
             <div className="mb-3 flex items-center gap-2">
               <CalendarDays size={13} style={{ color: 'var(--text-tertiary)' }} />
-              <h2 className="text-[12px] font-medium" style={{ color: 'var(--text-tertiary)' }}>
+              <h2 className="text-ui font-medium" style={{ color: 'var(--text-tertiary)' }}>
                 已预约会议
               </h2>
-              <label className="ml-auto cursor-pointer text-[11px] text-tertiary hover:text-secondary">
+              <label className="ml-auto cursor-pointer text-meta text-tertiary hover:text-secondary">
                 <input
                   type="file"
                   accept=".ics,text/calendar"
@@ -175,8 +175,8 @@ export function IdleHero() {
                     <CalendarDays size={13} />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-[12px] font-medium">{meeting.title}</p>
-                    <p className="mt-0.5 text-[11px] text-tertiary">
+                    <p className="truncate text-ui font-medium">{meeting.title}</p>
+                    <p className="mt-0.5 text-meta text-tertiary">
                       {meeting.scheduled_at
                         ? new Date(meeting.scheduled_at).toLocaleString('zh-CN')
                         : '未设置时间'}
@@ -186,7 +186,7 @@ export function IdleHero() {
                   <button
                     type="button"
                     onClick={() => void start(meeting.title, meeting.id)}
-                    className="btn btn-primary shrink-0 text-[11px]"
+                    className="btn btn-primary shrink-0 text-meta"
                     style={{ height: 28 }}
                   >
                     开始
@@ -199,7 +199,7 @@ export function IdleHero() {
 
         {scheduled.length === 0 && getToken() && (
           <div className="mt-5 flex items-center justify-center">
-            <label className="cursor-pointer text-[11px] text-tertiary hover:text-secondary">
+            <label className="cursor-pointer text-meta text-tertiary hover:text-secondary">
               <input
                 type="file"
                 accept=".ics,text/calendar"
@@ -222,7 +222,7 @@ export function IdleHero() {
         )}
 
         {importMessage && (
-          <p className="mt-2 text-center text-[11px] text-tertiary">{importMessage}</p>
+          <p className="mt-2 text-center text-meta text-tertiary">{importMessage}</p>
         )}
 
         {/* 最近会议 */}
@@ -230,7 +230,7 @@ export function IdleHero() {
           <div className="mt-8">
             <div className="mb-3 flex items-center gap-2">
               <Clock size={13} style={{ color: 'var(--text-tertiary)' }} />
-              <h2 className="text-[12px] font-medium" style={{ color: 'var(--text-tertiary)' }}>
+              <h2 className="text-ui font-medium" style={{ color: 'var(--text-tertiary)' }}>
                 最近会议
               </h2>
             </div>
@@ -243,7 +243,7 @@ export function IdleHero() {
         )}
 
         {/* 提示 */}
-        <div className="mt-6 flex items-center justify-center gap-4 text-[11px] max-md:hidden" style={{ color: 'var(--text-tertiary)' }}>
+        <div className="mt-6 flex items-center justify-center gap-4 text-meta max-md:hidden" style={{ color: 'var(--text-tertiary)' }}>
           <span className="flex items-center gap-1">
             <span className="kbd">Space</span>
             暂停/继续
@@ -301,10 +301,10 @@ function RecentMeetingRow({ meeting }: { meeting: Meeting }) {
         <FileText size={13} />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[12px] font-medium" style={{ color: 'var(--text-primary)' }}>
+        <p className="truncate text-ui font-medium" style={{ color: 'var(--text-primary)' }}>
           {meeting.title}
         </p>
-        <p className="mt-0.5 flex items-center gap-1.5 text-[11px]" style={{ color: 'var(--text-tertiary)' }}>
+        <p className="mt-0.5 flex items-center gap-1.5 text-meta" style={{ color: 'var(--text-tertiary)' }}>
           <span>{new Date(meeting.created_at).toLocaleString('zh-CN')}</span>
           {meeting.duration_ms > 0 && (
             <>

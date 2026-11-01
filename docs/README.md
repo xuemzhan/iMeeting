@@ -43,7 +43,7 @@
 | IM-EVD-009 | [全面审查验证证据](reviews/evidence/2026-11-01-comprehensive-review/README.md) | 阶段快照 | 审查当时的 743 项后端测试原始输出（2 失败）、Ruff、前端四项检查与 4 个独立探针 |
 | IM-RPT-008 | [2026-11-01 全面审查问题修复](reports/2026-11-01-comprehensive-review-fixes.md) | 阶段快照 | 11 项逐条处置、行为变化与影响面、未完成项 |
 | IM-EVD-010 | [修复验证证据](reviews/evidence/2026-11-01-comprehensive-review-fixes/README.md) | 阶段快照 | 修复后的后端 765 项全绿、Ruff、前端四项检查与 0 断链结果 |
-| IM-RPT-009 | [2026-11-01 手机/平板自适应改造](reports/2026-11-01-responsive-ui.md) | 阶段快照 | P0–P5 全部落地 + P6 部分：令牌与断点、顶栏紧凑化、会中/详情页三标签、平板双栏、8 个弹窗 Sheet、提示条折叠；6 档视口零溢出、触控 ≥44、1440 验收 14/14、响应式 e2e 13 条通过；未完成项逐条列出 |
+| IM-RPT-009 | [2026-11-01 手机/平板自适应改造](reports/2026-11-01-responsive-ui.md) | 阶段快照 | P0–P6 全部落地：令牌与断点、顶栏紧凑化、会中/详情页三标签、平板双栏、8 个弹窗 Sheet、提示条折叠、408 处字号语义化；6 档视口零溢出、触控 ≥44、1440 验收 14/14、响应式 e2e 13 条通过；长列表实测后不引入虚拟滚动；未完成项逐条列出 |
 | IM-EVD-011 | [改造前基线](reviews/evidence/2026-11-01-responsive-baseline/README.md) | 阶段快照 | 改造前四视口量测（390px 溢出 +25px、CTA 2 个）与 4 张截图 |
 | IM-EVD-012 | [改造后验证证据](reviews/evidence/2026-11-01-responsive/README.md) | 阶段快照 | 6 档 × 5 页探针输出、会中/详情页 390px 三标签截图、响应式 e2e 记录、CI 门禁与桌面验收结果 |
 

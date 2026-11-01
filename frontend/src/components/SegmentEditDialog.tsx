@@ -17,7 +17,7 @@ export function SegmentEditDialog({
   const [text, setText] = useState(segment.text)
   return (
     <Sheet onClose={onClose} title="修订转写文字" ariaLabel="修订转写文字" maxWidth={580}>
-      <p className="mb-1 text-[11px] text-tertiary">
+      <p className="mb-1 text-meta text-tertiary">
         原始识别时间 {formatTimestamp(segment.start_ms)} · 修订会同步更新全文检索
       </p>
       <textarea

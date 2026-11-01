@@ -18,7 +18,7 @@ export function SharedMeetingTranscript({
     <section className="panel overflow-hidden">
       <div className="panel-header">
         <FileText size={14} /> <h2>完整转写</h2>
-        <span className="ml-auto text-[11px] text-tertiary">
+        <span className="ml-auto text-meta text-tertiary">
           {segmentCount} 段
         </span>
       </div>
@@ -32,13 +32,13 @@ export function SharedMeetingTranscript({
               containIntrinsicSize: '150px',
             }}
           >
-            <span className="w-12 shrink-0 pt-0.5 font-mono text-[11px] text-tertiary">
+            <span className="w-12 shrink-0 pt-0.5 font-mono text-meta text-tertiary">
               {formatTimestamp(paragraph.startMs)}
             </span>
             <div className="min-w-0 flex-1">
               {paragraph.speaker && (
                 <p
-                  className="mb-0.5 text-[11px] font-medium"
+                  className="mb-0.5 text-meta font-medium"
                   style={{ color: 'var(--accent-text)' }}
                 >
                   {speakerLabel(paragraph.speaker)}
@@ -52,7 +52,7 @@ export function SharedMeetingTranscript({
         ))}
         {paragraphs.length > visibleParagraphs.length && (
           <div className="flex justify-center">
-            <button type="button" className="btn text-[12px]" onClick={onLoadMore}>
+            <button type="button" className="btn text-ui" onClick={onLoadMore}>
               加载更多（剩余 {paragraphs.length - visibleParagraphs.length} 段）
             </button>
           </div>

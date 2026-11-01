@@ -35,17 +35,17 @@ export function SettingsBackendConfig({
   if (!isAdminUser) {
     return (
       <SettingsSection title="后端配置">
-        <p className="mb-2 text-[11px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+        <p className="mb-2 text-meta leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
           模型与推理、识别与断句、说话人识别、LLM 纪要等配置项都在这里，
           但<strong>需要管理员身份</strong>才能查看和修改。当前未登录，所以暂时看不到。
         </p>
-        <p className="mb-2 text-[11px] leading-relaxed" style={{ color: 'var(--text-tertiary)' }}>
+        <p className="mb-2 text-meta leading-relaxed" style={{ color: 'var(--text-tertiary)' }}>
           未登录也可以正常开会转写；只有「改后端配置」这一步需要管理员。
         </p>
         <Link
           to="/login"
           onClick={onClose}
-          className="mt-1 inline-flex items-center gap-1.5 text-[12px] no-underline"
+          className="mt-1 inline-flex items-center gap-1.5 text-ui no-underline"
           style={{ color: 'var(--accent-text)' }}
         >
           <ShieldCheck size={13} />
@@ -68,7 +68,7 @@ export function SettingsBackendConfig({
 
       {cfg.schema && (
         <p
-          className="mb-3 text-[11px] leading-relaxed"
+          className="mb-3 text-meta leading-relaxed"
           style={{ color: 'var(--text-tertiary)' }}
         >
           以下为后端 FunASR 与 LLM 配置。标「需重启」的项保存后要重启服务才生效；

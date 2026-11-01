@@ -113,7 +113,7 @@ export const SegmentCard = memo(function SegmentCard({
               maxLength={32}
               placeholder="输入姓名"
               aria-label="说话人姓名"
-              className="w-[130px] rounded px-1.5 py-0.5 text-[11px] outline-none"
+              className="w-[130px] rounded px-1.5 py-0.5 text-meta outline-none"
               style={{
                 background: 'var(--bg-surface)',
                 color: 'var(--text-primary)',
@@ -121,7 +121,7 @@ export const SegmentCard = memo(function SegmentCard({
               }}
             />
           ) : isDraft ? (
-            <span className="text-[11px] font-medium" style={{ color: 'var(--text-tertiary)' }}>
+            <span className="text-meta font-medium" style={{ color: 'var(--text-tertiary)' }}>
               识别中
             </span>
           ) : (
@@ -206,7 +206,7 @@ export const SegmentCard = memo(function SegmentCard({
             <button
               type="button"
               onClick={() => onSeek?.(segment.startMs)}
-              className="ml-auto rounded px-1.5 py-0.5 font-mono text-[11px] tabular-nums transition-colors hover:bg-black/5"
+              className="ml-auto rounded px-1.5 py-0.5 font-mono text-meta tabular-nums transition-colors hover:bg-black/5"
               style={{ color: 'var(--text-tertiary)' }}
               title="跳转到音频对应位置"
             >

@@ -30,7 +30,7 @@ export function AdminDashboard() {
   if (error || !data) {
     return (
       <div
-        className="rounded-lg px-4 py-3 text-[12px]"
+        className="rounded-lg px-4 py-3 text-ui"
         style={{ background: 'var(--danger-soft)', color: 'var(--danger-text)' }}
       >
         看板加载失败：{error instanceof Error ? error.message : '未知错误'}
@@ -81,7 +81,7 @@ export function AdminDashboard() {
               value={`${data.llm_prompt_tokens.toLocaleString()} / ${data.llm_completion_tokens.toLocaleString()}`}
             />
             <StatLine label="累计成本" value={`$${data.llm_cost_usd.toFixed(4)}`} />
-            <p className="pt-1 text-[10px] text-tertiary">
+            <p className="pt-1 text-micro text-tertiary">
               数值来自每次模型调用后的本地计量，不会把会议内容上传到额外分析服务。
             </p>
           </div>
@@ -105,7 +105,7 @@ export function AdminDashboard() {
               label="后台任务"
               value={`等待 ${data.jobs.pending ?? 0} · 运行 ${data.jobs.running ?? 0} · 失败 ${data.jobs.failed ?? 0}`}
             />
-            <p className="pt-1 text-[10px] text-tertiary">
+            <p className="pt-1 text-micro text-tertiary">
               定稿延迟取最近会议指标的中位数；噪声告警可用来判断会议室环境是否需要改善。
             </p>
           </div>
@@ -115,14 +115,14 @@ export function AdminDashboard() {
       <section className="panel overflow-hidden">
         <div className="panel-header">
           <Power size={14} /> <h2>发布与排空</h2>
-          <span className="ml-auto text-[10px] text-tertiary">
+          <span className="ml-auto text-micro text-tertiary">
             {data.maintenance.draining ? '当前处于维护排空状态' : '当前可接收新会议'}
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-2 p-4">
           <button
             type="button"
-            className="btn text-[12px]"
+            className="btn text-ui"
             onClick={async () => {
               try {
                 await adminApi.reindexSearch()
@@ -136,7 +136,7 @@ export function AdminDashboard() {
           </button>
           <button
             type="button"
-            className="btn text-[12px]"
+            className="btn text-ui"
             onClick={async () => {
               const result = await adminApi.drain()
               setOpsMessage(
@@ -148,7 +148,7 @@ export function AdminDashboard() {
           </button>
           <button
             type="button"
-            className="btn btn-primary text-[12px]"
+            className="btn btn-primary text-ui"
             onClick={async () => {
               await adminApi.resume()
               setOpsMessage('已恢复正常接流')
@@ -156,7 +156,7 @@ export function AdminDashboard() {
           >
             恢复正常接流
           </button>
-          {opsMessage && <span className="text-[11px] text-tertiary">{opsMessage}</span>}
+          {opsMessage && <span className="text-meta text-tertiary">{opsMessage}</span>}
         </div>
       </section>
     </div>
@@ -176,18 +176,18 @@ function Metric({
 }) {
   return (
     <div className="panel px-3 py-3">
-      <div className="flex items-center gap-1.5 text-[11px] text-tertiary">
+      <div className="flex items-center gap-1.5 text-meta text-tertiary">
         {icon} {label}
       </div>
       <p className="mt-1 text-[20px] font-semibold tabular-nums">{value}</p>
-      <p className="mt-0.5 truncate text-[10px] text-tertiary">{hint}</p>
+      <p className="mt-0.5 truncate text-micro text-tertiary">{hint}</p>
     </div>
   )
 }
 
 function StatLine({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between gap-2 text-[12px]">
+    <div className="flex items-center justify-between gap-2 text-ui">
       <span className="text-secondary">{label}</span>
       <span className="font-mono tabular-nums" style={{ color: 'var(--text-primary)' }}>
         {value}

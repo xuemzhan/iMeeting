@@ -43,10 +43,10 @@ export default function SharedMeeting() {
           <BrandMark size={24} />
           <span>总师会议智能伙伴</span>
         </Link>
-        <span className="ml-auto text-[11px] text-tertiary">只读分享</span>
+        <span className="ml-auto text-meta text-tertiary">只读分享</span>
       </header>
 
-      <main className="mx-auto max-w-[920px] px-4 py-6">
+      <main className="mx-auto max-w-[920px] px-4 py-6 max-md:px-3 max-md:py-4">
       {(opening || shared.isLoading) && (
           <div className="flex justify-center py-24">
             <Loader2 size={20} className="animate-spin" />
@@ -58,7 +58,7 @@ export default function SharedMeeting() {
             <div className="mb-3 flex items-center gap-2">
               <Lock size={15} /> <h1 className="text-[14px] font-medium">输入访问口令</h1>
             </div>
-            <p className="mb-3 text-[11px] text-tertiary">
+            <p className="mb-3 text-meta text-tertiary">
               该会议分享链接受口令保护。
             </p>
             <input
@@ -69,7 +69,7 @@ export default function SharedMeeting() {
                 if (e.key === 'Enter') void open()
               }}
               placeholder="访问口令"
-              className="mb-2 w-full rounded px-2.5 py-2 text-[12px] outline-none"
+              className="mb-2 w-full rounded px-2.5 py-2 text-ui outline-none"
               style={{
                 background: 'var(--bg-surface)',
                 border: '1px solid var(--border-default)',
@@ -79,12 +79,12 @@ export default function SharedMeeting() {
             <button
               type="button"
               onClick={() => void open()}
-              className="btn btn-primary w-full text-[12px]"
+              className="btn btn-primary w-full text-ui"
             >
               打开会议
             </button>
             {authError && (
-              <p className="mt-2 text-[11px]" style={{ color: 'var(--danger-text)' }}>
+              <p className="mt-2 text-meta" style={{ color: 'var(--danger-text)' }}>
                 {authError}
               </p>
             )}
@@ -94,17 +94,17 @@ export default function SharedMeeting() {
         {!shared.isLoading && expired && (
           <div className="panel mx-auto max-w-[420px] p-6 text-center">
             <p className="text-[13px] font-medium">分享链接已过期</p>
-            <p className="mt-1 text-[11px] text-tertiary">请联系会议发起人重新生成链接。</p>
+            <p className="mt-1 text-meta text-tertiary">请联系会议发起人重新生成链接。</p>
           </div>
         )}
 
         {!shared.isLoading && shared.error && !locked && !expired && (
           <div className="panel mx-auto max-w-[420px] p-6 text-center">
             <p className="text-[13px] font-medium">无法打开会议</p>
-            <p className="mt-1 text-[11px] text-tertiary">
+            <p className="mt-1 text-meta text-tertiary">
               {shared.error instanceof Error ? shared.error.message : '分享链接无效'}
             </p>
-            <Link to="/" className="btn mt-3 no-underline text-[12px]">
+            <Link to="/" className="btn mt-3 no-underline text-ui">
               返回首页
             </Link>
           </div>
@@ -115,7 +115,7 @@ export default function SharedMeeting() {
             <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h1 className="text-[20px] font-semibold">{shared.data.meeting.title}</h1>
-                <p className="mt-1 flex flex-wrap gap-2 text-[11px] text-tertiary">
+                <p className="mt-1 flex flex-wrap gap-2 text-meta text-tertiary">
                   <span>{new Date(shared.data.meeting.created_at).toLocaleString('zh-CN')}</span>
                   <span>·</span>
                   <span>{formatDuration(shared.data.meeting.duration_ms)}</span>
@@ -128,7 +128,7 @@ export default function SharedMeeting() {
                 </p>
               </div>
               <div className="flex gap-2">
-                <button type="button" onClick={() => window.print()} className="btn text-[12px]">
+                <button type="button" onClick={() => window.print()} className="btn text-ui">
                   <Printer size={13} /> 打印
                 </button>
                 {shared.data.allow_download && (
@@ -136,7 +136,7 @@ export default function SharedMeeting() {
                     type="button"
                     onClick={() => void downloadAudio()}
                     disabled={downloading}
-                    className="btn text-[12px]"
+                    className="btn text-ui"
                   >
                     {downloading ? (
                       <Loader2 size={13} className="animate-spin" />
@@ -152,13 +152,13 @@ export default function SharedMeeting() {
             {(shared.data.meeting.agenda || shared.data.meeting.description) && (
               <section className="panel mb-3 p-4">
                 {shared.data.meeting.agenda && (
-                  <p className="text-[12px]">
+                  <p className="text-ui">
                     <span className="font-medium">议程：</span>
                     {shared.data.meeting.agenda}
                   </p>
                 )}
                 {shared.data.meeting.description && (
-                  <p className="mt-1 text-[12px] text-secondary">
+                  <p className="mt-1 text-ui text-secondary">
                     {shared.data.meeting.description}
                   </p>
                 )}

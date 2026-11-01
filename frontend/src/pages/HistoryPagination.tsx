@@ -16,10 +16,10 @@ export function HistoryPagination({
   onPageSizeChange,
 }: Props) {
   return (
-    <div className="flex flex-wrap items-center justify-end gap-2 pt-2 text-[11px] text-tertiary">
+    <div className="flex flex-wrap items-center justify-end gap-2 pt-2 text-meta text-tertiary">
       <button
         type="button"
-        className="btn btn-ghost text-[11px]"
+        className="btn btn-ghost text-meta"
         disabled={page === 0}
         onClick={() => onPageChange(Math.max(0, page - 1))}
       >
@@ -30,7 +30,7 @@ export function HistoryPagination({
       </span>
       <button
         type="button"
-        className="btn btn-ghost text-[11px]"
+        className="btn btn-ghost text-meta"
         disabled={page + 1 >= totalPages}
         onClick={() => onPageChange(page + 1)}
       >
@@ -40,7 +40,7 @@ export function HistoryPagination({
         value={pageSize}
         onChange={(e) => onPageSizeChange(Number(e.target.value))}
         aria-label="每页数量"
-        className="rounded px-1.5 py-1 text-[11px]"
+        className="rounded px-1.5 py-1 text-meta"
         style={historySelectStyle}
       >
         <option value={20}>20 / 页</option>

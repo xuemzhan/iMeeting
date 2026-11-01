@@ -90,7 +90,7 @@ export function TranscriptPanel({
       </div>
       <div className="space-y-3 p-4">
         {segments.length === 0 && (
-          <p className="py-8 text-center text-[12px] text-tertiary">没有转写内容</p>
+          <p className="py-8 text-center text-ui text-tertiary">没有转写内容</p>
         )}
         {visibleParagraphs.map((paragraph: Paragraph) => {
           const lowScore = paragraphLowScore(paragraph.items)
@@ -116,7 +116,7 @@ export function TranscriptPanel({
                   {formatTimestamp(paragraph.startMs)}
                 </button>
               ) : (
-                <span className="w-12 shrink-0 pt-0.5 font-mono text-[11px] tabular-nums text-tertiary">
+                <span className="w-12 shrink-0 pt-0.5 font-mono text-meta tabular-nums text-tertiary">
                   {formatTimestamp(paragraph.startMs)}
                 </span>
               )}
@@ -134,7 +134,7 @@ export function TranscriptPanel({
                     maxLength={32}
                     placeholder="输入姓名"
                     aria-label="说话人姓名"
-                    className="mb-1 w-[140px] rounded px-1.5 py-0.5 text-[11px] outline-none"
+                    className="mb-1 w-[140px] rounded px-1.5 py-0.5 text-meta outline-none"
                     style={{
                       background: 'var(--bg-surface)',
                       color: 'var(--text-primary)',
@@ -223,7 +223,7 @@ export function TranscriptPanel({
                 <button
                   type="button"
                   onClick={() => toggleParagraph(paragraph.key)}
-                  className="mt-1 inline-flex items-center gap-1 rounded px-1 py-0.5 text-[10px] text-tertiary transition-colors hover:bg-[var(--bg-hover)] hover:text-secondary"
+                  className="mt-1 inline-flex items-center gap-1 rounded px-1 py-0.5 text-micro text-tertiary transition-colors hover:bg-[var(--bg-hover)] hover:text-secondary"
                 >
                   <PencilLine size={10} />
                   {expandedParagraphs.has(paragraph.key) ? '收起原始句' : '按句修订文字'}
@@ -239,7 +239,7 @@ export function TranscriptPanel({
                         className="flex items-start gap-2 border-b py-1.5 last:border-b-0"
                         style={{ borderColor: 'var(--border-subtle)' }}
                       >
-                        <span className="shrink-0 pt-0.5 font-mono text-[10px] text-tertiary">
+                        <span className="shrink-0 pt-0.5 font-mono text-micro text-tertiary">
                           {formatTimestamp(segment.start_ms)}
                         </span>
                         <p
@@ -295,7 +295,7 @@ export function TranscriptPanel({
                         <button
                           type="button"
                           onClick={() => onEditSegment(segment)}
-                          className="shrink-0 rounded px-1.5 py-0.5 text-[10px] transition-colors hover:bg-[var(--bg-hover)]"
+                          className="shrink-0 rounded px-1.5 py-0.5 text-micro transition-colors hover:bg-[var(--bg-hover)]"
                           style={{ color: 'var(--accent-text)' }}
                         >
                           修订
@@ -312,7 +312,7 @@ export function TranscriptPanel({
           <div className="flex justify-center pt-1">
             <button
               type="button"
-              className="btn text-[12px]"
+              className="btn text-ui"
               onClick={() => setVisibleParagraphCount((value) => value + 200)}
             >
               加载更多（剩余 {paragraphs.length - visibleParagraphCount} 段）

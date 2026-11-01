@@ -25,7 +25,7 @@ function RouteFallback() {
   return (
     <div className="flex h-full min-h-[240px] flex-col items-center justify-center gap-2">
       <Loader2 size={16} className="animate-spin" style={{ color: 'var(--accent)' }} />
-      <p className="text-[12px] text-tertiary">正在加载页面…</p>
+      <p className="text-ui text-tertiary">正在加载页面…</p>
     </div>
   )
 }

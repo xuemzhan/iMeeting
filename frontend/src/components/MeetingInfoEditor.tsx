@@ -62,31 +62,31 @@ export function MeetingInfoEditor({
           系统会自动填充；也可以在这里手动修改。手动保存后自动提取不会覆盖。
         </p>
         <div className="space-y-2">
-          <label className="block text-[11px] text-tertiary">
+          <label className="block text-meta text-tertiary">
             会议主题
-            <input value={title} onChange={(e) => setTitle(e.target.value)} className="mt-1 w-full rounded px-2 py-1.5 text-[12px] outline-none" style={inputStyle} />
+            <input value={title} onChange={(e) => setTitle(e.target.value)} className="mt-1 w-full rounded px-2 py-1.5 text-ui outline-none" style={inputStyle} />
           </label>
-          <label className="block text-[11px] text-tertiary">
+          <label className="block text-meta text-tertiary">
             参会人（逗号分隔）
-            <input value={participants} onChange={(e) => setParticipants(e.target.value)} className="mt-1 w-full rounded px-2 py-1.5 text-[12px] outline-none" style={inputStyle} />
+            <input value={participants} onChange={(e) => setParticipants(e.target.value)} className="mt-1 w-full rounded px-2 py-1.5 text-ui outline-none" style={inputStyle} />
           </label>
-          <label className="block text-[11px] text-tertiary">
+          <label className="block text-meta text-tertiary">
             会议类型
-            <input value={meetingType} onChange={(e) => setMeetingType(e.target.value)} placeholder="周会 / 评审 / 访谈 / 培训" className="mt-1 w-full rounded px-2 py-1.5 text-[12px] outline-none" style={inputStyle} />
+            <input value={meetingType} onChange={(e) => setMeetingType(e.target.value)} placeholder="周会 / 评审 / 访谈 / 培训" className="mt-1 w-full rounded px-2 py-1.5 text-ui outline-none" style={inputStyle} />
           </label>
-          <label className="block text-[11px] text-tertiary">
+          <label className="block text-meta text-tertiary">
             议程
-            <textarea value={agenda} onChange={(e) => setAgenda(e.target.value)} rows={3} className="mt-1 w-full rounded px-2 py-1.5 text-[12px] outline-none" style={inputStyle} />
+            <textarea value={agenda} onChange={(e) => setAgenda(e.target.value)} rows={3} className="mt-1 w-full rounded px-2 py-1.5 text-ui outline-none" style={inputStyle} />
           </label>
-          <label className="block text-[11px] text-tertiary">
+          <label className="block text-meta text-tertiary">
             描述
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className="mt-1 w-full rounded px-2 py-1.5 text-[12px] outline-none" style={inputStyle} />
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className="mt-1 w-full rounded px-2 py-1.5 text-ui outline-none" style={inputStyle} />
           </label>
         </div>
-        {error && <p className="mt-2 text-[11px]" style={{ color: 'var(--danger-text)' }}>{error}</p>}
+        {error && <p className="mt-2 text-meta" style={{ color: 'var(--danger-text)' }}>{error}</p>}
         <div className="mt-3 flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="btn btn-ghost text-[12px]">取消</button>
-          <button type="button" onClick={() => void save()} disabled={busy || !title.trim()} className="btn btn-primary text-[12px]">
+          <button type="button" onClick={onClose} className="btn btn-ghost text-ui">取消</button>
+          <button type="button" onClick={() => void save()} disabled={busy || !title.trim()} className="btn btn-primary text-ui">
             {busy ? <Loader2 size={12} className="animate-spin" /> : null}
             保存
           </button>

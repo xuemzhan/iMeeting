@@ -41,7 +41,7 @@ export function GlossaryPanel() {
     <section className="panel overflow-hidden">
       <div className="panel-header">
         <h2>企业词表</h2>
-        <span className="ml-auto text-[10px] text-tertiary">
+        <span className="ml-auto text-micro text-tertiary">
           规范词会进入 ASR 热词和纪要提示
         </span>
       </div>
@@ -51,27 +51,27 @@ export function GlossaryPanel() {
             value={term}
             onChange={(e) => setTerm(e.target.value)}
             placeholder="规范词，如 XX-1000"
-            className="min-w-[160px] flex-1 rounded px-2 py-1.5 text-[12px] outline-none"
+            className="min-w-[160px] flex-1 rounded px-2 py-1.5 text-ui outline-none"
             style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}
           />
           <input
             value={aliases}
             onChange={(e) => setAliases(e.target.value)}
             placeholder="别名，逗号分隔"
-            className="min-w-[160px] flex-1 rounded px-2 py-1.5 text-[12px] outline-none"
+            className="min-w-[160px] flex-1 rounded px-2 py-1.5 text-ui outline-none"
             style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}
           />
           <input
             value={category}
             onChange={(e) => setCategory(e.target.value)}
             placeholder="分类"
-            className="w-[110px] rounded px-2 py-1.5 text-[12px] outline-none"
+            className="w-[110px] rounded px-2 py-1.5 text-ui outline-none"
             style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}
           />
-          <button type="button" onClick={() => void add()} disabled={busy} className="btn btn-primary text-[12px]">
+          <button type="button" onClick={() => void add()} disabled={busy} className="btn btn-primary text-ui">
             {busy ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />} 添加
           </button>
-          <label className="btn cursor-pointer text-[12px]">
+          <label className="btn cursor-pointer text-ui">
             <Upload size={12} /> 导入 CSV
             <input
               type="file"
@@ -94,10 +94,10 @@ export function GlossaryPanel() {
             />
           </label>
         </div>
-        {error && <p className="mb-2 text-[11px]" style={{ color: 'var(--danger-text)' }}>{error}</p>}
+        {error && <p className="mb-2 text-meta" style={{ color: 'var(--danger-text)' }}>{error}</p>}
         <div className="space-y-1">
           {terms.length === 0 && (
-            <p className="py-8 text-center text-[11px] text-tertiary">还没有企业词条</p>
+            <p className="py-8 text-center text-meta text-tertiary">还没有企业词条</p>
           )}
           {terms.map((row) => (
             <div
@@ -105,8 +105,8 @@ export function GlossaryPanel() {
               className="flex items-center gap-2 rounded-lg px-2.5 py-2"
               style={{ background: 'var(--bg-subtle)' }}
             >
-              <span className="text-[12px] font-medium">{row.term}</span>
-              {row.aliases && <span className="min-w-0 flex-1 truncate text-[10px] text-tertiary">{row.aliases}</span>}
+              <span className="text-ui font-medium">{row.term}</span>
+              {row.aliases && <span className="min-w-0 flex-1 truncate text-micro text-tertiary">{row.aliases}</span>}
               <span className="chip">{row.category || '术语'}</span>
               <button
                 type="button"

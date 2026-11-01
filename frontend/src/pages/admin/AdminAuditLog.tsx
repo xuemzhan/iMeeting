@@ -46,7 +46,7 @@ export function AdminAuditLog() {
             }
           }}
           placeholder="按动作筛选，如 share_create"
-          className="ml-auto w-[220px] rounded px-2 py-1 text-[11px] outline-none"
+          className="ml-auto w-[220px] rounded px-2 py-1 text-meta outline-none"
           style={{
             background: 'var(--bg-surface)',
             border: '1px solid var(--border-subtle)',
@@ -58,13 +58,13 @@ export function AdminAuditLog() {
             setPage(0)
             setApplied(action.trim())
           }}
-          className="btn btn-ghost text-[11px]"
+          className="btn btn-ghost text-meta"
         >
           筛选
         </button>
         <button
           type="button"
-          className="btn btn-ghost text-[11px]"
+          className="btn btn-ghost text-meta"
           onClick={async () => {
             const result = await adminApi.verifyAudit()
             setVerifyMessage(
@@ -78,7 +78,7 @@ export function AdminAuditLog() {
         </button>
         <button
           type="button"
-          className="btn btn-ghost text-[11px]"
+          className="btn btn-ghost text-meta"
           onClick={async () => {
             const blob = await adminApi.exportAudit(applied)
             const url = URL.createObjectURL(blob)
@@ -92,24 +92,24 @@ export function AdminAuditLog() {
           <Download size={12} /> 导出
         </button>
       </div>
-      {verifyMessage && <p className="px-3 py-2 text-[11px] text-tertiary">{verifyMessage}</p>}
+      {verifyMessage && <p className="px-3 py-2 text-meta text-tertiary">{verifyMessage}</p>}
       {isLoading && (
         <div className="flex justify-center py-16">
           <Loader2 size={17} className="animate-spin" />
         </div>
       )}
       {error && (
-        <p className="p-4 text-[12px]" style={{ color: 'var(--danger-text)' }}>
+        <p className="p-4 text-ui" style={{ color: 'var(--danger-text)' }}>
           {error instanceof Error ? error.message : '审计日志加载失败'}
         </p>
       )}
       {!isLoading && !error && (data?.items.length ?? 0) === 0 && (
-        <p className="py-16 text-center text-[12px] text-tertiary">没有匹配的操作记录</p>
+        <p className="py-16 text-center text-ui text-tertiary">没有匹配的操作记录</p>
       )}
       {!isLoading && (data?.items.length ?? 0) > 0 && (
         <>
           <div className="overflow-x-auto">
-            <table className="admin-table w-full text-left text-[11px]">
+            <table className="admin-table w-full text-left text-meta">
               <thead style={{ background: 'var(--bg-subtle)', color: 'var(--text-tertiary)' }}>
                 <tr>
                   <th className="px-3 py-2 font-medium">时间</th>
@@ -130,7 +130,7 @@ export function AdminAuditLog() {
                     </td>
                     <td className="px-3 py-2">{row.username}</td>
                     <td className="px-3 py-2">{actionLabel[row.action] ?? row.action}</td>
-                    <td className="max-w-[260px] truncate px-3 py-2 font-mono text-[10px] text-tertiary">
+                    <td className="max-w-[260px] truncate px-3 py-2 font-mono text-micro text-tertiary">
                       {row.target ?? '—'}
                     </td>
                   </tr>
@@ -138,11 +138,11 @@ export function AdminAuditLog() {
               </tbody>
             </table>
           </div>
-          <div className="flex items-center justify-end gap-2 px-3 py-2 text-[11px] text-tertiary">
+          <div className="flex items-center justify-end gap-2 px-3 py-2 text-meta text-tertiary">
             <span>共 {data?.total ?? 0} 条</span>
             <button
               type="button"
-              className="btn btn-ghost text-[11px]"
+              className="btn btn-ghost text-meta"
               disabled={page === 0}
               onClick={() => setPage((value) => Math.max(0, value - 1))}
             >
@@ -153,7 +153,7 @@ export function AdminAuditLog() {
             </span>
             <button
               type="button"
-              className="btn btn-ghost text-[11px]"
+              className="btn btn-ghost text-meta"
               disabled={page + 1 >= totalPages}
               onClick={() => setPage((value) => value + 1)}
             >

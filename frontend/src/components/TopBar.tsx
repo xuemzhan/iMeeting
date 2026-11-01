@@ -86,7 +86,7 @@ export function TopBar() {
       {/* 计时 */}
       {(isRecording || isPaused || isBusy) && (
         <span
-          className="font-mono text-[12px] tabular-nums"
+          className="font-mono text-ui tabular-nums"
           style={{ color: 'var(--text-secondary)' }}
         >
           {formatDuration(elapsedMs)}
@@ -105,7 +105,7 @@ export function TopBar() {
       {/* 麦克风信号指示：把「没声音」这件最容易误判的事显式说出来 */}
       {(isRecording || isPaused) && micAlive === false && (
         <span
-          className="flex items-center gap-1.5 rounded-full px-2 py-1 text-[11px] font-medium max-md:size-2 max-md:shrink-0 max-md:p-0"
+          className="flex items-center gap-1.5 rounded-full px-2 py-1 text-meta font-medium max-md:size-2 max-md:shrink-0 max-md:p-0"
           style={{ background: 'var(--danger-soft)', color: 'var(--danger-text)' }}
           title="已连续数秒未采集到声音，请检查麦克风设备与静音开关"
         >
@@ -201,7 +201,7 @@ function AccountEntry({ user }: { user: User | null }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex size-6 items-center justify-center rounded-full text-[11px] font-medium"
+        className="flex size-6 items-center justify-center rounded-full text-meta font-medium"
         style={{ background: 'var(--accent-soft)', color: 'var(--accent-text)' }}
         title={`${name}${isAdmin ? '（管理员）' : ''}`}
         aria-label="账号菜单"
@@ -213,10 +213,10 @@ function AccountEntry({ user }: { user: User | null }) {
       {open && (
         <div className="panel absolute right-0 top-[34px] z-50 w-[184px] p-1.5">
           <div className="px-2 py-1.5">
-            <div className="truncate text-[12px] font-medium" style={{ color: 'var(--text-primary)' }}>
+            <div className="truncate text-ui font-medium" style={{ color: 'var(--text-primary)' }}>
               {name}
             </div>
-            <div className="text-[11px] text-tertiary">
+            <div className="text-meta text-tertiary">
               {isAdmin ? '管理员' : '普通用户'}
             </div>
           </div>
@@ -230,7 +230,7 @@ function AccountEntry({ user }: { user: User | null }) {
                 setOpen(false)
                 navigate('/admin')
               }}
-              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[12px] hover:bg-[var(--bg-subtle)]"
+              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-ui hover:bg-[var(--bg-subtle)]"
               style={{ color: 'var(--text-secondary)' }}
             >
               <ShieldCheck size={13} />
@@ -249,7 +249,7 @@ function AccountEntry({ user }: { user: User | null }) {
               //   ——「admin 区未登录就回登录页」，不要在这里另立一套。
               logout()
             }}
-            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[12px] hover:bg-[var(--bg-subtle)]"
+            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-ui hover:bg-[var(--bg-subtle)]"
             style={{ color: 'var(--text-secondary)' }}
           >
             <LogOut size={13} />

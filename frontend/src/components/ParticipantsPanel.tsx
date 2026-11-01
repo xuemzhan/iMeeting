@@ -112,14 +112,14 @@ export function ParticipantsPanel({ meetingId, pollMs = 0, compact = false }: Pr
       aria-label="会议参会人"
     >
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-2.5 py-1.5">
-        <span className="flex items-center gap-1 text-[12px] font-medium">
+        <span className="flex items-center gap-1 text-ui font-medium">
           <Users size={13} style={{ color: 'var(--text-tertiary)' }} />
           参会人
-          <span className="text-[11px] font-normal text-tertiary">{rows.length}</span>
+          <span className="text-meta font-normal text-tertiary">{rows.length}</span>
         </span>
 
         {rows.length === 0 && (
-          <span className="text-[11px] text-tertiary">
+          <span className="text-meta text-tertiary">
             {controller.loading ? '读取中…' : '还没有识别到讲话人'}
           </span>
         )}
@@ -136,14 +136,14 @@ export function ParticipantsPanel({ meetingId, pollMs = 0, compact = false }: Pr
         </span>
 
         {pending > 0 && (
-          <span className="text-[10px]" style={{ color: 'var(--warn-text)' }}>
+          <span className="text-micro" style={{ color: 'var(--warn-text)' }}>
             {pending} 位待确认
           </span>
         )}
 
         <span className="ml-auto flex items-center gap-0.5">
-          {pending > 0 && <button type="button" className="btn btn-ghost text-[11px]" title="批量确认默认显示的候选；低可信候选需单独核对" onClick={() => void controller.confirmAll()}>确认全部</button>}
-          {controller.items.some((item) => item.hidden_by_confidence) && <button type="button" className="btn btn-ghost text-[11px]" onClick={() => setIncludeLow((value) => !value)}>{includeLow ? '收起低可信候选' : '显示低可信候选'}</button>}
+          {pending > 0 && <button type="button" className="btn btn-ghost text-meta" title="批量确认默认显示的候选；低可信候选需单独核对" onClick={() => void controller.confirmAll()}>确认全部</button>}
+          {controller.items.some((item) => item.hidden_by_confidence) && <button type="button" className="btn btn-ghost text-meta" onClick={() => setIncludeLow((value) => !value)}>{includeLow ? '收起低可信候选' : '显示低可信候选'}</button>}
           <IconButton label="添加参会人" onClick={startAdding}>
             <Plus size={12} />
           </IconButton>
@@ -184,7 +184,7 @@ export function ParticipantsPanel({ meetingId, pollMs = 0, compact = false }: Pr
                 placeholder={listening ? '请说出姓名…' : '输入姓名，回车加入'}
                 maxLength={32}
                 aria-label="新参会人姓名"
-                className="min-w-0 flex-1 rounded px-2 py-1 text-[12px] outline-none"
+                className="min-w-0 flex-1 rounded px-2 py-1 text-ui outline-none"
                 style={{
                   background: 'var(--bg-surface)',
                   color: 'var(--text-primary)',
@@ -195,7 +195,7 @@ export function ParticipantsPanel({ meetingId, pollMs = 0, compact = false }: Pr
                 type="button"
                 onClick={() => void submit()}
                 disabled={!draft.trim()}
-                className="btn btn-primary px-2 py-1 text-[11px]"
+                className="btn btn-primary px-2 py-1 text-meta"
               >
                 加入
               </button>
@@ -236,7 +236,7 @@ export function ParticipantsPanel({ meetingId, pollMs = 0, compact = false }: Pr
 
       {(controller.error || speechError) && (
         <p
-          className="flex items-start gap-1 px-2.5 pb-1.5 text-[10px]"
+          className="flex items-start gap-1 px-2.5 pb-1.5 text-micro"
           style={{ color: 'var(--danger-text)' }}
         >
           <AlertCircle size={10} className="mt-0.5 shrink-0" />
@@ -362,7 +362,7 @@ function ParticipantRow({
           }}
           maxLength={32}
           aria-label="参会人姓名"
-          className="w-[110px] rounded px-1.5 py-0.5 text-[12px] outline-none"
+          className="w-[110px] rounded px-1.5 py-0.5 text-ui outline-none"
           style={{
             background: 'var(--bg-surface)',
             color: 'var(--text-primary)',
@@ -397,13 +397,13 @@ function ParticipantRow({
         {row.ambiguous && isPending ? '有歧义' : STATE_LABELS[row.state]}
       </span>
 
-      {summary && <span className="text-[11px] text-tertiary">{summary}</span>}
-      {row.role && <span className="text-[11px] text-tertiary">· {row.role}</span>}
-      {row.evidence.map((segmentId, index) => <a key={segmentId} className="text-[10px] underline" href={`/history/${meetingId}#${encodeURIComponent(segmentId)}`}>证据{index + 1}</a>)}
+      {summary && <span className="text-meta text-tertiary">{summary}</span>}
+      {row.role && <span className="text-meta text-tertiary">· {row.role}</span>}
+      {row.evidence.map((segmentId, index) => <a key={segmentId} className="text-micro underline" href={`/history/${meetingId}#${encodeURIComponent(segmentId)}`}>证据{index + 1}</a>)}
 
       {binding ? (
         <span className="flex items-center gap-1">
-          <select aria-label="选择说话人" value={keyDraft} onChange={(event) => setKeyDraft(event.target.value)} className="rounded border px-1 py-0.5 text-[11px]">
+          <select aria-label="选择说话人" value={keyDraft} onChange={(event) => setKeyDraft(event.target.value)} className="rounded border px-1 py-0.5 text-meta">
             <option value="">解除绑定</option>
             {speakers.filter((speaker) => !speaker.speaker_key.startsWith('label:')).map((speaker) => <option key={speaker.speaker_key} value={speaker.speaker_key}>{speaker.speaker}（{speaker.segments}段发言）</option>)}
           </select>
@@ -413,7 +413,7 @@ function ParticipantRow({
               setBinding(false)
               onBind(keyDraft.trim() || null)
             }}
-            className="rounded px-1 text-[10px]"
+            className="rounded px-1 text-micro"
             style={{ color: 'var(--accent-text)' }}
           >
             绑定
@@ -436,11 +436,11 @@ function ParticipantRow({
 
       <button type="button" className="py-1 text-[10px] underline max-md:text-[12px]" onClick={() => setEditingDetails((value) => !value)}>编辑单位/职务</button>
       {editingDetails && <span className="flex gap-1">
-        <input aria-label="参会人单位" placeholder="单位" maxLength={64} value={unit} onChange={(e) => setUnit(e.target.value)} className="w-24 rounded border px-1 text-[11px]" />
-        <input aria-label="参会人职务" placeholder="职务" maxLength={64} value={title} onChange={(e) => setTitle(e.target.value)} className="w-24 rounded border px-1 text-[11px]" />
-        <button type="button" className="text-[11px] underline" onClick={() => { onDetails(unit, title); setEditingDetails(false) }}>保存属性</button>
+        <input aria-label="参会人单位" placeholder="单位" maxLength={64} value={unit} onChange={(e) => setUnit(e.target.value)} className="w-24 rounded border px-1 text-meta" />
+        <input aria-label="参会人职务" placeholder="职务" maxLength={64} value={title} onChange={(e) => setTitle(e.target.value)} className="w-24 rounded border px-1 text-meta" />
+        <button type="button" className="text-meta underline" onClick={() => { onDetails(unit, title); setEditingDetails(false) }}>保存属性</button>
       </span>}
-      {peers.length > 0 && <select aria-label={`合并参会人 ${row.speaker}`} className="rounded border text-[10px]" value="" onChange={(e) => { if (e.target.value) onMerge(Number(e.target.value)) }}>
+      {peers.length > 0 && <select aria-label={`合并参会人 ${row.speaker}`} className="rounded border text-micro" value="" onChange={(e) => { if (e.target.value) onMerge(Number(e.target.value)) }}>
         <option value="">合并到…</option>
         {peers.map((peer) => <option key={peer.person_id} value={peer.person_id}>{peer.speaker}</option>)}
       </select>}

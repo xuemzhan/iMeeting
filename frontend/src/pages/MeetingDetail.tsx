@@ -119,7 +119,7 @@ export default function MeetingDetail() {
             {unauthorized ? '登录状态已失效' : '加载失败'}
           </p>
           {unauthorized && (
-            <p className="max-w-[320px] text-center text-[12px] text-tertiary">
+            <p className="max-w-[320px] text-center text-ui text-tertiary">
               登录凭证已过期，请重新登录后查看这场会议。
             </p>
           )}
@@ -234,7 +234,7 @@ export default function MeetingDetail() {
               <div className="panel-header">
                 <CheckSquare size={14} style={{ color: 'var(--text-tertiary)' }} />
                 <h2>待办闭环</h2>
-                <span className="ml-auto text-[11px] text-tertiary">
+                <span className="ml-auto text-meta text-tertiary">
                   终稿与人工修订都会同步
                 </span>
               </div>

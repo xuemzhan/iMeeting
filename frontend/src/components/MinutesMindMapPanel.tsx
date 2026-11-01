@@ -24,21 +24,21 @@ export function MinutesMindMapPanel({
         <button
           type="button"
           onClick={onClose}
-          className="btn btn-ghost ml-auto px-1.5 text-[11px]"
+          className="btn btn-ghost ml-auto px-1.5 text-meta"
         >
           收起
         </button>
       </div>
       <div style={{ height: 420 }}>
         {loading ? (
-          <div className="flex h-full items-center justify-center gap-2 text-[12px] text-tertiary">
+          <div className="flex h-full items-center justify-center gap-2 text-ui text-tertiary">
             <Loader2 size={14} className="animate-spin" />
             正在生成导图…
           </div>
         ) : data ? (
           <MindMap data={data} onSeek={onSeek} />
         ) : (
-          <p className="py-10 text-center text-[12px] text-tertiary">
+          <p className="py-10 text-center text-ui text-tertiary">
             还没有可用的纪要
           </p>
         )}

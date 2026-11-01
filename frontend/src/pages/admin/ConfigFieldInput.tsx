@@ -12,11 +12,11 @@ export function ConfigFieldInput({ field, value, error, onChange }: Props) {
   return (
     <div className="flex items-start gap-4 px-4 py-3">
       <div className="w-[204px] shrink-0 pt-0.5">
-        <label className="block text-[12px] font-medium" htmlFor={field.key}>
+        <label className="block text-ui font-medium" htmlFor={field.key}>
           {field.label}
           {field.restart_required && (
             <span
-              className="ml-1.5 rounded px-1 py-px text-[10px]"
+              className="ml-1.5 rounded px-1 py-px text-micro"
               style={{ background: 'var(--warn-soft)', color: 'var(--warn-text)' }}
               title="修改后需重启服务才能生效"
             >
@@ -25,7 +25,7 @@ export function ConfigFieldInput({ field, value, error, onChange }: Props) {
           )}
         </label>
         {field.help && (
-          <p className="mt-0.5 text-[11px] leading-snug text-tertiary">{field.help}</p>
+          <p className="mt-0.5 text-meta leading-snug text-tertiary">{field.help}</p>
         )}
       </div>
 
@@ -33,12 +33,12 @@ export function ConfigFieldInput({ field, value, error, onChange }: Props) {
         <Control field={field} value={value} onChange={onChange} />
 
         {error && (
-          <p className="mt-1 text-[11px]" style={{ color: 'var(--danger)' }}>
+          <p className="mt-1 text-meta" style={{ color: 'var(--danger)' }}>
             {error}
           </p>
         )}
 
-        <p className="mt-1 font-mono text-[10px] text-tertiary">{field.key}</p>
+        <p className="mt-1 font-mono text-micro text-tertiary">{field.key}</p>
       </div>
     </div>
   )

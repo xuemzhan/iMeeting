@@ -34,13 +34,13 @@ export default function ChangePassword() {
   }
 
   return (
-    <div className="flex h-full items-center justify-center px-6">
-      <div className="panel w-full max-w-[380px] p-6">
+    <div className="flex h-full items-center justify-center px-6 max-md:px-4">
+      <div className="panel w-full max-w-[380px] p-6 max-md:p-5">
         <div className="mb-4 flex items-center gap-2">
           <KeyRound size={16} style={{ color: 'var(--accent)' }} />
           <h1 className="text-[15px] font-medium">修改密码</h1>
         </div>
-        <p className="mb-5 text-[11px] leading-relaxed text-tertiary">
+        <p className="mb-5 text-meta leading-relaxed text-tertiary">
           {user.must_change_password
             ? '当前账号仍在使用初始化密码，修改后才能进入业务页面。'
             : '修改后，其他登录凭证将失效，当前设备会自动更新登录状态。'}
@@ -94,7 +94,7 @@ export default function ChangePassword() {
 
           {(localError || error) && (
             <p
-              className="rounded-md px-2.5 py-2 text-[12px]"
+              className="rounded-md px-2.5 py-2 text-ui"
               style={{ background: 'var(--danger-soft)', color: 'var(--danger-text)' }}
             >
               {localError || error}
@@ -118,7 +118,7 @@ export default function ChangePassword() {
 
         <Link
           to="/login"
-          className="mt-4 block text-center text-[12px] text-tertiary no-underline hover:text-secondary"
+          className="mt-4 block text-center text-ui text-tertiary no-underline hover:text-secondary"
         >
           返回登录页
         </Link>

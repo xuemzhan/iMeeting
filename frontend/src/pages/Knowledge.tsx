@@ -41,7 +41,7 @@ export default function Knowledge() {
         <div className="mx-auto max-w-[980px]">
           <Link
             to="/"
-            className="mb-4 inline-flex items-center gap-1 text-[12px] no-underline text-tertiary hover:text-secondary"
+            className="mb-4 inline-flex items-center gap-1 text-ui no-underline text-tertiary hover:text-secondary"
           >
             <ArrowLeft size={13} /> 返回会议
           </Link>
@@ -49,7 +49,7 @@ export default function Knowledge() {
           <div className="mb-4 flex items-end justify-between gap-3">
             <div>
               <h1 className="text-[16px] font-medium">会议知识库</h1>
-              <p className="mt-1 text-[12px] text-tertiary">
+              <p className="mt-1 text-ui text-tertiary">
                 跨会议检索主题、结论与转写，点击主题可追溯相关会议。
               </p>
             </div>
@@ -61,7 +61,7 @@ export default function Knowledge() {
           <section className="panel mb-3 overflow-hidden">
             <div className="panel-header">
               <h2>主题关系图</h2>
-              <span className="ml-auto text-[11px] text-tertiary">气泡大小 = 出现频次</span>
+              <span className="ml-auto text-meta text-tertiary">气泡大小 = 出现频次</span>
             </div>
             <div className="p-2">
               {topics.isLoading ? (
@@ -77,7 +77,7 @@ export default function Knowledge() {
                   }}
                 />
               ) : (
-                <p className="py-16 text-center text-[12px] text-tertiary">
+                <p className="py-16 text-center text-ui text-tertiary">
                   还没有可用于跨会议分析的主题
                 </p>
               )}
@@ -97,7 +97,7 @@ export default function Knowledge() {
                   if (e.key === 'Enter') submit()
                 }}
                 placeholder="搜索主题、结论或原话…"
-                className="w-full rounded-lg py-2 pl-8 pr-3 text-[12px] outline-none"
+                className="w-full rounded-lg py-2 pl-8 pr-3 text-ui outline-none"
                 style={{
                   background: 'var(--bg-surface)',
                   border: '1px solid var(--border-subtle)',
@@ -115,7 +115,7 @@ export default function Knowledge() {
                 onChange={(e) => setTag(e.target.value)}
                 placeholder="标签"
                 aria-label="标签筛选"
-                className="w-[120px] rounded-lg py-2 pl-7 pr-2 text-[12px] outline-none"
+                className="w-[120px] rounded-lg py-2 pl-7 pr-2 text-ui outline-none"
                 style={{
                   background: 'var(--bg-surface)',
                   border: '1px solid var(--border-subtle)',
@@ -123,7 +123,7 @@ export default function Knowledge() {
                 }}
               />
             </div>
-            <button type="button" onClick={submit} className="btn btn-primary text-[12px]">
+            <button type="button" onClick={submit} className="btn btn-primary text-ui">
               检索
             </button>
             {(submitted || tag) && (
@@ -134,7 +134,7 @@ export default function Knowledge() {
                   setSubmitted('')
                   setTag('')
                 }}
-                className="btn text-[12px]"
+                className="btn text-ui"
               >
                 清除
               </button>
@@ -148,14 +148,14 @@ export default function Knowledge() {
           )}
           {results.error && (
             <div
-              className="rounded-lg px-4 py-3 text-[12px]"
+              className="rounded-lg px-4 py-3 text-ui"
               style={{ background: 'var(--danger-soft)', color: 'var(--danger-text)' }}
             >
               {results.error instanceof Error ? results.error.message : '检索失败'}
             </div>
           )}
           {!results.isLoading && !results.error && (results.data?.items.length ?? 0) === 0 && (
-            <div className="panel py-16 text-center text-[12px] text-tertiary">
+            <div className="panel py-16 text-center text-ui text-tertiary">
               没有匹配的会议
             </div>
           )}
@@ -176,7 +176,7 @@ export default function Knowledge() {
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[13px] font-medium">{meeting.title}</p>
-                  <p className="mt-0.5 flex flex-wrap gap-2 text-[11px] text-tertiary">
+                  <p className="mt-0.5 flex flex-wrap gap-2 text-meta text-tertiary">
                     <span>{new Date(meeting.created_at).toLocaleDateString('zh-CN')}</span>
                     {meeting.duration_ms > 0 && <span>{formatDuration(meeting.duration_ms)}</span>}
                     {meeting.participants && <span>参会：{meeting.participants}</span>}
@@ -193,7 +193,7 @@ export default function Knowledge() {
                   </p>
                   {match && (
                     <p
-                      className="mt-1 truncate rounded px-1.5 py-0.5 text-[10px]"
+                      className="mt-1 truncate rounded px-1.5 py-0.5 text-micro"
                       style={{
                         background: 'var(--bg-subtle)',
                         color: 'var(--text-secondary)',

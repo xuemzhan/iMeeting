@@ -108,7 +108,7 @@ export function OverflowMenu({ onOpenSettings, user }: Props) {
                 <div className="truncate text-[13px] font-medium" style={{ color: 'var(--text-primary)' }}>
                   {user.display_name || user.username}
                 </div>
-                <div className="text-[12px] text-tertiary">
+                <div className="text-ui text-tertiary">
                   {user.role === 'admin' ? '管理员' : '普通用户'}
                 </div>
               </div>
