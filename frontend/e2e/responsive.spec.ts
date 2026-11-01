@@ -22,6 +22,9 @@ const VIEWPORTS = [
 /** 手指操作档（compact + medium）：可点控件不得小于 40px */
 const TOUCH_MAX_WIDTH = 1023
 
+/** 轮换后的管理员口令（与 auth.spec 保持一致） */
+const NEXT_PASSWORD = 'playwright-password-123'
+
 async function horizontalOverflow(page: Page): Promise<number> {
   return page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
@@ -80,7 +83,7 @@ test.describe('首页各档布局', () => {
     })
   }
 
-  test('390px 顶栏不出现「未开始」与常驻导航，入口收进「更多」', async ({ page }) => {
+  test('390px 顶栏不出现常驻导航，入口收进「更多」', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await page.goto('/')
 
@@ -104,7 +107,7 @@ test.describe('登录页各档布局', () => {
         const fontSize = await page
           .locator('#username')
           .evaluate((el) => parseFloat(getComputedStyle(el).fontSize))
-        // iOS 对 <16px 的输入框会在聚焦时放大整页
+        // iOS / iPadOS 对 <16px 的输入框会在聚焦时放大整页
         expect(fontSize).toBeGreaterThanOrEqual(16)
 
         const submit = page.getByRole('button', { name: /登录|注册并登录/ }).first()
@@ -116,20 +119,98 @@ test.describe('登录页各档布局', () => {
 })
 
 /**
- * A6：断点行为（双栏 / 分隔条）。
+ * A6：断点行为（双栏 / 分隔条 / 手机三标签）。
  *
- * 这几条断言需要真的进到「会中」状态，而会中要能开始会议 —— 依赖
- * 后端是否强制登录（CI 的 e2e 席位是 REQUIRE_AUTH=1）。因此：
- * 能开始就断言，不能开始就显式 skip 并写清原因，绝不假绿。
+ * 这几条断言需要真的进到「会中」状态，而会中要能开始会议 —— 依赖后端是否强制登录
+ * （CI 的 e2e 席位是 REQUIRE_AUTH=1，本地 dev 席位通常不需要）。
+ *
+ * 用例自己找路：按「测试账号阶梯」用 API 登录拿 token；若账号仍在首次改密状态，
+ * 就顺手把密码改成 NEXT_PASSWORD 再登录（改密会让旧 token 失效，所以必须重登）。
+ * 两条路都不通才显式 skip 并写清原因 —— 绝不假绿。需要临时关掉时设 RESPONSIVE_MEETING=0。
  */
+async function loginForMeeting(
+  page: Page,
+): Promise<{ token: string } | { pendingPassword: true } | null> {
+  const credentials = [
+    { username: 'e2e', password: 'e2e-pass-123' },
+    { username: 'admin', password: NEXT_PASSWORD },
+    { username: 'admin', password: 'admin123' },
+  ]
+  let pending = false
+  for (const data of credentials) {
+    try {
+      const response = await page.request.post('/api/v1/auth/login', { data })
+      if (!response.ok()) continue
+      const body = (await response.json()) as { access_token?: string; token?: string }
+      let token = body.access_token ?? body.token
+      if (!token) continue
+
+      const me = await page.request.get('/api/v1/auth/me', {
+        headers: { authorization: `Bearer ${token}` },
+      })
+      if (me.ok()) {
+        const profile = (await me.json()) as { must_change_password?: boolean }
+        if (profile.must_change_password) {
+          pending = true
+          const rotated = await page.request.post('/api/v1/auth/password', {
+            data: { current_password: data.password, new_password: NEXT_PASSWORD },
+            headers: { authorization: `Bearer ${token}` },
+          })
+          if (!rotated.ok()) continue
+          const relogin = await page.request.post('/api/v1/auth/login', {
+            data: { username: data.username, password: NEXT_PASSWORD },
+          })
+          if (!relogin.ok()) continue
+          const again = (await relogin.json()) as { access_token?: string; token?: string }
+          token = again.access_token ?? again.token
+          if (!token) continue
+        }
+      }
+      await page.addInitScript((value) => window.localStorage.setItem('imeeting-token', value), token)
+      return { token }
+    } catch {
+      // 登录接口不存在（未启用鉴权）时继续尝试下一个
+    }
+  }
+  return pending ? { pendingPassword: true } : null
+}
+
 test.describe('会中断点', () => {
-  test.skip(!process.env.RESPONSIVE_MEETING, '需要可匿名起会的后端；设 RESPONSIVE_MEETING=1 启用')
+  test.skip(process.env.RESPONSIVE_MEETING === '0', '显式关闭（RESPONSIVE_MEETING=0）')
 
   test('1023 双栏无分隔条，1024 出现分隔条，390 只显示当前标签', async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 768 })
+    const auth = await loginForMeeting(page)
     await page.goto('/')
-    await page.getByRole('button', { name: /开始会议/ }).first().click()
-    await expect(page.getByText('识别中')).toBeVisible({ timeout: 20_000 })
+
+    if (auth && 'pendingPassword' in auth) {
+      test.skip(true, '测试账号仍处于首次改密状态，无法进入会中')
+      return
+    }
+
+    const cta = startCta(page)
+    const canStart = await cta
+      .first()
+      .waitFor({ state: 'visible', timeout: 5_000 })
+      .then(() => true)
+      .catch(() => false)
+    if (!canStart) {
+      test.skip(true, auth ? '已登录但首页没有「开始会议」入口' : '既没有可用测试账号，也不能匿名起会')
+      return
+    }
+    await cta.first().click()
+
+    // 注意用 waitFor 而不是 isVisible：后者不等待，会立刻返回 false
+    const recording = await page
+      .getByText('识别中')
+      .first()
+      .waitFor({ state: 'visible', timeout: 20_000 })
+      .then(() => true)
+      .catch(() => false)
+    if (!recording) {
+      test.skip(true, '后端拒绝建会/建连，无法进入会中状态')
+      return
+    }
 
     // 1024（wide）：两侧并排 + 分隔条
     await expect(page.getByRole('separator')).toBeVisible()

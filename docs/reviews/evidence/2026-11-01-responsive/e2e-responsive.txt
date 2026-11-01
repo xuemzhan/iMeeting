@@ -9,22 +9,22 @@ npm warn Unknown user config "sass_binary_site". This will stop working in the n
 npm warn Unknown user config "puppeteer_download_host". This will stop working in the next major version of npm.
 npm warn Unknown user config "chromedriver_cdnurl". This will stop working in the next major version of npm.
 npm warn Unknown user config "sharp_dist_base_url". This will stop working in the next major version of npm.
-[WebServer] INFO:     Started server process [32520]
+[WebServer] INFO:     Started server process [14016]
 [WebServer] INFO:     Waiting for application startup.
-[WebServer] 2026-11-01 22:53:43,078 INFO    imeeting.main: === ��ʦ�������ܻ�� ������ ===
-[WebServer] 2026-11-01 22:53:43,156 INFO    imeeting.db: ���ݿ��Ѿ���: sqlite:///C:/Users/liq08/AppData/Local/Temp/imeeti
-ng-playwright-35164.db
-[WebServer] 2026-11-01 22:53:43,173 INFO    imeeting.settings: �Ѽ��� 0 �����ݿ����ø���
-[WebServer] 2026-11-01 22:53:43,399 WARNING imeeting.db: �Ѵ�������Ա admin���״ε�¼�����޸ĳ�ʼ������
-[WebServer] 2026-11-01 22:53:43,414 INFO    imeeting.main: ҵ����־��д�� C:\Users\liq08\AppData\Local\Temp\imeeting-playw
+[WebServer] 2026-11-01 23:36:46,321 INFO    imeeting.main: === ��ʦ�������ܻ�� ������ ===
+[WebServer] 2026-11-01 23:36:46,502 INFO    imeeting.db: ���ݿ��Ѿ���: sqlite:///C:/Users/liq08/AppData/Local/Temp/imeeti
+ng-playwright-25292.db
+[WebServer] 2026-11-01 23:36:46,555 INFO    imeeting.settings: �Ѽ��� 0 �����ݿ����ø���
+[WebServer] 2026-11-01 23:36:46,897 WARNING imeeting.db: �Ѵ�������Ա admin���״ε�¼�����޸ĳ�ʼ������
+[WebServer] 2026-11-01 23:36:46,930 INFO    imeeting.main: ҵ����־��д�� C:\Users\liq08\AppData\Local\Temp\imeeting-playw
 right.log��20MB �� 10 ��ת��
-[WebServer] 2026-11-01 22:53:43,414 INFO    imeeting.main: �ؼ����ã��豸=cpu ��ʽģ��=iic/speech_paraformer_asr_nat-zh-cn-16
+[WebServer] 2026-11-01 23:36:46,931 INFO    imeeting.main: �ؼ����ã��豸=cpu ��ʽģ��=iic/speech_paraformer_asr_nat-zh-cn-16
 k-common-vocab8404-online VAD=True ���=True ˵����=True
-[WebServer] 2026-11-01 22:53:43,414 WARNING imeeting.main: ������ģ��Ԥ�ȣ�SKIP_MODEL_WARMUP=1��
-[WebServer] 2026-11-01 22:53:43,419 INFO    imeeting.application.jobs: �־û�����ֳ���������heavy=1 light=2
-[WebServer] 2026-11-01 22:53:43,419 INFO    imeeting.application.jobs: �־û����� Worker ������ lane=heavy-1
-[WebServer] 2026-11-01 22:53:43,419 INFO    imeeting.application.jobs: �־û����� Worker ������ lane=light-1
-[WebServer] 2026-11-01 22:53:43,422 INFO    imeeting.application.jobs: �־û����� Worker ������ lane=light-2
+[WebServer] 2026-11-01 23:36:46,931 WARNING imeeting.main: ������ģ��Ԥ�ȣ�SKIP_MODEL_WARMUP=1��
+[WebServer] 2026-11-01 23:36:46,937 INFO    imeeting.application.jobs: �־û�����ֳ���������heavy=1 light=2
+[WebServer] 2026-11-01 23:36:46,938 INFO    imeeting.application.jobs: �־û����� Worker ������ lane=heavy-1
+[WebServer] 2026-11-01 23:36:46,938 INFO    imeeting.application.jobs: �־û����� Worker ������ lane=light-1
+[WebServer] 2026-11-01 23:36:46,942 INFO    imeeting.application.jobs: �־û����� Worker ������ lane=light-2
 [WebServer] INFO:     Application startup complete.
 [WebServer] INFO:     Uvicorn running on http://127.0.0.1:8020 (Press CTRL+C to quit)
 [WebServer] C:\Users\liq08\AppData\Roaming\Python\Python314\site-packages\fastapi\routing.py:136: FastAPIDeprecationWar
@@ -50,20 +50,48 @@ npm.
 
 Running 14 tests using 1 worker
 
-  ok  1 e2e\responsive.spec.ts:58:5 › 首页各档布局 › phone-360：无横向溢出、只有一个开始按钮、触控够大 (1.3s)
-  ok  2 e2e\responsive.spec.ts:58:5 › 首页各档布局 › phone-390：无横向溢出、只有一个开始按钮、触控够大 (698ms)
-  ok  3 e2e\responsive.spec.ts:58:5 › 首页各档布局 › tablet-768：无横向溢出、只有一个开始按钮、触控够大 (687ms)
-  ok  4 e2e\responsive.spec.ts:58:5 › 首页各档布局 › tablet-1023：无横向溢出、只有一个开始按钮、触控够大 (810ms)
-  ok  5 e2e\responsive.spec.ts:58:5 › 首页各档布局 › laptop-1024：无横向溢出、只有一个开始按钮、触控够大 (832ms)
-  ok  6 e2e\responsive.spec.ts:58:5 › 首页各档布局 › desktop-1440：无横向溢出、只有一个开始按钮、触控够大 (817ms)
-  ok  7 e2e\responsive.spec.ts:83:3 › 首页各档布局 › 390px 顶栏不出现「未开始」与常驻导航，入口收进「更多」 (939ms)
-  ok  8 e2e\responsive.spec.ts:96:5 › 登录页各档布局 › phone-360：无溢出、输入 16px、主按钮够高 (1.1s)
-  ok  9 e2e\responsive.spec.ts:96:5 › 登录页各档布局 › phone-390：无溢出、输入 16px、主按钮够高 (1.1s)
-  ok 10 e2e\responsive.spec.ts:96:5 › 登录页各档布局 › tablet-768：无溢出、输入 16px、主按钮够高 (1.1s)
-  ok 11 e2e\responsive.spec.ts:96:5 › 登录页各档布局 › tablet-1023：无溢出、输入 16px、主按钮够高 (994ms)
-  ok 12 e2e\responsive.spec.ts:96:5 › 登录页各档布局 › laptop-1024：无溢出、输入 16px、主按钮够高 (964ms)
-  ok 13 e2e\responsive.spec.ts:96:5 › 登录页各档布局 › desktop-1440：无溢出、输入 16px、主按钮够高 (958ms)
-  -  14 e2e\responsive.spec.ts:128:3 › 会中断点 › 1023 双栏无分隔条，1024 出现分隔条，390 只显示当前标签
+  ok  1 e2e\responsive.spec.ts:61:5 › 首页各档布局 › phone-360：无横向溢出、只有一个开始按钮、触控够大 (2.1s)
+  ok  2 e2e\responsive.spec.ts:61:5 › 首页各档布局 › phone-390：无横向溢出、只有一个开始按钮、触控够大 (1.2s)
+  ok  3 e2e\responsive.spec.ts:61:5 › 首页各档布局 › tablet-768：无横向溢出、只有一个开始按钮、触控够大 (1.1s)
+  ok  4 e2e\responsive.spec.ts:61:5 › 首页各档布局 › tablet-1023：无横向溢出、只有一个开始按钮、触控够大 (1.1s)
+  ok  5 e2e\responsive.spec.ts:61:5 › 首页各档布局 › laptop-1024：无横向溢出、只有一个开始按钮、触控够大 (1.1s)
+  ok  6 e2e\responsive.spec.ts:61:5 › 首页各档布局 › desktop-1440：无横向溢出、只有一个开始按钮、触控够大 (1.2s)
+  ok  7 e2e\responsive.spec.ts:86:3 › 首页各档布局 › 390px 顶栏不出现常驻导航，入口收进「更多」 (1.3s)
+  ok  8 e2e\responsive.spec.ts:99:5 › 登录页各档布局 › phone-360：无溢出、输入 16px、主按钮够高 (1.3s)
+  ok  9 e2e\responsive.spec.ts:99:5 › 登录页各档布局 › phone-390：无溢出、输入 16px、主按钮够高 (1.3s)
+  ok 10 e2e\responsive.spec.ts:99:5 › 登录页各档布局 › tablet-768：无溢出、输入 16px、主按钮够高 (1.3s)
+  ok 11 e2e\responsive.spec.ts:99:5 › 登录页各档布局 › tablet-1023：无溢出、输入 16px、主按钮够高 (1.2s)
+  ok 12 e2e\responsive.spec.ts:99:5 › 登录页各档布局 › laptop-1024：无溢出、输入 16px、主按钮够高 (1.2s)
+  ok 13 e2e\responsive.spec.ts:99:5 › 登录页各档布局 › desktop-1440：无溢出、输入 16px、主按钮够高 (1.4s)
+[WebServer] INFO:     127.0.0.1:57327 - "WebSocket /ws/stream" [accepted]
+[WebServer] INFO:     connection open
+[WebServer] C:\Users\liq08\AppData\Roaming\Python\Python314\site-packages\fastapi\routing.py:136: FastAPIDeprecationWar
+ning: ORJSONResponse is deprecated, FastAPI now serializes data directly to JSON bytes via Pydantic when a return type 
+or response model is set, which is faster and doesn't need a custom response class. Read more in the FastAPI docs: http
+s://fastapi.tiangolo.com/advanced/custom-response/#orjson-or-response-model and https://fastapi.tiangolo.com/tutorial/r
+esponse-model/
+[WebServer]   response = await f(request)
+[WebServer] 2026-11-01 23:37:13,262 INFO    imeeting.engine.streaming: �Ự 9abe0d179489 �ѽ��� (meeting=1, mode=off)
+  ok 14 e2e\responsive.spec.ts:181:3 › 会中断点 › 1023 双栏无分隔条，1024 出现分隔条，390 只显示当前标签 (4.2s)
+[WebServer] 2026-11-01 23:37:14,274 INFO    imeeting.application.meeting_sessions: ���� 1 ��� 0 �Σ�״̬=abandoned
+[WebServer] 2026-11-01 23:37:14,278 INFO    imeeting.engine.metrics: meeting_metrics {"event": "meeting_metrics", "meet
+ing_id": 1, "session_id": "9abe0d179489", "mode": "off", "started_at": "2026-11-01T15:37:13+00:00", "duration_ms": 0, "
+wall_seconds": 1.0, "segments": 0, "partial_events": 0, "finalize_reasons": {}, "drops": {}, "speech_seconds": 0.0, "se
+gment_audio_seconds": 0.0, "speech_ratio": null, "chars": 0, "unknown_speaker": 0, "labeled_speaker": 0, "short_match_a
+ttempts": 0, "short_match_hits": 0, "out_of_order_emits": 0, "noise_floor_p50": null, "snr_db_p50": null, "snr_db_min":
+ null, "noise_warnings": 0, "fallback_final": 0, "fallback_rejected": 0, "fallback_details": [], "asr_sources": {}, "sp
+eaker_sources": {}, "speaker_score_p50": null, "low_confidence_speakers": 0, "trimmed_segments": 0, "trim_original_seco
+nds": 0.0, "trim_kept_seconds": 0.0, "trim_saved_ratio": null, "long_segments_gt20s": 0, "tiny_segments_le5chars": 0, "
+offline_ms": {"n": 0, "p50": 0.0, "p90": 0.0, "p95": 0.0, "max": 0.0, "mean": 0.0}, "speaker_ms": {"n": 0, "p50": 0.0, 
+"p90": 0.0, "p95": 0.0, "max": 0.0, "mean": 0.0}, "queue_wait_ms": {"n": 0, "p50": 0.0, "p90": 0.0, "p95": 0.0, "max": 
+0.0, "mean": 0.0}, "final_latency_ms": {"n": 0, "p50": 0.0, "p90": 0.0, "p95": 0.0, "max": 0.0, "mean": 0.0}, "cpu_seco
+nds": 0.2, "peak_rss_mb": null, "adaptive_profile": {"version": 1, "start_threshold": 0.008, "continue_threshold": 0.00
+4, "silence_ms": 800, "soft_segment_ms": 12000, "max_segment_ms": 20000, "gain": 1.0, "noise_floor": 0.0, "speech_level
+": 0.0, "snr_db": 0.0, "updated_blocks": 0}}
+[WebServer] 2026-11-01 23:37:14,278 INFO    imeeting.engine.streaming: �Ự 9abe0d179489 �ѹرգ��� 0 ��
+[WebServer] 2026-11-01 23:37:14,923 INFO    imeeting.application.jobs: ִ������ lane=light-1 id=1 kind=meeting_meta meet
+ing=1
+[WebServer] 2026-11-01 23:37:14,956 INFO    imeeting.application.jobs: ִ������ lane=heavy-1 id=2 kind=template_rebuild 
+meeting=1
 
-  1 skipped
-  13 passed (20.3s)
+  14 passed (35.1s)

@@ -70,9 +70,9 @@ node scripts/responsive-probe.mjs --strict `
 `e2e/responsive.spec.ts` 覆盖方案第 6 节的 A1/A2/A3/A5（首页与登录页各 6 档 + 390px 顶栏折叠），
 记录见 `e2e-responsive.txt`：
 
-- `npx playwright test e2e/responsive.spec.ts` → **13 passed / 1 skipped**（skip 的是需要匿名起会的会中断点用例）。
-- `PLAYWRIGHT_BASE_URL=http://localhost:5173 RESPONSIVE_MEETING=1 npx playwright test -g 会中断点` → 通过：
-  1024 有 `role="separator"`、1023 双栏但无分隔条、390 只有当前标签且标签栏 3 项。
+- `npx playwright test e2e/responsive.spec.ts` → **14 passed**（会中断点用例自带登录取 token 与首次改密轮换，不再需要环境变量开关）。
+- 会中断点用例断言：1024 有 `role="separator"`、1023 双栏但无分隔条、390 只有当前标签且标签栏 3 项。
+- 全量 `npx playwright test` → **20 passed / 2 failed / 0 skipped**（两条失败为既有问题，已在改造前 HEAD 上复现）。
 - CI：`.github/workflows/ci.yml` 的 frontend job 新增 `Responsive gate` 步骤（`vite preview --port 5173`
   + `npm run verify:responsive`）。该步骤只用构建产物、不依赖后端；本地已用同样方式（5174 端口）复跑通过。
 

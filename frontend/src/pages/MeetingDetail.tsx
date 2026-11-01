@@ -16,6 +16,7 @@ import { MeetingInfoEditor } from '../components/MeetingInfoEditor'
 import { MembersDialog } from '../components/MembersDialog'
 import { MinutesEditor } from '../components/MinutesEditor'
 import { MindMapDialog } from '../components/MindMapDialog'
+import { MindMapPanel } from '../components/MindMapPanel'
 import { MinutesSidebar } from '../components/MinutesSidebar'
 import { MinutesVersionsDialog } from '../components/MinutesVersionsDialog'
 import { ParticipantsPanel } from '../components/ParticipantsPanel'
@@ -31,6 +32,7 @@ const DETAIL_TABS = [
   { id: 'transcript', label: '转写' },
   { id: 'minutes', label: '纪要' },
   { id: 'todos', label: '待办' },
+  { id: 'mindmap', label: '导图' },
 ] as const
 
 export default function MeetingDetail() {
@@ -38,7 +40,9 @@ export default function MeetingDetail() {
   const [searchParams] = useSearchParams()
   const meetingId = Number(id)
   // 详情页在手机上不再「并排 + 长滚动」，改为三标签切换（见 render 里的底部标签栏）
-  const [detailTab, setDetailTab] = useState<'transcript' | 'minutes' | 'todos'>('transcript')
+  const [detailTab, setDetailTab] = useState<'transcript' | 'minutes' | 'todos' | 'mindmap'>(
+    'transcript',
+  )
   const {
     data,
     isLoading,
@@ -242,6 +246,19 @@ export default function MeetingDetail() {
             </section>
 
             <ReviewPanel meetingId={meetingId} onSeek={handleSeek} />
+          </div>
+
+          <div
+            data-pane="mindmap"
+            data-pane-active={detailTab === 'mindmap'}
+            className="mt-3"
+          >
+            <MindMapPanel
+              meetingId={meetingId}
+              onSeek={handleSeek}
+              onGenerate={() => void handleGenerate()}
+              generating={generating}
+            />
           </div>
 
           {showVersions && (
