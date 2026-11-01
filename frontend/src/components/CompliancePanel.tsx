@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Loader2, ShieldCheck, X } from 'lucide-react'
+import { Loader2, ShieldCheck } from 'lucide-react'
 import { meetingApi } from '../api/client'
 import type { Meeting } from '../api/types'
+import { Sheet } from './Sheet'
 
 export function CompliancePanel({
   meeting,
@@ -53,16 +54,16 @@ export function CompliancePanel({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
-      <div className="panel w-full max-w-[520px] p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-[14px] font-medium">
-            <ShieldCheck size={15} /> 数据合规
-          </h2>
-          <button type="button" onClick={onClose} className="p-1 text-tertiary" aria-label="关闭">
-            <X size={15} />
-          </button>
-        </div>
+    <Sheet
+      onClose={onClose}
+      title={
+        <>
+          <ShieldCheck size={15} /> 数据合规
+        </>
+      }
+      ariaLabel="数据合规"
+      maxWidth={520}
+    >
         <div className="space-y-3">
           <label className="block text-[11px] text-tertiary">
             会议保留天数（0 使用全局策略）
@@ -113,7 +114,6 @@ export function CompliancePanel({
             {busy && <Loader2 size={12} className="animate-spin" />} 保存策略
           </button>
         </div>
-      </div>
-    </div>
+    </Sheet>
   )
 }

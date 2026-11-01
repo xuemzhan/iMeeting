@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Loader2, Plus, Trash2, X } from 'lucide-react'
+import { Loader2, Plus, Trash2 } from 'lucide-react'
 import { meetingApi } from '../api/client'
 import type { Minutes, TodoItem, TopicItem } from '../api/types'
+import { Sheet } from './Sheet'
 
 interface Props {
   meetingId: number
@@ -73,24 +74,21 @@ export function MinutesEditor({ meetingId, minutes, onSaved, onClose }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-3">
-      <div className="panel flex max-h-[90vh] w-full max-w-[760px] flex-col overflow-hidden">
-        <div className="panel-header">
-          <h2>修订纪要</h2>
-          <span className="text-[11px] text-tertiary">
+    <Sheet
+      onClose={onClose}
+      title={
+        <>
+          修订纪要
+          <span className="text-[11px] font-normal text-tertiary max-md:text-[12px]">
             基于第 {minutes.version} 版，保存后生成新版本
           </span>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="关闭"
-            className="btn btn-ghost ml-auto p-1"
-          >
-            <X size={15} />
-          </button>
-        </div>
-
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
+        </>
+      }
+      ariaLabel="修订纪要"
+      maxWidth={760}
+      desktopHeight="90vh"
+    >
+      <div className="space-y-4">
           <section>
             <label className="mb-1 block text-[11px] font-medium text-tertiary">
               整体摘要
@@ -250,7 +248,6 @@ export function MinutesEditor({ meetingId, minutes, onSaved, onClose }: Props) {
             保存为新版本
           </button>
         </div>
-      </div>
-    </div>
+    </Sheet>
   )
 }

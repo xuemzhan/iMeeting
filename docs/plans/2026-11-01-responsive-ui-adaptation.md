@@ -2,11 +2,11 @@
 
 <!-- doc-governance: IM-PLN-001 -->
 
-> 文档类型：计划；状态：已实施（P0–P3、P5 主体）；日期：2026-11-01。
+> 文档类型：计划；状态：已实施（P0–P5；P6 部分，codemod 与虚拟滚动未做）；日期：2026-11-01。
 > 维护责任：待指派（iMeeting 维护者）。[台账](../README.md) · [规则](../governance/README.md)。
 > 关联：[工程结构](../architecture/project-structure.md)、[前端说明](../../frontend/README.md)、[生产可用性清单](../production-readiness.md)。
 > 基线证据：[IM-EVD-011](../reviews/evidence/2026-11-01-responsive-baseline/README.md)（改造前四视口量测与截图）。
-> 状态：**已实施**（P0–P3、P5 主体；P4 收口到「零溢出 + 触控」，P6 字号 codemod 与虚拟滚动有意未做）。
+> 状态：**已实施**（P0–P5 全部；P6 只做「语义类字号在 compact 抬一档」，codemod 与长列表虚拟滚动未做）。
 > 落地结果与未完成项见[实施报告 IM-RPT-009](../reports/2026-11-01-responsive-ui.md)，证据见 [IM-EVD-012](../reviews/evidence/2026-11-01-responsive/README.md)。
 
 让「总师会议智能伙伴」在 360–1440px 全区间可用，重点补齐 **手机（≤479）** 与

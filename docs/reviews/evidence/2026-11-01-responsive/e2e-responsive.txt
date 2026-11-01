@@ -1,0 +1,69 @@
+﻿node.exe : npm warn Unknown user config "electron_mirror". This will stop working in the next major version of npm.
+所在位置 行:1 字符: 1
++ & "D:\Program Files\nodejs/node.exe" "D:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (npm warn Unknow...version of npm.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+npm warn Unknown user config "sass_binary_site". This will stop working in the next major version of npm.
+npm warn Unknown user config "puppeteer_download_host". This will stop working in the next major version of npm.
+npm warn Unknown user config "chromedriver_cdnurl". This will stop working in the next major version of npm.
+npm warn Unknown user config "sharp_dist_base_url". This will stop working in the next major version of npm.
+[WebServer] INFO:     Started server process [32520]
+[WebServer] INFO:     Waiting for application startup.
+[WebServer] 2026-11-01 22:53:43,078 INFO    imeeting.main: === ��ʦ�������ܻ�� ������ ===
+[WebServer] 2026-11-01 22:53:43,156 INFO    imeeting.db: ���ݿ��Ѿ���: sqlite:///C:/Users/liq08/AppData/Local/Temp/imeeti
+ng-playwright-35164.db
+[WebServer] 2026-11-01 22:53:43,173 INFO    imeeting.settings: �Ѽ��� 0 �����ݿ����ø���
+[WebServer] 2026-11-01 22:53:43,399 WARNING imeeting.db: �Ѵ�������Ա admin���״ε�¼�����޸ĳ�ʼ������
+[WebServer] 2026-11-01 22:53:43,414 INFO    imeeting.main: ҵ����־��д�� C:\Users\liq08\AppData\Local\Temp\imeeting-playw
+right.log��20MB �� 10 ��ת��
+[WebServer] 2026-11-01 22:53:43,414 INFO    imeeting.main: �ؼ����ã��豸=cpu ��ʽģ��=iic/speech_paraformer_asr_nat-zh-cn-16
+k-common-vocab8404-online VAD=True ���=True ˵����=True
+[WebServer] 2026-11-01 22:53:43,414 WARNING imeeting.main: ������ģ��Ԥ�ȣ�SKIP_MODEL_WARMUP=1��
+[WebServer] 2026-11-01 22:53:43,419 INFO    imeeting.application.jobs: �־û�����ֳ���������heavy=1 light=2
+[WebServer] 2026-11-01 22:53:43,419 INFO    imeeting.application.jobs: �־û����� Worker ������ lane=heavy-1
+[WebServer] 2026-11-01 22:53:43,419 INFO    imeeting.application.jobs: �־û����� Worker ������ lane=light-1
+[WebServer] 2026-11-01 22:53:43,422 INFO    imeeting.application.jobs: �־û����� Worker ������ lane=light-2
+[WebServer] INFO:     Application startup complete.
+[WebServer] INFO:     Uvicorn running on http://127.0.0.1:8020 (Press CTRL+C to quit)
+[WebServer] C:\Users\liq08\AppData\Roaming\Python\Python314\site-packages\fastapi\routing.py:136: FastAPIDeprecationWar
+ning: ORJSONResponse is deprecated, FastAPI now serializes data directly to JSON bytes via Pydantic when a return type 
+or response model is set, which is faster and doesn't need a custom response class. Read more in the FastAPI docs: http
+s://fastapi.tiangolo.com/advanced/custom-response/#orjson-or-response-model and https://fastapi.tiangolo.com/tutorial/r
+esponse-model/
+[WebServer]   response = await f(request)
+[WebServer] npm warn Unknown env config "chromedriver-cdnurl". This will stop working in the next major version of npm.
+[WebServer] npm warn Unknown env config "electron-mirror". This will stop working in the next major version of npm.
+[WebServer] npm warn Unknown env config "puppeteer-download-host". This will stop working in the next major version of 
+npm.
+[WebServer] npm warn Unknown env config "sass-binary-site". This will stop working in the next major version of npm.
+[WebServer] npm warn Unknown env config "sharp-dist-base-url". This will stop working in the next major version of npm.
+[WebServer] npm warn Unknown user config "electron_mirror". This will stop working in the next major version of npm.
+[WebServer] npm warn Unknown user config "sass_binary_site". This will stop working in the next major version of npm.
+[WebServer] npm warn Unknown user config "puppeteer_download_host". This will stop working in the next major version of
+ npm.
+[WebServer] npm warn Unknown user config "chromedriver_cdnurl". This will stop working in the next major version of npm
+.
+[WebServer] npm warn Unknown user config "sharp_dist_base_url". This will stop working in the next major version of npm
+.
+
+Running 14 tests using 1 worker
+
+  ok  1 e2e\responsive.spec.ts:58:5 › 首页各档布局 › phone-360：无横向溢出、只有一个开始按钮、触控够大 (1.3s)
+  ok  2 e2e\responsive.spec.ts:58:5 › 首页各档布局 › phone-390：无横向溢出、只有一个开始按钮、触控够大 (698ms)
+  ok  3 e2e\responsive.spec.ts:58:5 › 首页各档布局 › tablet-768：无横向溢出、只有一个开始按钮、触控够大 (687ms)
+  ok  4 e2e\responsive.spec.ts:58:5 › 首页各档布局 › tablet-1023：无横向溢出、只有一个开始按钮、触控够大 (810ms)
+  ok  5 e2e\responsive.spec.ts:58:5 › 首页各档布局 › laptop-1024：无横向溢出、只有一个开始按钮、触控够大 (832ms)
+  ok  6 e2e\responsive.spec.ts:58:5 › 首页各档布局 › desktop-1440：无横向溢出、只有一个开始按钮、触控够大 (817ms)
+  ok  7 e2e\responsive.spec.ts:83:3 › 首页各档布局 › 390px 顶栏不出现「未开始」与常驻导航，入口收进「更多」 (939ms)
+  ok  8 e2e\responsive.spec.ts:96:5 › 登录页各档布局 › phone-360：无溢出、输入 16px、主按钮够高 (1.1s)
+  ok  9 e2e\responsive.spec.ts:96:5 › 登录页各档布局 › phone-390：无溢出、输入 16px、主按钮够高 (1.1s)
+  ok 10 e2e\responsive.spec.ts:96:5 › 登录页各档布局 › tablet-768：无溢出、输入 16px、主按钮够高 (1.1s)
+  ok 11 e2e\responsive.spec.ts:96:5 › 登录页各档布局 › tablet-1023：无溢出、输入 16px、主按钮够高 (994ms)
+  ok 12 e2e\responsive.spec.ts:96:5 › 登录页各档布局 › laptop-1024：无溢出、输入 16px、主按钮够高 (964ms)
+  ok 13 e2e\responsive.spec.ts:96:5 › 登录页各档布局 › desktop-1440：无溢出、输入 16px、主按钮够高 (958ms)
+  -  14 e2e\responsive.spec.ts:128:3 › 会中断点 › 1023 双栏无分隔条，1024 出现分隔条，390 只显示当前标签
+
+  1 skipped
+  13 passed (20.3s)

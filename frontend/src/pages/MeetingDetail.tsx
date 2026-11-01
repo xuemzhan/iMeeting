@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import {
   CheckSquare,
@@ -26,10 +26,19 @@ import { TopBar } from '../components/TopBar'
 import { TranscriptPanel } from '../components/TranscriptPanel'
 import { STATE_CONFIRMED, STATE_DELETED } from '../lib/speakerRoles'
 
+/** 详情页 compact 档的标签（宽屏不显示标签栏，靠并排布局） */
+const DETAIL_TABS = [
+  { id: 'transcript', label: '转写' },
+  { id: 'minutes', label: '纪要' },
+  { id: 'todos', label: '待办' },
+] as const
+
 export default function MeetingDetail() {
   const { id } = useParams<{ id: string }>()
   const [searchParams] = useSearchParams()
   const meetingId = Number(id)
+  // 详情页在手机上不再「并排 + 长滚动」，改为三标签切换（见 render 里的底部标签栏）
+  const [detailTab, setDetailTab] = useState<'transcript' | 'minutes' | 'todos'>('transcript')
   const {
     data,
     isLoading,
@@ -156,17 +165,28 @@ export default function MeetingDetail() {
           )}
 
           <div className="grid gap-3 lg:grid-cols-[1fr_320px]">
-            <TranscriptPanel
-              segments={data.segments}
-              hasAudio={data.has_audio}
-              onSeek={handleSeek}
-              onRenameSpeaker={renameSpeaker}
-              onConfirmSpeaker={confirmSpeaker}
-              onEditSegment={setEditingSegment}
-              speakerImportance={importanceByKey}
-            />
+            <div
+              data-pane="transcript"
+              data-pane-active={detailTab === 'transcript'}
+              className="min-w-0"
+            >
+              <TranscriptPanel
+                segments={data.segments}
+                hasAudio={data.has_audio}
+                onSeek={handleSeek}
+                onRenameSpeaker={renameSpeaker}
+                onConfirmSpeaker={confirmSpeaker}
+                onEditSegment={setEditingSegment}
+                speakerImportance={importanceByKey}
+              />
+            </div>
 
-            <MinutesSidebar
+            <div
+              data-pane="minutes"
+              data-pane-active={detailTab === 'minutes'}
+              className="min-w-0"
+            >
+              <MinutesSidebar
               minutes={activeMinutes}
               generating={generating}
               error={genError}
@@ -194,22 +214,35 @@ export default function MeetingDetail() {
               onSpeakerDelete={(row) => void setSpeakerState(row, STATE_DELETED)}
               importanceError={speakerRoleError}
             />
+            </div>
           </div>
 
-          <ParticipantsPanel meetingId={meetingId} />
+          <div
+            data-pane="minutes"
+            data-pane-active={detailTab === 'minutes'}
+            className="mt-3"
+          >
+            <ParticipantsPanel meetingId={meetingId} />
+          </div>
 
-          <section className="panel mt-3 overflow-hidden">
-            <div className="panel-header">
-              <CheckSquare size={14} style={{ color: 'var(--text-tertiary)' }} />
-              <h2>待办闭环</h2>
-              <span className="ml-auto text-[11px] text-tertiary">
-                终稿与人工修订都会同步
-              </span>
-            </div>
-            <ActionsPanel meetingId={meetingId} onSeek={handleSeek} />
-          </section>
+          <div
+            data-pane="todos"
+            data-pane-active={detailTab === 'todos'}
+            className="space-y-3"
+          >
+            <section className="panel mt-3 overflow-hidden">
+              <div className="panel-header">
+                <CheckSquare size={14} style={{ color: 'var(--text-tertiary)' }} />
+                <h2>待办闭环</h2>
+                <span className="ml-auto text-[11px] text-tertiary">
+                  终稿与人工修订都会同步
+                </span>
+              </div>
+              <ActionsPanel meetingId={meetingId} onSeek={handleSeek} />
+            </section>
 
-          <ReviewPanel meetingId={meetingId} onSeek={handleSeek} />
+            <ReviewPanel meetingId={meetingId} onSeek={handleSeek} />
+          </div>
 
           {showVersions && (
             <MinutesVersionsDialog
@@ -228,6 +261,33 @@ export default function MeetingDetail() {
           )}
         </div>
       </main>
+
+      {/* 底部标签栏（仅 compact）：把「并排 + 长滚动」换成三屏切换。
+          桌面（>=768）不渲染这块，布局与改造前完全一致。 */}
+      <nav
+        className="flex shrink-0 items-stretch gap-1 px-2 pt-1.5 pb-1 md:hidden"
+        style={{
+          borderTop: '1px solid var(--border-subtle)',
+          background: 'var(--bg-surface)',
+        }}
+        aria-label="详情面板切换"
+      >
+        {DETAIL_TABS.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setDetailTab(tab.id)}
+            aria-current={detailTab === tab.id ? 'page' : undefined}
+            className="flex min-h-11 flex-1 items-center justify-center rounded-lg text-[13px] font-medium transition-colors"
+            style={{
+              background: detailTab === tab.id ? 'var(--accent-soft)' : 'transparent',
+              color: detailTab === tab.id ? 'var(--accent-text)' : 'var(--text-tertiary)',
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </nav>
 
       {showInfo && (
         <MeetingInfoEditor

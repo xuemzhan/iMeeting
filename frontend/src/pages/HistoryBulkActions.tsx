@@ -65,8 +65,12 @@ export function HistoryBulkActions({
 }: Props) {
   return (
     <div
-      className="mb-3 rounded-lg px-3 py-2"
-      style={{ background: 'var(--accent-soft)', color: 'var(--accent-text)' }}
+      className="history-bulk-bar mb-3 rounded-lg px-3 py-2 max-md:sticky max-md:bottom-2 max-md:z-20 max-md:mb-2 max-md:border max-md:shadow-lg max-md:backdrop-blur"
+      style={{
+        background: 'var(--accent-soft)',
+        color: 'var(--accent-text)',
+        borderColor: 'var(--border-subtle)',
+      }}
     >
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-[12px]">已选 {selectedCount} 场</span>

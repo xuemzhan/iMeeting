@@ -12,7 +12,8 @@
 |---|---|
 | `responsive-gate.txt` | `node scripts/responsive-probe.mjs --strict --paths /,/login,/history,/knowledge,/voiceprints` 的完整输出（30 行量测 + 门禁结论）。 |
 | `measurements-after.json` | 同上探针的机器可读结果（6 档视口 × 5 个页面）。 |
-| `shots/` | 改造后截图：`phone-360/390`、`phablet-430`、`tablet-768/1024`、`desktop-1440` 各页一张，另含真机会中三标签截图 `meeting-390-transcript/minutes/participants.png`。 |
+| `shots/` | 改造后截图：`phone-360/390`、`phablet-430`、`tablet-768/1024`、`desktop-1440` 各页一张，另含真机会中三标签截图 `meeting-390-transcript/minutes/participants.png`，以及详情页三标签 `detail-390-transcript/minutes/todos.png`。 |
+| `e2e-responsive.txt` | （见第 5 节）响应式 e2e 用例与 CI 门禁的执行记录。 |
 
 改造前的量测与截图在 [IM-EVD-011](../2026-11-01-responsive-baseline/README.md)（`measurements.json` + 4 张 before 截图），两套结果的差异即本次改造的效果。
 
@@ -64,7 +65,27 @@ node scripts/responsive-probe.mjs --strict `
 > （`seed-e2e.py` 生成的临时库 + 8021 后端 + 5175 前端 + `e2e/e2e-pass-123`）。
 > 本次用 `ASR_MODE=echo` 起了一套临时栈跑完即回收，未改动开发库。
 
-## 5 说明
+## 5 响应式 e2e 与 CI 门禁
+
+`e2e/responsive.spec.ts` 覆盖方案第 6 节的 A1/A2/A3/A5（首页与登录页各 6 档 + 390px 顶栏折叠），
+记录见 `e2e-responsive.txt`：
+
+- `npx playwright test e2e/responsive.spec.ts` → **13 passed / 1 skipped**（skip 的是需要匿名起会的会中断点用例）。
+- `PLAYWRIGHT_BASE_URL=http://localhost:5173 RESPONSIVE_MEETING=1 npx playwright test -g 会中断点` → 通过：
+  1024 有 `role="separator"`、1023 双栏但无分隔条、390 只有当前标签且标签栏 3 项。
+- CI：`.github/workflows/ci.yml` 的 frontend job 新增 `Responsive gate` 步骤（`vite preview --port 5173`
+  + `npm run verify:responsive`）。该步骤只用构建产物、不依赖后端；本地已用同样方式（5174 端口）复跑通过。
+
+## 6 详情页三标签（390 / 1440 实测）
+
+`detail-390-*.png` 来自登录态下的 `/history/1`：
+
+| 视口 | 结果 |
+|---|---|
+| 390×844 | 三块面板 `data-pane` 一次只显示一块（其余 `display:none`），标签栏可见 55px，横向溢出 0 |
+| 1440×900 | 四块面板同时 `display:block`（桌面并排不变），`nav[aria-label="详情面板切换"]` 不渲染 |
+
+## 7 说明
 
 - 截图含本地会议标题，均为测试生成的数据；临时会议记录（#20–#23）在验证后已从开发库清除，库回到 19 场。
 - 未做的验证：真机 iOS Safari / Android Chrome（方案 A10）、会中 500/1000/2000 段的滚动帧率实测（方案 4.6）。

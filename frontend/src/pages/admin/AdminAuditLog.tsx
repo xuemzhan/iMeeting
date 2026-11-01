@@ -109,7 +109,7 @@ export function AdminAuditLog() {
       {!isLoading && (data?.items.length ?? 0) > 0 && (
         <>
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-[11px]">
+            <table className="admin-table w-full text-left text-[11px]">
               <thead style={{ background: 'var(--bg-subtle)', color: 'var(--text-tertiary)' }}>
                 <tr>
                   <th className="px-3 py-2 font-medium">时间</th>

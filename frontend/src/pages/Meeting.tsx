@@ -240,37 +240,23 @@ export default function Meeting() {
     <div className="flex h-full flex-col">
       <TopBar />
 
-      {supportWarning && (
-        <div
-          className="shrink-0 px-4 py-2 text-center text-[12px]"
-          style={{ background: 'var(--warn-soft)', color: 'var(--warn-text)' }}
-        >
-          {supportWarning}
-        </div>
-      )}
+      {supportWarning && <NoticeBar tone="warn" text={supportWarning} />}
 
-      {error && (
-        <div
-          className="shrink-0 px-4 py-2 text-center text-[12px]"
-          style={{ background: 'var(--danger-soft)', color: 'var(--danger-text)' }}
-        >
-          {error}
-        </div>
-      )}
+      {error && <NoticeBar tone="danger" text={error} />}
 
       {/* 非阻塞提示：采集参数正在自动降级时用，不打断会议 */}
       {!error && notice && (
-        <div
-          className="flex shrink-0 items-center justify-center gap-2 px-4 py-2 text-center text-[12px]"
-          style={{ background: 'var(--warn-soft)', color: 'var(--warn-text)' }}
-        >
-          {notice.includes('自动尝试') || notice.includes('重连') ? (
-            <Loader2 size={13} className="animate-spin" />
-          ) : (
-            <Info size={13} />
-          )}
-          {notice}
-        </div>
+        <NoticeBar
+          tone="warn"
+          icon={
+            notice.includes('自动尝试') || notice.includes('重连') ? (
+              <Loader2 size={13} className="animate-spin" />
+            ) : (
+              <Info size={13} />
+            )
+          }
+          text={notice}
+        />
       )}
 
       {(captureWindowOpen || meetingInfo) && (
@@ -498,6 +484,48 @@ export default function Meeting() {
           />
         )}
       </Suspense>
+    </div>
+  )
+}
+
+/**
+ * 顶部提示条。
+ *
+ * 桌面（>=768）与改造前一致：整行文字直接展开。
+ * 手机（<=767）折成一行 +「详情」展开：三条提示同时出现时会吃掉 3 行首屏高度，
+ * 而它们大多是「知道有这回事就行」的信息。
+ */
+function NoticeBar({
+  tone,
+  text,
+  icon,
+}: {
+  tone: 'warn' | 'danger'
+  text: string
+  icon?: React.ReactNode
+}) {
+  const [open, setOpen] = useState(false)
+  const palette =
+    tone === 'danger'
+      ? { background: 'var(--danger-soft)', color: 'var(--danger-text)' }
+      : { background: 'var(--warn-soft)', color: 'var(--warn-text)' }
+
+  return (
+    <div className="shrink-0 px-4 py-2 text-[12px] max-md:px-3" style={palette}>
+      <div className="flex items-center gap-2">
+        {icon && <span className="shrink-0">{icon}</span>}
+        <span className={`min-w-0 flex-1 max-md:text-[13px] ${open ? '' : 'max-md:truncate'}`}>
+          {text}
+        </span>
+        <button
+          type="button"
+          onClick={() => setOpen((value) => !value)}
+          aria-expanded={open}
+          className="shrink-0 rounded px-2 py-0.5 text-[12px] underline md:hidden"
+        >
+          {open ? '收起' : '详情'}
+        </button>
+      </div>
     </div>
   )
 }

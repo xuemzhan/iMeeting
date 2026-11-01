@@ -19,14 +19,22 @@ export default defineConfig({
   workers: 1,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
-    baseURL: 'http://127.0.0.1:5174',
+    // 默认用本配置自带的 e2e 席位；设 PLAYWRIGHT_BASE_URL 时改为复用已在跑的服务
+    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:5174',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     ...devices['Desktop Chrome'],
     // 本地复用已安装的 Chrome；CI 使用 Playwright 下载的 Chromium。
     ...(process.env.CI ? {} : { channel: 'chrome' }),
+    // 会中断点用例需要麦克风：给假设备，避免真去申请权限
+    permissions: ['microphone'],
+    launchOptions: {
+      args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'],
+    },
   },
-  webServer: [
+  webServer: process.env.PLAYWRIGHT_BASE_URL
+    ? undefined
+    : [
     {
       command: 'python -m uvicorn imeeting.main:app --host 127.0.0.1 --port 8020',
       cwd: backendRoot,

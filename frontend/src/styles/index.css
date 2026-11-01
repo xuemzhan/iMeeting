@@ -542,7 +542,7 @@
 
    - 可点区抬到 --tap-min（44）：`.btn` 之外的图标按钮也都带 `.btn`/`.chip`，
      这里统一加 min-width，避免手机上一排「32×32」点不中。
-   - 输入类 16px：iOS 对 <16px 的输入框会在聚焦时放大整页。
+   （输入框 16px 与高度在 <=1023 的块里统一处理，见文件末尾。）
 --------------------------------------------------------------------------- */
 @media (max-width: 767px) {
   .btn {
@@ -554,19 +554,28 @@
     min-width: var(--tap-min);
   }
 
-  .input {
-    height: var(--tap-min);
-  }
-
-  input:not([type='checkbox']):not([type='radio']):not([type='range']),
-  textarea,
-  select {
-    font-size: 16px !important;
-  }
-
   .reader-body-sm,
   .reader-body-xs {
     font-size: calc(var(--fs-ui) * var(--reader-scale, 1));
+  }
+
+  /* 语义类的字号在 compact 抬一档（桌面保持原值，视觉零变化）：
+     `.label` 12→13、`.chip` 11→12、面板标题 13→15、计数徽章 11→12。 */
+  .label {
+    font-size: 13px;
+  }
+
+  .chip {
+    font-size: 12px;
+  }
+
+  .panel-header h2 {
+    font-size: 15px;
+  }
+
+  .count-badge {
+    font-size: 12px;
+    height: 20px;
   }
 
   /* 底栏里的键盘提示（Space/F/Esc）在手机上无意义，还占宽度把按钮挤成两行 */
@@ -624,5 +633,36 @@
   .font-size-control button {
     height: var(--tap-min) !important;
     min-width: var(--tap-min) !important;
+  }
+
+  /* 输入类：iOS / iPadOS 对 <16px 的输入框会在聚焦时自动放大整页；
+     高度同时抬到 --tap-min，避免平板上 32px 的输入框点不准。 */
+  .input {
+    height: var(--tap-min);
+  }
+
+  input:not([type='checkbox']):not([type='radio']):not([type='range']),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+
+  /* 批量操作条里的按钮同样写了内联高度（28px），手指档统一抬到 44 */
+  .history-bulk-bar .btn {
+    height: var(--tap-min) !important;
+    padding-inline: 10px !important;
+  }
+
+  .history-bulk-bar button:not(.btn) {
+    min-height: var(--tap-min);
+  }
+
+  /* 后台表格：横向滚动时首列吸附，滚动后仍能看出这一行是谁/哪一条 */
+  .admin-table th:first-child,
+  .admin-table td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--bg-surface);
   }
 }

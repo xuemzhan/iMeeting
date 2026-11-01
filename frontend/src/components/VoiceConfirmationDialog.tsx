@@ -69,7 +69,7 @@ export function VoiceConfirmationDialog() {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
       <div ref={dialog} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="voice-confirmation-title"
-        className="panel w-full max-w-md space-y-3 p-5 outline-none"
+        className="panel w-full max-w-md space-y-3 p-5 outline-none max-md:max-h-[92dvh] max-md:overflow-y-auto max-md:p-4"
         onKeyDown={(event) => {
           if (event.key === 'Escape') { event.preventDefault(); finish({ decision: 'cancel' }) }
           if (event.key === 'Tab') {

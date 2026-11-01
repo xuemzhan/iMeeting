@@ -9,8 +9,13 @@
 
 ## 结论
 
-按方案 IM-PLN-001 的 P0–P3 与 P5 主体**已落地**，P4 做了「零溢出 + 触控」层面的收口，
-P6 的字号 codemod 与虚拟滚动**有意未做**（理由见第 5 节）。
+按方案 IM-PLN-001 的 P0–P5 **已全部落地**，P6 做了「先做」部分（语义类字号在 compact 抬一档）；
+只剩「423 处硬编码字号的 codemod」与「长列表虚拟滚动」两项按第 5 节的理由未做。
+
+第二轮（同日追加）补齐了首轮列为遗留的项：`e2e/responsive.spec.ts` + CI 响应式门禁、
+剩余 3 个弹窗迁移（`MinutesEditor`/`CompliancePanel` 迁到 `Sheet`，`VoiceConfirmationDialog`
+做 compact 适配）、会议页提示条折叠、History 批量条改底部浮层、MeetingDetail 手机三标签、
+admin 表格首列吸附。
 
 关键结果：
 
@@ -30,8 +35,11 @@ P6 的字号 codemod 与虚拟滚动**有意未做**（理由见第 5 节）。
 | **P1** | 顶栏紧凑化（品牌文字/分隔线/「未开始」/波形/导航/设置收进 `max-md:hidden`；标题输入改 flex-1）；新增 `OverflowMenu`（导航 + 设置 + 账号：后台配置/退出登录）；`IdleHero` 单列重排、特性卡改横向行、CTA 去重 | `TopBar.tsx`、`OverflowMenu.tsx`、`IdleHero.tsx`、`ControlBar.tsx`、`DeviceSelector.tsx` |
 | **P2** | 会议页 compact：底部三标签（新增「参会人」）、左右滑动切页（阈值 40px、横向位移须大于纵向、选中文本/输入框/横滑容器内不拦截、慢速拖动不切）、`MinutesPanel` **单实例化**、参会人 chips 横滑、`data-pane` 取代 `data-hidden-mobile` | `pages/Meeting.tsx`、`ParticipantsPanel.tsx`、`styles/index.css` |
 | **P3** | `PaneSplitter` 只在 wide（≥1024）挂载；medium（768–1023）双栏 60/40（转写 `flex 2`、纪要 `flex 1`，纪要 `min-width: 280px`） | `pages/Meeting.tsx` |
-| **P4** | `/voiceprints` 行内 26–30px 按钮与纯文字按钮在 ≤1023 统一抬到 44（93 个）→ 0；`/login` 主按钮与「去注册」抬到 44（2 个）→ 0；其余页面实测无横向溢出 | `pages/Voiceprints.tsx`、`pages/Login.tsx`、`styles/index.css` |
-| **P5** | 新增 `Sheet`（compact 底部升起：圆角 16、抓手、`92dvh` 上限、下拉关闭、背景滚动锁；md+ 保持原居中卡片）；迁移 `ShareDialog`/`MindMapDialog`/`SegmentEditDialog`/`MeetingInfoEditor`/`MembersDialog`/`MinutesVersionsDialog`；`SettingsPanel` compact 全宽 + 安全区 | `components/Sheet.tsx` + 6 个弹窗、`SettingsPanel.tsx` |
+| **P4** | `/voiceprints` 行内 26–30px 按钮与纯文字按钮在 ≤1023 统一抬到 44（93 个）→ 0；`/login` 主按钮与「去注册」抬到 44（2 个）→ 0；`/history` 批量操作条改 compact 底部吸附浮层；admin 表格首列在横向滚动时吸附 | `pages/Voiceprints.tsx`、`pages/Login.tsx`、`pages/HistoryBulkActions.tsx`、`pages/admin/AdminAuditLog.tsx`、`styles/index.css` |
+| **P5** | 新增 `Sheet`（compact 底部升起：圆角 16、抓手、`92dvh` 上限、下拉关闭、背景滚动锁；md+ 保持原居中卡片）；迁移 `ShareDialog`/`MindMapDialog`/`SegmentEditDialog`/`MeetingInfoEditor`/`MembersDialog`/`MinutesVersionsDialog`/`MinutesEditor`/`CompliancePanel` 共 8 个弹窗；`SettingsPanel` compact 全宽 + 安全区；`VoiceConfirmationDialog` 保留自身焦点陷阱，只做 compact 高度/内边距适配 | `components/Sheet.tsx` + 8 个弹窗、`SettingsPanel.tsx`、`VoiceConfirmationDialog.tsx` |
+| **P6** | 语义类字号在 compact 抬一档（`.label` 12→13、`.chip` 11→12、`.panel-header h2` 13→15、`.count-badge` 11→12），桌面保持原值；输入类 16px 覆盖到 ≤1023（含 iPadOS 聚焦放大问题） | `styles/index.css` |
+| **追加** | 详情页 compact 三标签（转写 / 纪要 / 待办，替代「并排 + 长滚动」）；会议页顶部提示条 compact 折叠为单行 +「详情」 | `pages/MeetingDetail.tsx`、`pages/Meeting.tsx` |
+| **验收工程** | `e2e/responsive.spec.ts`（6 档视口 × 首页/登录页断言 + 会中断点用例）+ CI `Responsive gate` 步骤 + `npm run verify:responsive` | `e2e/responsive.spec.ts`、`playwright.config.ts`、`.github/workflows/ci.yml` |
 
 ## 2 行为变化（与改造前的差异）
 
@@ -47,6 +55,10 @@ P6 的字号 codemod 与虚拟滚动**有意未做**（理由见第 5 节）。
 | 弹窗（compact） | 居中卡片，内容多时上下被裁 | 底部升起的 Sheet，最高 92dvh，可下拉关闭，背景不滚 |
 | 设置面板（compact） | 右侧 380px 抽屉 | 全宽 + 底部安全区 |
 | 登录页（compact） | 内联 36px 主按钮 + 18px 文字按钮 | 44px，错误提示 `role="alert"` 且可换行 |
+| 详情页（compact） | 转写 + 纪要并排堆叠、待办/复核在下面，一屏要滚很久 | 底部三标签（转写 / 纪要 / 待办），一次只显示一块；参会人并入「纪要」 |
+| 会议页提示条（compact） | 三条提示全部展开，最多吃掉 3 行 | 折成一行 +「详情」展开，`role`/`aria-expanded` 齐全 |
+| History 批量条（compact） | 列表顶部，选中后要往上滚才点得到 | `sticky bottom-2` 浮层，滚动时始终可达 |
+| 后台审计表（≤1023） | 横向滚动后看不到「谁/哪一条」 | 首列 `position: sticky` 吸附 |
 
 ## 3 验收对照（方案第 6 节）
 
@@ -57,7 +69,7 @@ P6 的字号 codemod 与虚拟滚动**有意未做**（理由见第 5 节）。
 | A3 | compact 主 CTA ≥56、其它控件 ≥44 | **通过**（CTA 62/64；≤1023 档 `smallTargets = 0`） |
 | A4 | compact 下 `.reader-body` ≥16px | **通过**（会中实测 16px） |
 | A5 | 首页同屏 CTA == 1 | **通过** |
-| A6 | 768/1023 双栏、1024 出现分隔条 | **结构通过**：`PaneSplitter` 仅 `layout === 'wide'` 挂载；medium 双栏由 `md:flex-row` + flex 比例实现（未写 e2e，见第 5 节） |
+| A6 | 768/1023 双栏、1024 出现分隔条 | **通过**（`e2e/responsive.spec.ts` 的会中断点用例：1024 有 `role="separator"`、1023 无但仍是双栏、390 只有当前标签；本轮在 dev 栈实跑通过；CI 默认 skip，需 `RESPONSIVE_MEETING=1` 才启用——原因见第 5 节） |
 | A9 | 1440 下既有 14 条断言全绿 | **通过**（14/14） |
 | A10 | iOS / Android 真机 | **未做**（无真机） |
 
@@ -71,24 +83,27 @@ P6 的字号 codemod 与虚拟滚动**有意未做**（理由见第 5 节）。
 | 构建 | `npm run build` | 通过（8.4s，产物 `dist/`） |
 | 响应式门禁 | `node scripts/responsive-probe.mjs --strict --paths /,/login,/history,/knowledge,/voiceprints` | **全部通过**（见 IM-EVD-012） |
 | 桌面功能验收 | `BASE_URL=http://localhost:5175 API_URL=http://127.0.0.1:8021 node scripts/verify-features.mjs` | **14/14**（临时 e2e 栈，`ASR_MODE=echo`） |
-| e2e 全量 | `npx playwright test` | 6 passed / 2 failed；两条失败在**改造前 HEAD 上同样复现**（`git stash` 对照），属既有问题 |
+| e2e 全量 | `npx playwright test` | **19 passed / 2 failed / 1 skipped**；两条失败在**改造前 HEAD 上同样复现**（`git stash` 对照），属既有问题；skip 的是会中断点用例（CI 席位需登录，见第 5 节） |
+| 响应式 e2e | `npx playwright test e2e/responsive.spec.ts` | 首页 6 档 + 登录页 6 档 + 顶栏折叠共 13 条全部通过（无溢出、CTA 唯一且 ≥56、触控 ≥40、输入 16px） |
+| 会中断点 e2e | `PLAYWRIGHT_BASE_URL=http://localhost:5173 RESPONSIVE_MEETING=1 npx playwright test -g 会中断点` | 通过（1024 有分隔条 / 1023 双栏无分隔条 / 390 三标签且只显示当前块） |
+| 详情页三标签（真机仿真） | 390×844 + 1440×900 实测 | 390：一次只显示一块、标签栏 55px、溢出 0；1440：四块同时可见、标签栏不渲染 |
+| CI 门禁 | `.github/workflows/ci.yml` 的 `Responsive gate`（`vite preview` + `npm run verify:responsive`） | 已在本地用 `vite preview`（5174）复跑通过，确认不依赖后端 |
 | 会中真机仿真 | Chromium 假麦克风 + 390×844 起会 15s | 三标签切换正常、控制条 65px、溢出 0、正文 16px、无 <40px 控件、无 JS 异常 |
 
 后端未改一行代码，因此未重跑后端 766 项测试（本轮改动面 100% 在 `frontend/`）。
 
 ## 5 未完成与已知限制
 
+
 | 项 | 状态 | 原因 / 后续 |
 |---|---|---|
-| P6 字号 codemod（423 处 10–12px 硬编码） | **未做** | 一次性把 10–12px 抬到 12–14px 会改变桌面排版（行高、表格列宽、分栏标题不换行等），与「桌面零回归」冲突。改用令牌覆盖 `.reader-body*` 与输入类，其余留给按目录分批、逐批回归 |
-| 长会议虚拟滚动（方案 4.6） | **未做** | 需要 500/1000/2000 段真实数据测 FPS 才能决定；本轮没有造这类数据，故不加依赖 |
-| P4 的 History 筛选抽屉 / 批量操作底部浮层、MeetingDetail 手机四标签、admin 表格首列 sticky | **未做** | 实测 `/history`、`/knowledge` 在 6 档视口均无横向溢出，属「可用但未重排」；重排需要改交互结构，风险与收益比在本次不划算 |
-| 未迁移到 `Sheet` 的弹窗 | **部分** | `VoiceConfirmationDialog`、`MinutesEditor`、`CompliancePanel` 仍是居中卡片（前两个在手机上仍可用，仅内容多时需滚动）；后续按同一模式迁移 |
-| 提示条折叠（方案 4.4.8） | **部分** | 只把「会议信息」按钮抬到 44px；三条提示条仍是展开态，未做「单行 + 详情」折叠 |
-| A6 的 e2e 断言、A10 真机 | **未做** | 需要新增 `e2e/responsive.spec.ts` 与真机；本轮用探针脚本覆盖了同等指标 |
-| CI 接线 | **部分** | 已加 `npm run verify:responsive`（本地 Chrome、`CI=1` 时改用 Playwright 自带 Chromium）。未接进 `.github/workflows/ci.yml`：需要一个「构建 + preview + 探针」的 job，且要确认 runner 上的浏览器与 5173 端口可用；先落命令，接线留给下一轮 |
+| 423 处 10–12px 硬编码字号的 codemod | **未做** | 一次性抬到 12–14px 会改变桌面排版（行高、表格列宽、分栏标题不换行），与「桌面零回归」冲突。已改为：令牌覆盖 `.reader-body*` 与输入类 + 语义类（`.label`/`.chip`/`.panel-header h2`/`.count-badge`）在 compact 抬一档；余下按目录分批迁移、逐批回归 |
+| 长会议虚拟滚动（方案 4.6） | **未做** | 需要 500/1000/2000 段真实数据测 FPS 才能决定；本轮没有造这类数据，故不引入 `react-window` |
+| History 筛选抽屉 / 筛选项折叠 | **未做** | `/history` 6 档视口均无横向溢出，筛选行本身已 `flex-wrap`；做抽屉需要重排交互且收益有限。已做的是批量操作条改底部吸附浮层 |
+| 详情页第四标签「导图」 | **未做** | 导图是纪要栏里的一个切换按钮，不是独立面板；做成第四标签要么复制一份侧栏、要么改组件契约。当前三标签（转写/纪要/待办）已消除长滚动，导图仍从「纪要」标签里打开 |
+| 真机 iOS Safari / Android Chrome（A10） | **未做** | 无真机。已用 Chromium 设备仿真 + 假麦克风覆盖布局与三标签，真机仍需按第 4 节的清单人工过一遍 |
+| 会中断点 e2e 在 CI 默认 skip | **已知限制** | CI 的 e2e 席位 `REQUIRE_AUTH=1`，无法匿名起会。用例用 `RESPONSIVE_MEETING=1` 显式开启（本轮在 dev 栈跑通）；若要让它在 CI 常跑，需要给席位加一个可匿名的测试开关或预置 token |
 | 平板横屏 1024×768 归 wide 档 | **已知取舍** | 1024 按方案归 wide（32px 控件）。iPad 横屏用鼠标/触控笔没问题，纯手指操作时控件偏小；若要覆盖，需把 1024 单独成档，属方案变更 |
-
 ## 6 回滚
 
 改动全部在 `frontend/`（+ 文档），无后端/DB/接口变化。回滚方式：

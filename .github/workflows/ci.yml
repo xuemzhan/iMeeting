@@ -58,6 +58,18 @@ jobs:
         run: npm run typecheck
       - name: Build
         run: npm run build
+      - name: Install Chromium for the responsive gate
+        run: npx playwright install --with-deps chromium
+      - name: Responsive gate (no horizontal overflow / tap targets >= 40 / single CTA)
+        env:
+          CI: '1'
+        run: |
+          npx vite preview --port 5173 --strictPort &
+          for i in $(seq 1 60); do
+            curl -sf http://127.0.0.1:5173 >/dev/null && break
+            sleep 1
+          done
+          npm run verify:responsive
 
   e2e:
     runs-on: ubuntu-latest
