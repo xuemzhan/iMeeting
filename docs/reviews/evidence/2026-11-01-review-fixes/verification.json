@@ -1,0 +1,56 @@
+{
+  "baseline_commit": "f40385b",
+  "scope": "four verified P1 fixes, local SQLite and model doubles; no frontend changes, schema migration or production access",
+  "source_files": [
+    {
+      "path": "backend/src/imeeting/engine/voice_template.py",
+      "sha256": "d64fa964aea3781a47711b5c97a09bbbd4e78cc13adeb0e903e5173aced83a51"
+    },
+    {
+      "path": "backend/src/imeeting/meeting_cleanup.py",
+      "sha256": "d0b6fbb1b1c3862e896befb2309011f8d2299e2f02e530428e0fdfbfb4b59b62"
+    },
+    {
+      "path": "backend/tests/test_review_followup_fixes.py",
+      "sha256": "d3b78260ed0558183ebea1bbf75808a7b367f6a4780ba8a76fee10d8eb2aced7"
+    }
+  ],
+  "targeted_tests": {
+    "tests": 6,
+    "failures": 0,
+    "included_in_full_backend": true
+  },
+  "checks": [
+    {
+      "command": "python -m ruff check backend/src backend/tests backend/migrations",
+      "exit_code": 0
+    },
+    {
+      "command": "git diff --check",
+      "exit_code": 0
+    },
+    {
+      "command": "python scripts/docs_governance.py --write; python scripts/docs_governance.py",
+      "cwd": "FunASR-main",
+      "exit_code": 0,
+      "source_documents": 319,
+      "registered_documents": 62
+    }
+  ],
+  "full_backend": {
+    "tests": 728,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "exit_code": 0,
+    "command": "python -m pytest backend/tests -q --tb=short --show-capture=no --disable-warnings --junitxml=docs/reviews/evidence/2026-11-01-review-fixes/backend-tests.xml",
+    "wall_seconds": 490.84,
+    "warnings": 171
+  },
+  "not_validated": [
+    "real CAM++ inference",
+    "target server",
+    "Docker/TLS",
+    "long-duration acceptance"
+  ]
+}

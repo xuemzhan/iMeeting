@@ -1,0 +1,1423 @@
+{
+  "source": "E:\\Workspace\\FunASR-main\\iMeeting\\backend\\data\\logs\\backend.log",
+  "sha256": "33946ac8fe77e6d5956bd145398bcbe966b572fc21aa061c59e1e39826547a04",
+  "bytes": 2606302,
+  "lines": 7014,
+  "days": {
+    "2026-10-31": {
+      "timestamped_lines": 4055,
+      "first": "2026-10-31 08:41:54,348",
+      "last": "2026-10-31 16:59:55,352",
+      "parse_failures": [
+        {
+          "line": 1353,
+          "event": "2026-10-31 09:26:17,487 WARNING imeeting.llm.progressive: 滚动纪要输出无法解析为 JSON，跳过本版",
+          "preceding_call": "2026-10-31 09:26:17,483 INFO    imeeting.llm.client: llm_call model=deepseek-chat attempt=1 prompt_tokens=5955 completion_tokens=4096 cost_usd=0.000000 elapsed_ms=17777"
+        },
+        {
+          "line": 1439,
+          "event": "2026-10-31 09:31:36,722 WARNING imeeting.llm.progressive: 滚动纪要输出无法解析为 JSON，跳过本版",
+          "preceding_call": "2026-10-31 09:31:36,715 INFO    imeeting.llm.client: llm_call model=deepseek-chat attempt=1 prompt_tokens=6845 completion_tokens=4095 cost_usd=0.000000 elapsed_ms=19190"
+        },
+        {
+          "line": 1547,
+          "event": "2026-10-31 09:36:55,118 WARNING imeeting.llm.progressive: 滚动纪要输出无法解析为 JSON，跳过本版",
+          "preceding_call": "2026-10-31 09:36:55,115 INFO    imeeting.llm.client: llm_call model=deepseek-chat attempt=1 prompt_tokens=7706 completion_tokens=4096 cost_usd=0.000000 elapsed_ms=18332"
+        },
+        {
+          "line": 1643,
+          "event": "2026-10-31 09:42:12,128 WARNING imeeting.llm.progressive: 滚动纪要输出无法解析为 JSON，跳过本版",
+          "preceding_call": "2026-10-31 09:42:12,123 INFO    imeeting.llm.client: llm_call model=deepseek-chat attempt=1 prompt_tokens=12032 completion_tokens=4096 cost_usd=0.000000 elapsed_ms=16681"
+        },
+        {
+          "line": 1729,
+          "event": "2026-10-31 09:47:29,324 WARNING imeeting.llm.progressive: 滚动纪要输出无法解析为 JSON，跳过本版",
+          "preceding_call": "2026-10-31 09:47:29,317 INFO    imeeting.llm.client: llm_call model=deepseek-chat attempt=1 prompt_tokens=12865 completion_tokens=4096 cost_usd=0.000000 elapsed_ms=16927"
+        },
+        {
+          "line": 1836,
+          "event": "2026-10-31 09:52:48,639 WARNING imeeting.llm.progressive: 滚动纪要输出无法解析为 JSON，跳过本版",
+          "preceding_call": "2026-10-31 09:52:48,635 INFO    imeeting.llm.client: llm_call model=deepseek-chat attempt=1 prompt_tokens=13793 completion_tokens=4096 cost_usd=0.000000 elapsed_ms=17551"
+        },
+        {
+          "line": 2129,
+          "event": "2026-10-31 10:03:11,792 WARNING imeeting.llm.progressive: 滚动纪要输出无法解析为 JSON，跳过本版",
+          "preceding_call": "2026-10-31 10:03:11,787 INFO    imeeting.llm.client: llm_call model=deepseek-chat attempt=1 prompt_tokens=15499 completion_tokens=4096 cost_usd=0.000000 elapsed_ms=16878"
+        },
+        {
+          "line": 2242,
+          "event": "2026-10-31 10:08:29,049 WARNING imeeting.llm.progressive: 滚动纪要输出无法解析为 JSON，跳过本版",
+          "preceding_call": "2026-10-31 10:08:29,046 INFO    imeeting.llm.client: llm_call model=deepseek-chat attempt=1 prompt_tokens=16462 completion_tokens=4096 cost_usd=0.000000 elapsed_ms=17173"
+        },
+        {
+          "line": 2332,
+          "event": "2026-10-31 10:13:47,270 WARNING imeeting.llm.progressive: 滚动纪要输出无法解析为 JSON，跳过本版",
+          "preceding_call": "2026-10-31 10:13:47,265 INFO    imeeting.llm.client: llm_call model=deepseek-chat attempt=1 prompt_tokens=17335 completion_tokens=4096 cost_usd=0.000000 elapsed_ms=18110"
+        },
+        {
+          "line": 2434,
+          "event": "2026-10-31 10:19:04,534 WARNING imeeting.llm.progressive: 滚动纪要输出无法解析为 JSON，跳过本版",
+          "preceding_call": "2026-10-31 10:19:04,530 INFO    imeeting.llm.client: llm_call model=deepseek-chat attempt=1 prompt_tokens=18304 completion_tokens=4096 cost_usd=0.000000 elapsed_ms=17172"
+        },
+        {
+          "line": 2521,
+          "event": "2026-10-31 10:24:21,869 WARNING imeeting.llm.progressive: 滚动纪要输出无法解析为 JSON，跳过本版",
+          "preceding_call": "2026-10-31 10:24:21,858 INFO    imeeting.llm.client: llm_call model=deepseek-chat attempt=1 prompt_tokens=19019 completion_tokens=4096 cost_usd=0.000000 elapsed_ms=17213"
+        },
+        {
+          "line": 2604,
+          "event": "2026-10-31 10:29:39,307 WARNING imeeting.llm.progressive: 滚动纪要输出无法解析为 JSON，跳过本版",
+          "preceding_call": "2026-10-31 10:29:39,303 INFO    imeeting.llm.client: llm_call model=deepseek-chat attempt=1 prompt_tokens=19694 completion_tokens=4096 cost_usd=0.000000 elapsed_ms=17356"
+        },
+        {
+          "line": 2706,
+          "event": "2026-10-31 10:34:57,184 WARNING imeeting.llm.progressive: 滚动纪要输出无法解析为 JSON，跳过本版",
+          "preceding_call": "2026-10-31 10:34:57,180 INFO    imeeting.llm.client: llm_call model=deepseek-chat attempt=1 prompt_tokens=6620 completion_tokens=4096 cost_usd=0.000000 elapsed_ms=17790"
+        },
+        {
+          "line": 2885,
+          "event": "2026-10-31 10:45:24,109 WARNING imeeting.llm.progressive: 滚动纪要输出无法解析为 JSON，跳过本版",
+          "preceding_call": "2026-10-31 10:45:24,097 INFO    imeeting.llm.client: llm_call model=deepseek-chat attempt=1 prompt_tokens=8273 completion_tokens=4096 cost_usd=0.000000 elapsed_ms=18674"
+        },
+        {
+          "line": 3435,
+          "event": "2026-10-31 14:26:18,925 WARNING imeeting.llm.progressive: 滚动纪要输出无法解析为 JSON，跳过本版",
+          "preceding_call": "2026-10-31 14:26:18,914 INFO    imeeting.llm.client: llm_call model=deepseek-chat attempt=1 prompt_tokens=5939 completion_tokens=4096 cost_usd=0.000000 elapsed_ms=16244"
+        },
+        {
+          "line": 3462,
+          "event": "2026-10-31 14:29:36,150 WARNING imeeting.llm.progressive: 滚动纪要输出无法解析为 JSON，跳过本版",
+          "preceding_call": "2026-10-31 14:29:36,146 INFO    imeeting.llm.client: llm_call model=deepseek-chat attempt=1 prompt_tokens=6382 completion_tokens=4096 cost_usd=0.000000 elapsed_ms=17187"
+        },
+        {
+          "line": 3507,
+          "event": "2026-10-31 14:32:52,968 WARNING imeeting.llm.progressive: 滚动纪要输出无法解析为 JSON，跳过本版",
+          "preceding_call": "2026-10-31 14:32:52,964 INFO    imeeting.llm.client: llm_call model=deepseek-chat attempt=1 prompt_tokens=6896 completion_tokens=4096 cost_usd=0.000000 elapsed_ms=16784"
+        },
+        {
+          "line": 4607,
+          "event": "2026-10-31 16:55:02,546 WARNING imeeting.llm.progressive: 滚动纪要输出无法解析为 JSON，跳过本版",
+          "preceding_call": "2026-10-31 16:55:02,538 INFO    imeeting.llm.client: llm_call model=deepseek-chat attempt=1 prompt_tokens=5691 completion_tokens=4096 cost_usd=0.000000 elapsed_ms=16710"
+        },
+        {
+          "line": 4645,
+          "event": "2026-10-31 16:58:20,250 WARNING imeeting.llm.progressive: 滚动纪要输出无法解析为 JSON，跳过本版",
+          "preceding_call": "2026-10-31 16:58:20,243 INFO    imeeting.llm.client: llm_call model=deepseek-chat attempt=1 prompt_tokens=6146 completion_tokens=4096 cost_usd=0.000000 elapsed_ms=17649"
+        }
+      ],
+      "errors": [
+        {
+          "line": 1920,
+          "event": "2026-10-31 09:57:54,615 ERROR   imeeting.api.ws.stream: 渐进纪要生成失败 meeting=1",
+          "exception": [
+            "httpx.ConnectError: [Errno 11001] getaddrinfo failed"
+          ]
+        },
+        {
+          "line": 4134,
+          "event": "2026-10-31 15:53:59,823 ERROR   imeeting.api.ws.stream: WebSocket 会话异常 (meeting=10)",
+          "exception": [
+            "RuntimeError: Cannot call \"send\" once a close message has been sent."
+          ]
+        },
+        {
+          "line": 4429,
+          "event": "2026-10-31 16:42:30,381 ERROR   imeeting.api.ws.stream: WebSocket 会话异常 (meeting=12)",
+          "exception": [
+            "RuntimeError: Unexpected ASGI message 'websocket.send', after sending 'websocket.close'.",
+            "RuntimeError: Unexpected ASGI message 'websocket.send', after sending 'websocket.close'."
+          ]
+        },
+        {
+          "line": 4476,
+          "event": "2026-10-31 16:45:10,839 ERROR   imeeting.api.ws.stream: WebSocket 会话异常 (meeting=12)",
+          "exception": [
+            "RuntimeError: Unexpected ASGI message 'websocket.send', after sending 'websocket.close'."
+          ]
+        }
+      ],
+      "offline_empty_warnings": 20,
+      "hotword_list_lines": 1159
+    },
+    "2026-11-01": {
+      "timestamped_lines": 2061,
+      "first": "2026-11-01 08:30:49,404",
+      "last": "2026-11-01 10:35:55,576",
+      "parse_failures": [
+        {
+          "line": 5323,
+          "event": "2026-11-01 09:03:02,846 WARNING imeeting.llm.progressive: 滚动纪要输出无法解析为 JSON，跳过本版",
+          "preceding_call": "2026-11-01 09:03:02,835 INFO    imeeting.llm.client: llm_call model=deepseek-chat attempt=1 prompt_tokens=5652 completion_tokens=4096 cost_usd=0.000000 elapsed_ms=17744"
+        },
+        {
+          "line": 5382,
+          "event": "2026-11-01 09:06:19,941 WARNING imeeting.llm.progressive: 滚动纪要输出无法解析为 JSON，跳过本版",
+          "preceding_call": "2026-11-01 09:06:19,933 INFO    imeeting.llm.client: llm_call model=deepseek-chat attempt=1 prompt_tokens=6350 completion_tokens=4096 cost_usd=0.000000 elapsed_ms=16994"
+        },
+        {
+          "line": 5445,
+          "event": "2026-11-01 09:09:38,371 WARNING imeeting.llm.progressive: 滚动纪要输出无法解析为 JSON，跳过本版",
+          "preceding_call": "2026-11-01 09:09:38,363 INFO    imeeting.llm.client: llm_call model=deepseek-chat attempt=1 prompt_tokens=7023 completion_tokens=4096 cost_usd=0.000000 elapsed_ms=18315"
+        },
+        {
+          "line": 5499,
+          "event": "2026-11-01 09:12:58,204 WARNING imeeting.llm.progressive: 滚动纪要输出无法解析为 JSON，跳过本版",
+          "preceding_call": "2026-11-01 09:12:58,197 INFO    imeeting.llm.client: llm_call model=deepseek-chat attempt=1 prompt_tokens=8077 completion_tokens=4096 cost_usd=0.000000 elapsed_ms=19748"
+        },
+        {
+          "line": 5571,
+          "event": "2026-11-01 09:16:16,467 WARNING imeeting.llm.progressive: 滚动纪要输出无法解析为 JSON，跳过本版",
+          "preceding_call": "2026-11-01 09:16:16,460 INFO    imeeting.llm.client: llm_call model=deepseek-chat attempt=1 prompt_tokens=8924 completion_tokens=4096 cost_usd=0.000000 elapsed_ms=18004"
+        },
+        {
+          "line": 5634,
+          "event": "2026-11-01 09:19:37,885 WARNING imeeting.llm.progressive: 滚动纪要输出无法解析为 JSON，跳过本版",
+          "preceding_call": "2026-11-01 09:19:37,874 INFO    imeeting.llm.client: llm_call model=deepseek-chat attempt=1 prompt_tokens=9646 completion_tokens=4096 cost_usd=0.000000 elapsed_ms=21067"
+        },
+        {
+          "line": 5692,
+          "event": "2026-11-01 09:22:58,468 WARNING imeeting.llm.progressive: 滚动纪要输出无法解析为 JSON，跳过本版",
+          "preceding_call": "2026-11-01 09:22:58,444 INFO    imeeting.llm.client: llm_call model=deepseek-chat attempt=1 prompt_tokens=10326 completion_tokens=4096 cost_usd=0.000000 elapsed_ms=20418"
+        },
+        {
+          "line": 5745,
+          "event": "2026-11-01 09:26:19,240 WARNING imeeting.llm.progressive: 滚动纪要输出无法解析为 JSON，跳过本版",
+          "preceding_call": "2026-11-01 09:26:19,233 INFO    imeeting.llm.client: llm_call model=deepseek-chat attempt=1 prompt_tokens=11006 completion_tokens=4096 cost_usd=0.000000 elapsed_ms=20699"
+        },
+        {
+          "line": 5790,
+          "event": "2026-11-01 09:29:39,224 WARNING imeeting.llm.progressive: 滚动纪要输出无法解析为 JSON，跳过本版",
+          "preceding_call": "2026-11-01 09:29:39,212 INFO    imeeting.llm.client: llm_call model=deepseek-chat attempt=1 prompt_tokens=11625 completion_tokens=4096 cost_usd=0.000000 elapsed_ms=19849"
+        },
+        {
+          "line": 5963,
+          "event": "2026-11-01 09:32:59,889 WARNING imeeting.llm.progressive: 滚动纪要输出无法解析为 JSON，跳过本版",
+          "preceding_call": "2026-11-01 09:32:59,839 INFO    imeeting.llm.client: llm_call model=deepseek-chat attempt=1 prompt_tokens=12182 completion_tokens=4096 cost_usd=0.000000 elapsed_ms=20231"
+        },
+        {
+          "line": 6028,
+          "event": "2026-11-01 09:36:20,573 WARNING imeeting.llm.progressive: 滚动纪要输出无法解析为 JSON，跳过本版",
+          "preceding_call": "2026-11-01 09:36:20,547 INFO    imeeting.llm.client: llm_call model=deepseek-chat attempt=1 prompt_tokens=12893 completion_tokens=4096 cost_usd=0.000000 elapsed_ms=20400"
+        },
+        {
+          "line": 6092,
+          "event": "2026-11-01 09:39:41,173 WARNING imeeting.llm.progressive: 滚动纪要输出无法解析为 JSON，跳过本版",
+          "preceding_call": "2026-11-01 09:39:41,159 INFO    imeeting.llm.client: llm_call model=deepseek-chat attempt=1 prompt_tokens=13578 completion_tokens=4096 cost_usd=0.000000 elapsed_ms=20434"
+        },
+        {
+          "line": 6149,
+          "event": "2026-11-01 09:43:00,555 WARNING imeeting.llm.progressive: 滚动纪要输出无法解析为 JSON，跳过本版",
+          "preceding_call": "2026-11-01 09:43:00,541 INFO    imeeting.llm.client: llm_call model=deepseek-chat attempt=1 prompt_tokens=14179 completion_tokens=4096 cost_usd=0.000000 elapsed_ms=19287"
+        },
+        {
+          "line": 6203,
+          "event": "2026-11-01 09:46:21,246 WARNING imeeting.llm.progressive: 滚动纪要输出无法解析为 JSON，跳过本版",
+          "preceding_call": "2026-11-01 09:46:21,234 INFO    imeeting.llm.client: llm_call model=deepseek-chat attempt=1 prompt_tokens=14821 completion_tokens=4096 cost_usd=0.000000 elapsed_ms=20573"
+        },
+        {
+          "line": 6258,
+          "event": "2026-11-01 09:49:46,226 WARNING imeeting.llm.progressive: 滚动纪要输出无法解析为 JSON，跳过本版",
+          "preceding_call": "2026-11-01 09:49:46,222 INFO    imeeting.llm.client: llm_call model=deepseek-chat attempt=1 prompt_tokens=15399 completion_tokens=4096 cost_usd=0.000000 elapsed_ms=24650"
+        },
+        {
+          "line": 6306,
+          "event": "2026-11-01 09:53:09,458 WARNING imeeting.llm.progressive: 滚动纪要输出无法解析为 JSON，跳过本版",
+          "preceding_call": "2026-11-01 09:53:09,455 INFO    imeeting.llm.client: llm_call model=deepseek-chat attempt=1 prompt_tokens=16067 completion_tokens=4096 cost_usd=0.000000 elapsed_ms=23161"
+        },
+        {
+          "line": 6898,
+          "event": "2026-11-01 10:29:46,447 WARNING imeeting.llm.progressive: 滚动纪要输出无法解析为 JSON，跳过本版",
+          "preceding_call": "2026-11-01 10:29:46,435 INFO    imeeting.llm.client: llm_call model=deepseek-chat attempt=1 prompt_tokens=5870 completion_tokens=4096 cost_usd=0.000000 elapsed_ms=17841"
+        },
+        {
+          "line": 6955,
+          "event": "2026-11-01 10:33:05,679 WARNING imeeting.llm.progressive: 滚动纪要输出无法解析为 JSON，跳过本版",
+          "preceding_call": "2026-11-01 10:33:05,663 INFO    imeeting.llm.client: llm_call model=deepseek-chat attempt=1 prompt_tokens=6562 completion_tokens=4096 cost_usd=0.000000 elapsed_ms=19035"
+        }
+      ],
+      "errors": [
+        {
+          "line": 5820,
+          "event": "2026-11-01 09:31:19,224 ERROR   imeeting.engine.speaker: 自动加入参会人失败 meeting=13 key=spk_e8cfb8ba",
+          "exception": [
+            "sqlite3.IntegrityError: UNIQUE constraint failed: meeting_participant.meeting_id, meeting_participant.person_id"
+          ]
+        },
+        {
+          "line": 6342,
+          "event": "2026-11-01 09:54:46,205 ERROR   imeeting.engine.speaker: 自动加入参会人失败 meeting=13 key=spk_e8cfb8ba",
+          "exception": [
+            "sqlite3.IntegrityError: UNIQUE constraint failed: meeting_participant.meeting_id, meeting_participant.person_id"
+          ]
+        },
+        {
+          "line": 6569,
+          "event": "2026-11-01 10:13:39,007 ERROR   asyncio: Task exception was never retrieved",
+          "exception": [
+            "OSError: [WinError 64] 指定的网络名不再可用。",
+            "OSError: [WinError 64] 指定的网络名不再可用。"
+          ]
+        },
+        {
+          "line": 6581,
+          "event": "2026-11-01 10:13:39,063 ERROR   asyncio: Accept failed on a socket",
+          "exception": [
+            "OSError: [WinError 64] 指定的网络名不再可用。"
+          ]
+        }
+      ],
+      "offline_empty_warnings": 6,
+      "hotword_list_lines": 612
+    }
+  },
+  "sessions": [
+    {
+      "log_line": 2954,
+      "event": "meeting_metrics",
+      "meeting_id": 1,
+      "session_id": "6545b93679de",
+      "mode": "normal",
+      "started_at": "2026-10-31T00:44:32+00:00",
+      "duration_ms": 7471800,
+      "wall_seconds": 7473.2,
+      "segments": 644,
+      "partial_events": 11321,
+      "finalize_reasons": {
+        "silence": 474,
+        "adaptive_silence": 159,
+        "max_duration": 6,
+        "max_duration_valley": 8,
+        "stop": 1
+      },
+      "drops": {
+        "no_speech": 1187,
+        "fallback_quality": 4,
+        "noise_burst": 13,
+        "low_speech": 1
+      },
+      "speech_seconds": 2797.1,
+      "segment_audio_seconds": 5308.2,
+      "speech_ratio": 0.527,
+      "chars": 22149,
+      "unknown_speaker": 0,
+      "labeled_speaker": 644,
+      "short_match_attempts": 0,
+      "short_match_hits": 0,
+      "out_of_order_emits": 0,
+      "noise_floor_p50": 0.00287,
+      "snr_db_p50": 9.6,
+      "snr_db_min": 6.4,
+      "noise_warnings": 1,
+      "fallback_final": 3,
+      "fallback_rejected": 4,
+      "fallback_details": [
+        {
+          "segment_id": "s-6545b93679de-57-86d6",
+          "reason": "silence",
+          "duration_ms": 2400,
+          "chars": 16
+        },
+        {
+          "segment_id": "s-6545b93679de-76-2f7d",
+          "reason": "silence",
+          "duration_ms": 1800,
+          "chars": 9
+        },
+        {
+          "segment_id": "s-6545b93679de-183-ace8",
+          "reason": "silence",
+          "duration_ms": 3000,
+          "chars": 8
+        }
+      ],
+      "asr_sources": {
+        "offline": 641,
+        "streaming_fallback": 3
+      },
+      "speaker_sources": {
+        "cluster": 55,
+        "enrolled": 575,
+        "enrolled_ambiguous": 14
+      },
+      "speaker_score_p50": 0.8,
+      "low_confidence_speakers": 27,
+      "trimmed_segments": 84,
+      "trim_original_seconds": 415.2,
+      "trim_kept_seconds": 341.7,
+      "trim_saved_ratio": 0.177,
+      "long_segments_gt20s": 0,
+      "tiny_segments_le5chars": 7,
+      "offline_ms": {
+        "n": 644,
+        "p50": 2770.1,
+        "p90": 6220.0,
+        "p95": 7727.4,
+        "max": 29129.2,
+        "mean": 3458.6
+      },
+      "speaker_ms": {
+        "n": 644,
+        "p50": 392.7,
+        "p90": 681.0,
+        "p95": 854.4,
+        "max": 5295.1,
+        "mean": 456.3
+      },
+      "queue_wait_ms": {
+        "n": 644,
+        "p50": 0.1,
+        "p90": 0.2,
+        "p95": 0.2,
+        "max": 6272.0,
+        "mean": 70.4
+      },
+      "final_latency_ms": {
+        "n": 644,
+        "p50": 3970.6,
+        "p90": 7271.1,
+        "p95": 9092.6,
+        "max": 32477.4,
+        "mean": 4574.7
+      },
+      "cpu_seconds": 20774.3,
+      "peak_rss_mb": 3312.9,
+      "adaptive_profile": {
+        "version": 830,
+        "start_threshold": 0.008373,
+        "continue_threshold": 0.005181,
+        "silence_ms": 800,
+        "soft_segment_ms": 12000,
+        "max_segment_ms": 18000,
+        "gain": 3.99,
+        "noise_floor": 0.003712,
+        "speech_level": 0.008374,
+        "snr_db": 7.06,
+        "updated_blocks": 12440
+      }
+    },
+    {
+      "log_line": 3688,
+      "event": "meeting_metrics",
+      "meeting_id": 7,
+      "session_id": "261f51429c56",
+      "mode": "normal",
+      "started_at": "2026-10-31T06:01:09+00:00",
+      "duration_ms": 2992200,
+      "wall_seconds": 2992.8,
+      "segments": 153,
+      "partial_events": 4856,
+      "finalize_reasons": {
+        "adaptive_silence": 38,
+        "silence": 111,
+        "max_duration": 4
+      },
+      "drops": {
+        "no_speech": 942,
+        "noise_burst": 4,
+        "silent": 2
+      },
+      "speech_seconds": 608.3,
+      "segment_audio_seconds": 1282.8,
+      "speech_ratio": 0.474,
+      "chars": 6974,
+      "unknown_speaker": 1,
+      "labeled_speaker": 152,
+      "short_match_attempts": 3,
+      "short_match_hits": 2,
+      "out_of_order_emits": 0,
+      "noise_floor_p50": 0.00841,
+      "snr_db_p50": 7.3,
+      "snr_db_min": 4.4,
+      "noise_warnings": 1,
+      "fallback_final": 0,
+      "fallback_rejected": 0,
+      "fallback_details": [],
+      "asr_sources": {
+        "offline": 153
+      },
+      "speaker_sources": {
+        "cluster": 11,
+        "enrolled": 141
+      },
+      "speaker_score_p50": 0.818,
+      "low_confidence_speakers": 5,
+      "trimmed_segments": 10,
+      "trim_original_seconds": 42.0,
+      "trim_kept_seconds": 35.3,
+      "trim_saved_ratio": 0.159,
+      "long_segments_gt20s": 0,
+      "tiny_segments_le5chars": 0,
+      "offline_ms": {
+        "n": 153,
+        "p50": 2291.8,
+        "p90": 5260.5,
+        "p95": 6363.4,
+        "max": 22881.9,
+        "mean": 3032.9
+      },
+      "speaker_ms": {
+        "n": 153,
+        "p50": 324.4,
+        "p90": 520.7,
+        "p95": 562.6,
+        "max": 1180.5,
+        "mean": 342.1
+      },
+      "queue_wait_ms": {
+        "n": 153,
+        "p50": 0.1,
+        "p90": 0.1,
+        "p95": 0.2,
+        "max": 2491.5,
+        "mean": 16.4
+      },
+      "final_latency_ms": {
+        "n": 153,
+        "p50": 3823.9,
+        "p90": 5786.5,
+        "p95": 6981.8,
+        "max": 24080.1,
+        "mean": 4253.1
+      },
+      "cpu_seconds": 7272.3,
+      "peak_rss_mb": 2156.6,
+      "adaptive_profile": {
+        "version": 333,
+        "start_threshold": 0.020734,
+        "continue_threshold": 0.013636,
+        "silence_ms": 1200,
+        "soft_segment_ms": 12000,
+        "max_segment_ms": 18000,
+        "gain": 1.638,
+        "noise_floor": 0.008048,
+        "speech_level": 0.020368,
+        "snr_db": 8.06,
+        "updated_blocks": 4985
+      }
+    },
+    {
+      "log_line": 4000,
+      "event": "meeting_metrics",
+      "meeting_id": 8,
+      "session_id": "eff34d7079f0",
+      "mode": "normal",
+      "started_at": "2026-10-31T07:14:45+00:00",
+      "duration_ms": 1662000,
+      "wall_seconds": 1662.6,
+      "segments": 82,
+      "partial_events": 2488,
+      "finalize_reasons": {
+        "max_duration": 4,
+        "max_duration_valley": 2,
+        "adaptive_silence": 23,
+        "silence": 63
+      },
+      "drops": {
+        "no_speech": 472,
+        "silent": 1,
+        "fallback_quality": 10
+      },
+      "speech_seconds": 385.5,
+      "segment_audio_seconds": 808.8,
+      "speech_ratio": 0.477,
+      "chars": 3636,
+      "unknown_speaker": 0,
+      "labeled_speaker": 82,
+      "short_match_attempts": 0,
+      "short_match_hits": 0,
+      "out_of_order_emits": 0,
+      "noise_floor_p50": 0.00769,
+      "snr_db_p50": 7.8,
+      "snr_db_min": 5.3,
+      "noise_warnings": 1,
+      "fallback_final": 0,
+      "fallback_rejected": 10,
+      "fallback_details": [],
+      "asr_sources": {
+        "offline": 82
+      },
+      "speaker_sources": {
+        "enrolled": 77,
+        "enrolled_ambiguous": 2,
+        "cluster": 3
+      },
+      "speaker_score_p50": 0.832,
+      "low_confidence_speakers": 5,
+      "trimmed_segments": 7,
+      "trim_original_seconds": 28.2,
+      "trim_kept_seconds": 22.6,
+      "trim_saved_ratio": 0.2,
+      "long_segments_gt20s": 1,
+      "tiny_segments_le5chars": 1,
+      "offline_ms": {
+        "n": 82,
+        "p50": 2990.5,
+        "p90": 5535.2,
+        "p95": 6285.8,
+        "max": 10502.7,
+        "mean": 3306.3
+      },
+      "speaker_ms": {
+        "n": 82,
+        "p50": 399.2,
+        "p90": 572.7,
+        "p95": 684.2,
+        "max": 1383.6,
+        "mean": 414.9
+      },
+      "queue_wait_ms": {
+        "n": 82,
+        "p50": 0.1,
+        "p90": 0.2,
+        "p95": 0.2,
+        "max": 0.3,
+        "mean": 0.1
+      },
+      "final_latency_ms": {
+        "n": 82,
+        "p50": 4527.8,
+        "p90": 6628.4,
+        "p95": 6980.1,
+        "max": 11339.7,
+        "mean": 4513.8
+      },
+      "cpu_seconds": 3985.7,
+      "peak_rss_mb": 2335.0,
+      "adaptive_profile": {
+        "version": 185,
+        "start_threshold": 0.021146,
+        "continue_threshold": 0.012944,
+        "silence_ms": 1180,
+        "soft_segment_ms": 12000,
+        "max_segment_ms": 18000,
+        "gain": 1.91,
+        "noise_floor": 0.009612,
+        "speech_level": 0.018436,
+        "snr_db": 5.66,
+        "updated_blocks": 2765
+      }
+    },
+    {
+      "log_line": 4145,
+      "event": "meeting_metrics",
+      "meeting_id": 10,
+      "session_id": "59aa6f6075e6",
+      "mode": "normal",
+      "started_at": "2026-10-31T07:42:30+00:00",
+      "duration_ms": 686400,
+      "wall_seconds": 694.9,
+      "segments": 39,
+      "partial_events": 1107,
+      "finalize_reasons": {
+        "adaptive_silence": 16,
+        "silence": 22,
+        "max_duration_valley": 1
+      },
+      "drops": {
+        "no_speech": 182,
+        "noise_burst": 2
+      },
+      "speech_seconds": 179.0,
+      "segment_audio_seconds": 355.8,
+      "speech_ratio": 0.503,
+      "chars": 1647,
+      "unknown_speaker": 0,
+      "labeled_speaker": 39,
+      "short_match_attempts": 1,
+      "short_match_hits": 1,
+      "out_of_order_emits": 0,
+      "noise_floor_p50": 0.00797,
+      "snr_db_p50": 7.8,
+      "snr_db_min": 4.7,
+      "noise_warnings": 1,
+      "fallback_final": 0,
+      "fallback_rejected": 0,
+      "fallback_details": [],
+      "asr_sources": {
+        "offline": 39
+      },
+      "speaker_sources": {
+        "enrolled": 38,
+        "cluster": 1
+      },
+      "speaker_score_p50": 0.852,
+      "low_confidence_speakers": 1,
+      "trimmed_segments": 3,
+      "trim_original_seconds": 12.6,
+      "trim_kept_seconds": 10.4,
+      "trim_saved_ratio": 0.171,
+      "long_segments_gt20s": 0,
+      "tiny_segments_le5chars": 0,
+      "offline_ms": {
+        "n": 39,
+        "p50": 3616.7,
+        "p90": 7506.4,
+        "p95": 12452.9,
+        "max": 14797.1,
+        "mean": 4325.4
+      },
+      "speaker_ms": {
+        "n": 39,
+        "p50": 396.6,
+        "p90": 808.8,
+        "p95": 987.7,
+        "max": 1857.3,
+        "mean": 494.6
+      },
+      "queue_wait_ms": {
+        "n": 39,
+        "p50": 0.1,
+        "p90": 0.2,
+        "p95": 0.2,
+        "max": 2464.8,
+        "mean": 63.3
+      },
+      "final_latency_ms": {
+        "n": 39,
+        "p50": 4361.6,
+        "p90": 9881.4,
+        "p95": 14347.5,
+        "max": 17031.3,
+        "mean": 5514.6
+      },
+      "cpu_seconds": 1839.5,
+      "peak_rss_mb": 1843.8,
+      "adaptive_profile": {
+        "version": 76,
+        "start_threshold": 0.017962,
+        "continue_threshold": 0.010897,
+        "silence_ms": 1200,
+        "soft_segment_ms": 12000,
+        "max_segment_ms": 18000,
+        "gain": 1.975,
+        "noise_floor": 0.008165,
+        "speech_level": 0.017291,
+        "snr_db": 6.52,
+        "updated_blocks": 1130
+      }
+    },
+    {
+      "log_line": 4186,
+      "event": "meeting_metrics",
+      "meeting_id": 11,
+      "session_id": "53eccc8099bf",
+      "mode": "normal",
+      "started_at": "2026-10-31T07:54:11+00:00",
+      "duration_ms": 274800,
+      "wall_seconds": 275.1,
+      "segments": 9,
+      "partial_events": 430,
+      "finalize_reasons": {
+        "adaptive_silence": 6,
+        "silence": 3
+      },
+      "drops": {
+        "no_speech": 95
+      },
+      "speech_seconds": 56.4,
+      "segment_audio_seconds": 104.4,
+      "speech_ratio": 0.54,
+      "chars": 527,
+      "unknown_speaker": 0,
+      "labeled_speaker": 9,
+      "short_match_attempts": 0,
+      "short_match_hits": 0,
+      "out_of_order_emits": 0,
+      "noise_floor_p50": 0.00816,
+      "snr_db_p50": 6.4,
+      "snr_db_min": 5.0,
+      "noise_warnings": 1,
+      "fallback_final": 0,
+      "fallback_rejected": 0,
+      "fallback_details": [],
+      "asr_sources": {
+        "offline": 9
+      },
+      "speaker_sources": {
+        "enrolled": 9
+      },
+      "speaker_score_p50": 0.888,
+      "low_confidence_speakers": 0,
+      "trimmed_segments": 0,
+      "trim_original_seconds": 0.0,
+      "trim_kept_seconds": 0.0,
+      "trim_saved_ratio": null,
+      "long_segments_gt20s": 0,
+      "tiny_segments_le5chars": 0,
+      "offline_ms": {
+        "n": 9,
+        "p50": 3965.2,
+        "p90": 4280.4,
+        "p95": 5626.2,
+        "max": 5626.2,
+        "mean": 3731.2
+      },
+      "speaker_ms": {
+        "n": 9,
+        "p50": 356.1,
+        "p90": 435.1,
+        "p95": 566.6,
+        "max": 566.6,
+        "mean": 375.0
+      },
+      "queue_wait_ms": {
+        "n": 9,
+        "p50": 0.1,
+        "p90": 0.1,
+        "p95": 0.2,
+        "max": 0.2,
+        "mean": 0.1
+      },
+      "final_latency_ms": {
+        "n": 9,
+        "p50": 4402.9,
+        "p90": 4743.8,
+        "p95": 6202.6,
+        "max": 6202.6,
+        "mean": 4467.2
+      },
+      "cpu_seconds": 645.1,
+      "peak_rss_mb": 1801.1,
+      "adaptive_profile": {
+        "version": 31,
+        "start_threshold": 0.01569,
+        "continue_threshold": 0.010072,
+        "silence_ms": 1200,
+        "soft_segment_ms": 12000,
+        "max_segment_ms": 18000,
+        "gain": 2.049,
+        "noise_floor": 0.004138,
+        "speech_level": 0.018219,
+        "snr_db": 12.87,
+        "updated_blocks": 455
+      }
+    },
+    {
+      "log_line": 4447,
+      "event": "meeting_metrics",
+      "meeting_id": 12,
+      "session_id": "9debcda7ad59",
+      "mode": "normal",
+      "started_at": "2026-10-31T08:17:09+00:00",
+      "duration_ms": 1492200,
+      "wall_seconds": 1541.5,
+      "segments": 72,
+      "partial_events": 2439,
+      "finalize_reasons": {
+        "max_duration": 1,
+        "adaptive_silence": 19,
+        "silence": 51,
+        "stop": 1
+      },
+      "drops": {
+        "no_speech": 510,
+        "noise_burst": 1
+      },
+      "speech_seconds": 263.2,
+      "segment_audio_seconds": 572.4,
+      "speech_ratio": 0.46,
+      "chars": 3127,
+      "unknown_speaker": 2,
+      "labeled_speaker": 70,
+      "short_match_attempts": 5,
+      "short_match_hits": 3,
+      "out_of_order_emits": 0,
+      "noise_floor_p50": 0.00877,
+      "snr_db_p50": 7.1,
+      "snr_db_min": 5.3,
+      "noise_warnings": 1,
+      "fallback_final": 0,
+      "fallback_rejected": 0,
+      "fallback_details": [],
+      "asr_sources": {
+        "offline": 72
+      },
+      "speaker_sources": {
+        "enrolled": 69,
+        "cluster": 1
+      },
+      "speaker_score_p50": 0.82,
+      "low_confidence_speakers": 0,
+      "trimmed_segments": 7,
+      "trim_original_seconds": 25.8,
+      "trim_kept_seconds": 20.3,
+      "trim_saved_ratio": 0.212,
+      "long_segments_gt20s": 1,
+      "tiny_segments_le5chars": 1,
+      "offline_ms": {
+        "n": 72,
+        "p50": 2360.1,
+        "p90": 6116.3,
+        "p95": 11196.8,
+        "max": 31454.9,
+        "mean": 3878.9
+      },
+      "speaker_ms": {
+        "n": 72,
+        "p50": 309.6,
+        "p90": 631.1,
+        "p95": 703.8,
+        "max": 1432.4,
+        "mean": 390.1
+      },
+      "queue_wait_ms": {
+        "n": 72,
+        "p50": 0.1,
+        "p90": 0.1,
+        "p95": 0.2,
+        "max": 1116.0,
+        "mean": 15.6
+      },
+      "final_latency_ms": {
+        "n": 72,
+        "p50": 3875.2,
+        "p90": 6675.2,
+        "p95": 11909.7,
+        "max": 32894.6,
+        "mean": 5136.6
+      },
+      "cpu_seconds": 3540.7,
+      "peak_rss_mb": 1923.1,
+      "adaptive_profile": {
+        "version": 166,
+        "start_threshold": 0.022717,
+        "continue_threshold": 0.013743,
+        "silence_ms": 1200,
+        "soft_segment_ms": 12000,
+        "max_segment_ms": 18000,
+        "gain": 1.852,
+        "noise_floor": 0.010326,
+        "speech_level": 0.019941,
+        "snr_db": 5.72,
+        "updated_blocks": 2480
+      }
+    },
+    {
+      "log_line": 4493,
+      "event": "meeting_metrics",
+      "meeting_id": 12,
+      "session_id": "81a71738e686",
+      "mode": "normal",
+      "started_at": "2026-10-31T08:42:30+00:00",
+      "duration_ms": 159000,
+      "wall_seconds": 162.4,
+      "segments": 9,
+      "partial_events": 256,
+      "finalize_reasons": {
+        "adaptive_silence": 6,
+        "silence": 3
+      },
+      "drops": {
+        "no_speech": 30
+      },
+      "speech_seconds": 53.4,
+      "segment_audio_seconds": 105.0,
+      "speech_ratio": 0.508,
+      "chars": 563,
+      "unknown_speaker": 0,
+      "labeled_speaker": 9,
+      "short_match_attempts": 0,
+      "short_match_hits": 0,
+      "out_of_order_emits": 0,
+      "noise_floor_p50": 0.00878,
+      "snr_db_p50": 7.7,
+      "snr_db_min": 5.8,
+      "noise_warnings": 1,
+      "fallback_final": 0,
+      "fallback_rejected": 0,
+      "fallback_details": [],
+      "asr_sources": {
+        "offline": 9
+      },
+      "speaker_sources": {
+        "enrolled": 8,
+        "cluster": 1
+      },
+      "speaker_score_p50": 0.875,
+      "low_confidence_speakers": 1,
+      "trimmed_segments": 1,
+      "trim_original_seconds": 3.6,
+      "trim_kept_seconds": 3.0,
+      "trim_saved_ratio": 0.172,
+      "long_segments_gt20s": 0,
+      "tiny_segments_le5chars": 0,
+      "offline_ms": {
+        "n": 9,
+        "p50": 15644.3,
+        "p90": 21089.5,
+        "p95": 21193.5,
+        "max": 21193.5,
+        "mean": 14441.6
+      },
+      "speaker_ms": {
+        "n": 9,
+        "p50": 1474.1,
+        "p90": 2225.8,
+        "p95": 3600.4,
+        "max": 3600.4,
+        "mean": 1407.0
+      },
+      "queue_wait_ms": {
+        "n": 9,
+        "p50": 0.1,
+        "p90": 0.2,
+        "p95": 0.3,
+        "max": 0.3,
+        "mean": 0.1
+      },
+      "final_latency_ms": {
+        "n": 9,
+        "p50": 17126.0,
+        "p90": 23331.5,
+        "p95": 24812.0,
+        "max": 24812.0,
+        "mean": 16138.6
+      },
+      "cpu_seconds": 388.6,
+      "peak_rss_mb": 1668.1,
+      "adaptive_profile": {
+        "version": 18,
+        "start_threshold": 0.027019,
+        "continue_threshold": 0.015204,
+        "silence_ms": 850,
+        "soft_segment_ms": 12000,
+        "max_segment_ms": 18000,
+        "gain": 1.684,
+        "noise_floor": 0.012281,
+        "speech_level": 0.021774,
+        "snr_db": 4.97,
+        "updated_blocks": 260
+      }
+    },
+    {
+      "log_line": 4669,
+      "event": "meeting_metrics",
+      "meeting_id": 12,
+      "session_id": "14303540514b",
+      "mode": "normal",
+      "started_at": "2026-10-31T08:45:11+00:00",
+      "duration_ms": 863400,
+      "wall_seconds": 832.8,
+      "segments": 50,
+      "partial_events": 1319,
+      "finalize_reasons": {
+        "silence": 36,
+        "adaptive_silence": 15,
+        "max_duration_valley": 1,
+        "stop": 1
+      },
+      "drops": {
+        "no_speech": 232,
+        "fallback_quality": 3
+      },
+      "speech_seconds": 219.5,
+      "segment_audio_seconds": 445.8,
+      "speech_ratio": 0.492,
+      "chars": 2371,
+      "unknown_speaker": 0,
+      "labeled_speaker": 50,
+      "short_match_attempts": 3,
+      "short_match_hits": 3,
+      "out_of_order_emits": 0,
+      "noise_floor_p50": 0.00943,
+      "snr_db_p50": 7.9,
+      "snr_db_min": 5.1,
+      "noise_warnings": 1,
+      "fallback_final": 0,
+      "fallback_rejected": 3,
+      "fallback_details": [],
+      "asr_sources": {
+        "offline": 50
+      },
+      "speaker_sources": {
+        "enrolled": 43,
+        "cluster": 7
+      },
+      "speaker_score_p50": 0.842,
+      "low_confidence_speakers": 1,
+      "trimmed_segments": 6,
+      "trim_original_seconds": 27.0,
+      "trim_kept_seconds": 22.6,
+      "trim_saved_ratio": 0.163,
+      "long_segments_gt20s": 0,
+      "tiny_segments_le5chars": 0,
+      "offline_ms": {
+        "n": 50,
+        "p50": 3487.3,
+        "p90": 9846.9,
+        "p95": 15937.2,
+        "max": 29360.9,
+        "mean": 5046.8
+      },
+      "speaker_ms": {
+        "n": 50,
+        "p50": 457.2,
+        "p90": 969.4,
+        "p95": 1551.9,
+        "max": 2872.0,
+        "mean": 604.6
+      },
+      "queue_wait_ms": {
+        "n": 50,
+        "p50": 0.1,
+        "p90": 0.3,
+        "p95": 1461.2,
+        "max": 5456.9,
+        "mean": 192.5
+      },
+      "final_latency_ms": {
+        "n": 50,
+        "p50": 5000.7,
+        "p90": 10906.6,
+        "p95": 20281.5,
+        "max": 32248.5,
+        "mean": 6653.3
+      },
+      "cpu_seconds": 2175.6,
+      "peak_rss_mb": 1810.1,
+      "adaptive_profile": {
+        "version": 262,
+        "start_threshold": 0.009278,
+        "continue_threshold": 0.005261,
+        "silence_ms": 1060,
+        "soft_segment_ms": 12000,
+        "max_segment_ms": 18000,
+        "gain": 1.731,
+        "noise_floor": 0.004206,
+        "speech_level": 0.021515,
+        "snr_db": 14.18,
+        "updated_blocks": 1430
+      }
+    },
+    {
+      "log_line": 6459,
+      "event": "meeting_metrics",
+      "meeting_id": 13,
+      "session_id": "05adc8694e12",
+      "mode": "normal",
+      "started_at": "2026-11-01T00:34:26+00:00",
+      "duration_ms": 4813200,
+      "wall_seconds": 4819.9,
+      "segments": 410,
+      "partial_events": 7082,
+      "finalize_reasons": {
+        "adaptive_silence": 139,
+        "silence": 256,
+        "max_duration_valley": 9,
+        "max_duration": 10
+      },
+      "drops": {
+        "no_speech": 511,
+        "noise_burst": 6,
+        "silent": 1,
+        "fallback_quality": 4
+      },
+      "speech_seconds": 2203.7,
+      "segment_audio_seconds": 3876.6,
+      "speech_ratio": 0.568,
+      "chars": 19026,
+      "unknown_speaker": 0,
+      "labeled_speaker": 410,
+      "short_match_attempts": 0,
+      "short_match_hits": 0,
+      "out_of_order_emits": 1,
+      "noise_floor_p50": 0.00298,
+      "snr_db_p50": 11.1,
+      "snr_db_min": 6.4,
+      "noise_warnings": 1,
+      "fallback_final": 0,
+      "fallback_rejected": 4,
+      "fallback_details": [],
+      "asr_sources": {
+        "offline": 410
+      },
+      "speaker_sources": {
+        "enrolled_ambiguous": 6,
+        "cluster": 54,
+        "enrolled": 350
+      },
+      "speaker_score_p50": 0.846,
+      "low_confidence_speakers": 16,
+      "trimmed_segments": 73,
+      "trim_original_seconds": 367.2,
+      "trim_kept_seconds": 298.2,
+      "trim_saved_ratio": 0.188,
+      "long_segments_gt20s": 0,
+      "tiny_segments_le5chars": 1,
+      "offline_ms": {
+        "n": 410,
+        "p50": 3343.3,
+        "p90": 7630.7,
+        "p95": 9976.4,
+        "max": 27581.7,
+        "mean": 3956.5
+      },
+      "speaker_ms": {
+        "n": 410,
+        "p50": 438.5,
+        "p90": 857.8,
+        "p95": 1158.9,
+        "max": 2270.2,
+        "mean": 505.3
+      },
+      "queue_wait_ms": {
+        "n": 410,
+        "p50": 0.1,
+        "p90": 0.3,
+        "p95": 0.8,
+        "max": 7340.7,
+        "mean": 115.6
+      },
+      "final_latency_ms": {
+        "n": 410,
+        "p50": 4137.6,
+        "p90": 9140.5,
+        "p95": 11598.4,
+        "max": 29159.3,
+        "mean": 5069.3
+      },
+      "cpu_seconds": 15010.5,
+      "peak_rss_mb": 2147.8,
+      "adaptive_profile": {
+        "version": 535,
+        "start_threshold": 0.007566,
+        "continue_threshold": 0.004875,
+        "silence_ms": 780,
+        "soft_segment_ms": 12000,
+        "max_segment_ms": 18000,
+        "gain": 3.797,
+        "noise_floor": 0.003439,
+        "speech_level": 0.008287,
+        "snr_db": 7.64,
+        "updated_blocks": 8015
+      }
+    }
+  ],
+  "meetings": [
+    [
+      1,
+      "finished",
+      7471800,
+      644
+    ],
+    [
+      2,
+      "finished",
+      6227,
+      1
+    ],
+    [
+      3,
+      "finished",
+      6227,
+      1
+    ],
+    [
+      4,
+      "finished",
+      6227,
+      1
+    ],
+    [
+      5,
+      "finished",
+      4860,
+      1
+    ],
+    [
+      6,
+      "finished",
+      6227,
+      1
+    ],
+    [
+      7,
+      "abandoned",
+      2992200,
+      153
+    ],
+    [
+      8,
+      "abandoned",
+      1662000,
+      82
+    ],
+    [
+      9,
+      "abandoned",
+      1800,
+      0
+    ],
+    [
+      10,
+      "failed",
+      686400,
+      39
+    ],
+    [
+      11,
+      "finished",
+      274800,
+      9
+    ],
+    [
+      12,
+      "finished",
+      2514600,
+      131
+    ],
+    [
+      13,
+      "finished",
+      4813200,
+      410
+    ],
+    [
+      14,
+      "finished",
+      10800,
+      1
+    ],
+    [
+      15,
+      "recording",
+      1504200,
+      138
+    ]
+  ],
+  "minutes": [
+    [
+      1,
+      "ready",
+      0,
+      5,
+      7471800
+    ],
+    [
+      1,
+      "ready",
+      1,
+      7,
+      2157600
+    ],
+    [
+      7,
+      "ready",
+      0,
+      1,
+      1915800
+    ],
+    [
+      7,
+      "ready",
+      1,
+      8,
+      2799600
+    ],
+    [
+      8,
+      "ready",
+      1,
+      7,
+      1497600
+    ],
+    [
+      10,
+      "ready",
+      1,
+      3,
+      537600
+    ],
+    [
+      11,
+      "ready",
+      0,
+      1,
+      252000
+    ],
+    [
+      11,
+      "ready",
+      1,
+      1,
+      82800
+    ],
+    [
+      12,
+      "ready",
+      0,
+      2,
+      2513400
+    ],
+    [
+      12,
+      "ready",
+      1,
+      8,
+      2050800
+    ],
+    [
+      13,
+      "ready",
+      0,
+      2,
+      4797600
+    ],
+    [
+      13,
+      "ready",
+      1,
+      8,
+      1476600
+    ],
+    [
+      15,
+      "ready",
+      1,
+      5,
+      921600
+    ]
+  ],
+  "sessions_12": [
+    [
+      "9debcda7ad59",
+      0,
+      1492200,
+      "failed"
+    ],
+    [
+      "81a71738e686",
+      1492200,
+      159000,
+      "failed"
+    ],
+    [
+      "14303540514b",
+      1651200,
+      863400,
+      "finished"
+    ]
+  ],
+  "speaker_sources_13_current": [
+    [
+      "cluster",
+      12
+    ],
+    [
+      "enrolled",
+      206
+    ],
+    [
+      "enrolled_ambiguous",
+      4
+    ],
+    [
+      "enrolled_reconciled",
+      37
+    ],
+    [
+      "manual",
+      151
+    ]
+  ]
+}

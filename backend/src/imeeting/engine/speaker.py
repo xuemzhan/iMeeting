@@ -29,7 +29,7 @@ from typing import Optional
 import numpy as np
 
 from ..models import Meeting
-from ..settings import get_config
+from ..settings import config_float, get_config
 
 logger = logging.getLogger(__name__)
 
@@ -436,27 +436,38 @@ class SpeakerResolver:
         self, threshold: float = 0.6, meeting_id: int | None = None
     ) -> None:
         self.threshold = threshold
+        # 阈值只从 CONFIG_SCHEMA 取（config_float 保证单一事实来源）：
+        # 这里原来写 `or 0.68` / `or 0.58`，schema 改成 0.75/0.68 后两处会背离。
         self.enrolled_threshold = max(
-            threshold, float(get_config("spk.enrolled_threshold") or 0.68)
+            threshold, config_float("spk.enrolled_threshold")
         )
         self.ambiguous_threshold = min(
             self.enrolled_threshold,
-            max(
-                threshold,
-                float(get_config("spk.enrolled_ambiguous_threshold") or 0.58),
-            ),
+            max(threshold, config_float("spk.enrolled_ambiguous_threshold")),
         )
-        self.arbitration_margin = float(
-            get_config("spk.arbitration_margin") or 0.03
-        )
+        self.arbitration_margin = config_float("spk.arbitration_margin")
         self.meeting_id = meeting_id
         self._clusters: list[SpeakerCluster] = []
+        self._label_overrides: dict[str, str] = {}
         #: 本会话新聚出来的说话人 (key, label, 向量)，由调用方取走后落库
         self.new_clusters: list[tuple[str, str, np.ndarray]] = []
         self._next_index = 1
 
         if meeting_id is not None:
+            from sqlmodel import select
+
+            from ..db import session_scope
+            from ..models import MeetingParticipant, Person
+
+            with session_scope() as db:
+                for part, person in db.exec(select(MeetingParticipant, Person).join(
+                    Person, MeetingParticipant.person_id == Person.id
+                ).where(MeetingParticipant.meeting_id == meeting_id,
+                        MeetingParticipant.state == "confirmed")).all():
+                    if part.speaker_key:
+                        self._label_overrides[part.speaker_key] = person.display_name
             for key, label, vector in load_meeting_speakers(meeting_id):
+                label = self._label_overrides.get(key, label)
                 self._clusters.append(SpeakerCluster(key, vector, label))
                 match = re.match(r"说话人\s*(\d+)", label)
                 if match:
@@ -494,6 +505,7 @@ class SpeakerResolver:
             speaker_key
             or (f"vp_{voiceprint_id}" if voiceprint_id is not None else f"nm_{name}")
         )
+        name = self._label_overrides.get(key, name)
         for cluster in self._clusters:
             if cluster.key == key:
                 merged = cluster.vector + emb
@@ -552,12 +564,17 @@ class SpeakerResolver:
         # 已录入身份优先于匿名簇：否则一个被开场杂谈污染的匿名簇
         # 会在 0.5 就抢占，导致 0.9 的已知声纹也永远没有机会命中。
         hit = self._formal_enrolled_candidate(emb)
+        cluster, score = self._best_cluster(emb, max(thr, self.enrolled_threshold))
+        if (cluster is not None and not cluster.label.startswith(("说话人", "疑似"))
+                and (hit is None or cluster.key != hit[3])
+                and (hit is None or score >= hit[1] - self.arbitration_margin)):
+            return SpeakerResolution(cluster.label, cluster.key, score, "cluster")
         if hit and hit[1] >= max(thr, self.enrolled_threshold):
             key = (
                 hit[3]
                 or (f"vp_{hit[2]}" if hit[2] is not None else f"nm_{hit[0]}")
             )
-            return SpeakerResolution(hit[0], key, hit[1], "enrolled")
+            return SpeakerResolution(self._label_overrides.get(key, hit[0]), key, hit[1], "enrolled")
         cluster, score = self._best_cluster(emb, thr)
         if cluster is not None:
             return SpeakerResolution(cluster.label, cluster.key, score, "cluster")
@@ -581,6 +598,17 @@ class SpeakerResolver:
         cluster, cluster_score = self._best_cluster(emb, self.threshold)
         enrolled = self._formal_enrolled_candidate(emb)
         enrolled_score = enrolled[1] if enrolled is not None else 0.0
+
+        # A high-quality meeting voice remains stable when a global identity
+        # offers only a marginal score gain. Anonymous clusters must not hide
+        # a strong enrolled match; genuinely different voices still switch.
+        if (cluster is not None and cluster_score >= self.enrolled_threshold
+                and (enrolled is None or cluster.key != enrolled[3])
+                and not cluster.label.startswith(("说话人", "疑似"))
+                and cluster_score >= enrolled_score - self.arbitration_margin):
+            merged = cluster.vector + emb
+            cluster.vector = merged / (np.linalg.norm(merged) + 1e-9)
+            return SpeakerResolution(cluster.label, cluster.key, cluster_score, "cluster")
 
         if enrolled is not None and enrolled_score >= self.enrolled_threshold:
             attached, score = self._attach_enrolled_hit(emb, enrolled)
@@ -633,6 +661,7 @@ class SpeakerResolver:
         for cluster in self._clusters:
             if cluster.label == old_label:
                 cluster.label = new_name
+                self._label_overrides[cluster.key] = new_name
                 changed += 1
         return changed
 

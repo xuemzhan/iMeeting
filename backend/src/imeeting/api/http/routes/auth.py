@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import time
 from typing import Any
 
@@ -210,13 +211,28 @@ def _reset_bootstrap_cache() -> None:
     _BOOTSTRAP_CACHE["value"] = None
 
 
+def bootstrap_password_exposed() -> bool:
+    """是否允许在预填接口里回传口令。
+
+    回传口令只在「本机/开发」形态下才有意义（一键登录）。一旦进入生产形态
+    ——``APP_ENV=production`` 或开启了强制鉴权 ``REQUIRE_AUTH=1``——任何未登录的
+    访问者都能从这里拿到管理员口令并直接登录，等于把首次改密前的窗口整个交出去。
+    需要保留预填的内部部署可显式设 ``ALLOW_BOOTSTRAP_PASSWORD=1``。
+    """
+    if os.getenv("ALLOW_BOOTSTRAP_PASSWORD", "").strip() == "1":
+        return True
+    if os.getenv("APP_ENV", "development").strip().lower() == "production":
+        return False
+    return os.getenv("REQUIRE_AUTH", "0").strip() != "1"
+
+
 @router.get("/bootstrap", response_model=AuthBootstrapOut)
 def bootstrap(db: Session = Depends(get_session)):
     """登录页预填用的初始凭据信息。
 
-    只在管理员**仍在使用出厂默认口令**时才把口令回传，改过密码后一律为 None。
-    这样既能「一键登录」，又不会把真实口令暴露给任何未登录的访问者，
-    也不会让用户对着一个已失效的预填值反复失败。
+    只有「管理员仍在使用出厂/环境口令」**且**当前是本机或开发形态时，
+    才把口令回传；生产形态下一律为 None（见 ``bootstrap_password_exposed``）。
+    用户名照常回传，它是公开的默认值，预填省一次输入。
     """
     now = time.time()
     cached = _BOOTSTRAP_CACHE["value"]
@@ -231,11 +247,11 @@ def bootstrap(db: Session = Depends(get_session)):
         and admin.username == env_username
         and verify_password(env_password, admin.password_hash)
     )
+    expose_password = using_default and bootstrap_password_exposed()
 
     result = AuthBootstrapOut(
-        # 用户名照常回传：它是公开的默认值，预填省一次输入。
         default_username=admin.username if admin is not None else env_username,
-        default_password=env_password if using_default else None,
+        default_password=env_password if expose_password else None,
         using_default_password=using_default,
     )
     _BOOTSTRAP_CACHE["ts"] = now

@@ -1,0 +1,17 @@
+﻿documents scanned: 42  relative links checked: 369
+broken/escaping links: 15
+  docs/plans/2026-10-31-gap-remediation-plan.md -> ../../../docs/governance/CATALOG.md (exists=False)
+  docs/plans/2026-10-31-gap-remediation-plan.md -> ../../../docs/governance/POLICY.md (exists=False)
+  docs/reviews/2026-10-31-code-document-gap-review.md -> ../../../docs/governance/CATALOG.md (exists=False)
+  docs/reviews/2026-10-31-code-document-gap-review.md -> ../../../docs/governance/POLICY.md (exists=False)
+  docs/reviews/2026-10-31-code-document-gap-review.md -> ../../../docs/production-optimization-plan.md (exists=False)
+  docs/reviews/2026-10-31-code-document-gap-review.md -> ../../../funasr/utils/asgi_limits.py (exists=False)
+  docs/reviews/2026-10-31-code-document-gap-review.md -> ../../../funasr/utils/safe_parse.py (exists=False)
+  docs/reviews/2026-10-31-code-document-gap-review.md -> ../../../portable/extract_from_split.py (exists=False)
+  docs/reviews/2026-10-31-code-document-gap-review.md -> ../../../docs/rust-audio-optimization.md (exists=False)
+  docs/reviews/2026-10-31-code-document-gap-review.md -> ../../../funasr/utils/audio_buffer.py (exists=False)
+  docs/reviews/2026-10-31-code-document-gap-review.md -> ../../../runtime/rust/audio_buffer/README.md (exists=False)
+  docs/reviews/2026-10-31-code-document-gap-review.md -> ../../../funasr/__init__.py#L78 (exists=False)
+  docs/reviews/2026-10-31-code-document-gap-review.md -> ../../../funasr/register.py (exists=False)
+  docs/reviews/evidence/2026-10-31-gap-review/README.md -> ../../../../../docs/governance/CATALOG.md (exists=False)
+  docs/reviews/evidence/2026-10-31-gap-review/README.md -> ../../../../../docs/governance/POLICY.md (exists=False)

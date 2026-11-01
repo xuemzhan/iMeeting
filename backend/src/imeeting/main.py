@@ -6,6 +6,7 @@ import asyncio
 import logging
 import os
 import re
+import secrets
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -13,7 +14,7 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 import orjson
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse, PlainTextResponse
 
@@ -93,9 +94,14 @@ def _orjson_dumps(content, *, default=None) -> bytes:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """启动：建库、加载配置、预热模型。"""
-    from .runtime_checks import validate_production_settings
+    from .runtime_checks import (
+        production_config_warnings,
+        validate_production_settings,
+    )
 
     validate_production_settings()
+    for warning in production_config_warnings():
+        logger.warning("生产配置提示：%s", warning)
     logger.info("=== %s 启动中 ===", SERVER_CONFIG["app_name"])
     initialize_app_database()
     # init_db 内的 Alembic fileConfig 会重置根 logger；必须在迁移之后重装，
@@ -144,10 +150,16 @@ async def lifespan(app: FastAPI):
 
 async def _audio_cleanup_loop(interval_seconds: int = 6 * 3600) -> None:
     """周期性清理过期音频文件，避免磁盘无限增长。"""
-    from .engine.audio import cleanup_expired
+    from .engine.audio import cleanup_expired, repair_interrupted_wavs
 
+    repaired_done = False
     while True:
         try:
+            # 上次进程若被强杀，留下的 WAV 头可能不完整；启动首轮先修一遍，
+            # 之后不再重复扫描（运行期间的头由 AudioSink 自己维护）。
+            if not repaired_done:
+                await asyncio.to_thread(repair_interrupted_wavs)
+                repaired_done = True
             # 清理是同步 IO，放到线程里避免阻塞事件循环
             await asyncio.to_thread(cleanup_expired)
             from .application.exports import cleanup_exports
@@ -224,8 +236,29 @@ app.include_router(api_router)
 app.include_router(stream.router)
 
 
+def _metrics_allowed(request: Request) -> bool:
+    """``/metrics`` 的访问控制。
+
+    配置 ``METRICS_TOKEN`` 时必须带 `Authorization: Bearer <token>`（或
+    `?token=`）；生产环境未配置令牌时只允许环回地址访问——容器内的
+    `curl 127.0.0.1:8000/metrics` 与同机采集照常可用，但从网络进来的抓取
+    会被拒绝，避免把成本、会话数和磁盘水位直接挂在公网上。
+    """
+    token = os.getenv("METRICS_TOKEN", "").strip()
+    if token:
+        header = request.headers.get("Authorization", "")
+        provided = header[7:].strip() if header.lower().startswith("bearer ") else ""
+        if not provided:
+            provided = request.query_params.get("token", "")
+        return secrets.compare_digest(provided, token)
+    if os.getenv("APP_ENV", "development").strip().lower() != "production":
+        return True
+    client = request.client.host if request.client else ""
+    return client in {"127.0.0.1", "::1", "localhost"}
+
+
 @app.get("/metrics", include_in_schema=False)
-def prometheus_metrics():
+def prometheus_metrics(request: Request):
     from sqlalchemy import func
     from sqlmodel import Session, select
 
@@ -235,6 +268,9 @@ def prometheus_metrics():
     from .models import LLMUsage
     from .ops import disk_gauges, prometheus_text
     from .session_registry import active_session_count
+
+    if not _metrics_allowed(request):
+        raise HTTPException(status_code=403, detail="指标接口未授权")
 
     jobs = job_metrics()
     gauges = disk_gauges(SERVER_CONFIG["data_dir"])

@@ -21,11 +21,25 @@ from sqlmodel import func, select
 from ..db import session_scope
 from ..models import ActionItem, Minutes, Segment, utcnow
 from ..settings import get_config
-from .client import LLMClient, extract_json
+from .client import LLMClient, LLMTruncatedError, extract_json
 from .minutes import _finalize_minutes, _format_lines, generate_minutes
 from .types import TranscriptLine
 
 logger = logging.getLogger(__name__)
+
+# Bound backlog growth after a failed update. Whole segments remain intact.
+ROLLING_BATCH_CHARS = 6000
+
+
+def _draft_batch(lines: list[TranscriptLine]) -> list[TranscriptLine]:
+    batch: list[TranscriptLine] = []
+    chars = 0
+    for line in lines:
+        if batch and chars + len(line.text) > ROLLING_BATCH_CHARS:
+            break
+        batch.append(line)
+        chars += len(line.text)
+    return batch
 
 
 def load_transcript_lines(meeting_id: int) -> list[TranscriptLine]:
@@ -173,6 +187,7 @@ def minutes_payload(row: Minutes) -> dict:
         "error": row.error,
         "version": row.version,
         "is_draft": row.is_draft,
+        "transcript_end_ms": row.transcript_end_ms,
         "edited": row.edited,
         "created_at": row.created_at.isoformat(),
     }
@@ -192,6 +207,15 @@ async def _rolling_update(
         "summary": previous.summary,
         "topics": json.loads(previous.topics or "[]"),
         "todos": json.loads(previous.todos or "[]"),
+    }
+    # Historical evidence is restored locally; asking the model to repeat every
+    # evidence id and unchanged todo eventually exhausts the output budget.
+    prompt_previous = {
+        **prev_payload,
+        "topics": [{k: v for k, v in topic.items() if k != "evidence"}
+                   for topic in prev_payload["topics"] if isinstance(topic, dict)],
+        "todos": [{k: v for k, v in todo.items() if k != "evidence"}
+                  for todo in prev_payload["todos"] if isinstance(todo, dict)],
     }
     from ..glossary import prompt_section
     from ..speaker_roles import importance_prompt_section
@@ -214,8 +238,10 @@ async def _rolling_update(
         "6. 输出同样的 JSON 结构，并额外给出 corrections 字段："
         '[{"from":"转写中的错误片段","to":"知识库规范词","confidence":0.9}]；'
         "只列有把握的项，不确定就不要列。\n\n"
+        "摘要控制在1200字以内，议题不超过12项，每项详情不超过150字；"
+        "不要重复输出整段转写。todos只输出新增或更新的待办，旧待办由系统保留。\n\n"
         + priority_prompt
-        + f"上一版纪要：\n{json.dumps(prev_payload, ensure_ascii=False)}\n\n"
+        + f"上一版纪要：\n{json.dumps(prompt_previous, ensure_ascii=False)}\n\n"
         f"新增转写：\n---\n{_format_lines(new_lines)}\n---"
     )
     prompt = prompt_prefix + prompt_body
@@ -227,12 +253,17 @@ async def _rolling_update(
         purpose="rolling_draft",
     )
     parsed = extract_json(raw)
-    if parsed is None:
-        logger.warning("滚动纪要输出无法解析为 JSON，跳过本版")
+    if not isinstance(parsed, dict) or not isinstance(parsed.get("summary"), str):
+        logger.warning("滚动纪要结构无效 meeting=%s，保留上一版", previous.meeting_id)
         return None
     from ..evidence import preserve_previous_evidence
 
     result = _finalize_minutes(parsed, new_lines, model)
+    tasks = {str(item.get("task") or "") for item in result.get("todos", [])}
+    result["todos"] = list(result.get("todos") or []) + [
+        item for item in prev_payload["todos"]
+        if isinstance(item, dict) and str(item.get("task") or "") not in tasks
+    ]
     return preserve_previous_evidence(prev_payload, result)
 
 
@@ -258,6 +289,7 @@ async def generate_progressive_draft(
     new_chars = sum(len(line.text) for line in new_lines)
     if new_chars < min_chars:
         return None
+    batch = _draft_batch(new_lines)
 
     if previous is not None and previous.summary:
         from .knowledge_context import build_knowledge_context
@@ -269,24 +301,31 @@ async def generate_progressive_draft(
         except Exception:
             logger.exception("构建知识库校正上下文失败 meeting=%s", meeting_id)
             knowledge_context = ""
-        result = await _rolling_update(
-            previous, new_lines, knowledge_context
-        )
+        for attempt in range(3):
+            try:
+                result = await _rolling_update(previous, batch, knowledge_context)
+            except LLMTruncatedError:
+                result = None
+                logger.warning("滚动纪要截断 meeting=%s batch_segments=%s attempt=%s",
+                               meeting_id, len(batch), attempt + 1)
+            if result is not None or len(batch) <= 1:
+                break
+            batch = batch[:max(1, len(batch) // 2)]
         if result is None:
             return None
         # 质量护栏：明显短于上一版时保留上一版，避免「越更越短」
         if len(result.get("summary", "")) < max(
-            120, int(len(previous.summary) * 0.5)
+            120, min(600, int(len(previous.summary) * 0.5))
         ):
             logger.info("滚动纪要过短，保留上一版 meeting=%s", meeting_id)
             return None
     else:
         result = await generate_minutes(
-            lines, model_label="实时草稿", draft=True, meeting_id=meeting_id
+            batch, model_label="实时草稿", draft=True, meeting_id=meeting_id
         )
 
     end_ms = max(
-        (line.end_ms or (line.start_ms + 1000)) for line in lines
+        (line.end_ms or (line.start_ms + 1000)) for line in batch
     )
     row = await asyncio.to_thread(
         save_generated_minutes,

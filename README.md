@@ -136,11 +136,14 @@ npm run dev
 
 ## 自测
 
-### 一、后端单元 / 接口测试（544 项，不依赖模型，约 5 分钟）
+### 一、后端单元 / 接口测试（不依赖模型，约 9 分钟）
+
+用例数随提交增长，以实际收集数为准（当前 `pytest --collect-only -q` 为 765 项）：
 
 ```bash
 cd backend
 python -m pytest tests/ -q
+python -m pytest tests/ --collect-only -q | tail -1
 ```
 
 覆盖范围：
@@ -161,11 +164,16 @@ python -m pytest tests/ -q
 | `test_ops.py` | 请求指标归一化、延迟直方图、磁盘/任务/成本 gauge |
 | `test_meeting_product_extras.py` | 分享权限、令牌迁移、版本化纪要和文档导出 |
 | `test_speaker_importance.py` | 参会人重要程度归一化、设置/读取/排序、改名迁移、纪要加权 prompt |
+| `test_review_20261101_fixes.py` | 配置密钥重启后仍可用、生产 bootstrap 不回传口令、`/metrics` 令牌、WAV 头实时有效与崩溃修复、分享令牌有效期、非法请求体 422 |
 
-### 二、前端单元测试（66 项）
+### 二、前端单元测试（101 项，含组件测试）与静态检查
 
 ```bash
-cd frontend && npm test && npm run typecheck && npm run build
+cd frontend
+npm run lint          # eslint：hooks 规则 + 未定义/未使用变量
+npm test              # vitest：lib/store/api 逻辑层 + components 组件层（jsdom）
+npm run test:coverage # 覆盖率报告（当前为基线，未设阈值）
+npm run typecheck && npm run build
 ```
 
 ### 三、浏览器端到端冒烟

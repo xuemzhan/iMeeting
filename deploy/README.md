@@ -121,6 +121,20 @@ ssh -L 8000:127.0.0.1:8000 user@meeting-host
 curl -sS http://127.0.0.1:8000/metrics
 ```
 
+**访问控制**：`APP_ENV=production` 且未设置 `METRICS_TOKEN` 时，`/metrics` 只接受
+环回地址（127.0.0.1 / ::1）——上面这条 SSH 隧道仍然可用，但从其他主机/容器直接抓取
+会返回 403。跨机采集请在 `deploy/production.env` 设置令牌：
+
+```sh
+METRICS_TOKEN=<随机串>
+curl -sS -H "Authorization: Bearer $METRICS_TOKEN" http://backend:8000/metrics
+```
+
+**客户端真实 IP**：compose 给后端设了 `FORWARDED_ALLOW_IPS`（默认 RFC1918 网段），
+让 `request.client.host` 取到 nginx 传来的真实来源地址。缺了它，按 IP 的登录限流会退化
+成一个全局桶（任何人连错 5 次就能把所有人锁在门外），审计日志的来源 IP 也全是代理地址。
+如果把 backend 端口也发布到宿主机/公网，必须把这个变量收窄到具体代理地址。
+
 `deploy/prometheus-alerts.yml` 提供后端不可用、readiness 失败、模型加载失败、
 5xx、P95 延迟、任务积压/卡死、磁盘容量和 LLM 成本突增规则。使用前先校验：
 

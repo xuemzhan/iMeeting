@@ -53,6 +53,8 @@ from ....schemas import (
     MeetingSearchResult,
     MinutesEditRequest,
     MinutesOut,
+    RedactRequest,
+    RetentionUpdateRequest,
     SearchMatchOut,
     SegmentOut,
     SegmentUpdate,
@@ -76,6 +78,9 @@ from .deps import get_current_user_or_anonymous, require_admin
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1", tags=["meeting-extras"])
+
+#: 分享访问凭证的有效期（分钟）。与 ``ShareOpenOut.expires_in`` 同源。
+SHARE_ACCESS_MINUTES = 120
 
 
 @router.post("/meetings/{meeting_id}/review-audio")
@@ -502,8 +507,11 @@ def open_share(
             "share_token_hash": hash_share_token(token),
             "meeting_id": row.meeting_id,
         },
+        # 分享访问凭证只活 2 小时：与下面回传的 expires_in 保持一致，
+        # 不能沿用登录令牌的默认有效期（否则口令外泄后可复用一整天）。
+        expires_minutes=SHARE_ACCESS_MINUTES,
     )
-    return ShareOpenOut(access_token=access, expires_in=7200)
+    return ShareOpenOut(access_token=access, expires_in=SHARE_ACCESS_MINUTES * 60)
 
 
 @router.get("/share/{token}")
@@ -991,7 +999,7 @@ def knowledge_topics(
 @router.post("/meetings/{meeting_id}/redact")
 def redact_meeting(
     meeting_id: int,
-    payload: dict | None = None,
+    payload: RedactRequest | None = None,
     user: User = Depends(get_current_user_or_anonymous),
     db: Session = Depends(get_session),
 ):
@@ -999,7 +1007,7 @@ def redact_meeting(
     from ....privacy import redact_json, redact_text
 
     meeting = _owned(meeting_id, user, db, write=True)
-    dry_run = bool((payload or {}).get("dry_run") or False)
+    dry_run = bool(payload.dry_run) if payload is not None else False
     segments = db.exec(select(Segment).where(Segment.meeting_id == meeting_id)).all()
     changed = 0
     for segment in segments:
@@ -1045,15 +1053,15 @@ def redact_meeting(
 @router.patch("/meetings/{meeting_id}/retention")
 def update_retention(
     meeting_id: int,
-    payload: dict,
+    payload: RetentionUpdateRequest,
     user: User = Depends(get_current_user_or_anonymous),
     db: Session = Depends(get_session),
 ):
     meeting = _owned(meeting_id, user, db, write=True)
-    if "retention_days" in payload:
-        meeting.retention_days = max(0, min(3650, int(payload["retention_days"])))
-    if "legal_hold" in payload:
-        meeting.legal_hold = bool(payload["legal_hold"])
+    if payload.retention_days is not None:
+        meeting.retention_days = payload.retention_days
+    if payload.legal_hold is not None:
+        meeting.legal_hold = payload.legal_hold
     db.add(meeting)
     db.add(
         AuditLog(

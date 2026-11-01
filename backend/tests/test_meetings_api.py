@@ -519,3 +519,59 @@ class TestSystemEndpoints:
     def test_root_serves_something(self, client, admin_user):
         resp = client.get("/")
         assert resp.status_code in (200, 404)
+
+    def test_purge_meeting_with_templated_voiceprint(self, client, admin_user):
+        """临时声纹带模板时删除会议不能撞外键。
+
+        回归 2026-11-01 现场发现的缺陷：`_delete_meeting_rows` 直接 DELETE voiceprint，
+        而 `voiceprint_template` 引用它，用户点「删除会议」会 500。
+        """
+        from imeeting.models import User, Voiceprint, VoiceprintTemplate
+
+        mid = _make_meeting(admin_user.id, title="带模板的会议")
+        with Session(engine) as db:
+            owner = db.exec(select(User).where(User.username == "admin")).one()
+            voice = Voiceprint(
+                owner_id=owner.id,
+                name="说话人 1",
+                embedding=b"\x00" * 4,
+                provisional=True,
+                meeting_id=mid,
+                source_meeting_id=mid,
+                speaker_key="spk_del",
+            )
+            db.add(voice)
+            db.commit()
+            db.refresh(voice)
+            db.add(
+                VoiceprintTemplate(
+                    voiceprint_id=voice.id,
+                    slot=0,
+                    embedding=b"\x00" * 4,
+                    dim=1,
+                )
+            )
+            db.commit()
+            voice_id = voice.id
+
+        token = client.post(
+            "/api/v1/auth/login", json={"username": "admin", "password": "admin123"}
+        ).json()["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+        # 彻底删除要求先进回收站，顺序与实际操作一致
+        trashed = client.delete(f"/api/v1/meetings/{mid}", headers=headers)
+        assert trashed.status_code == 204, trashed.text
+        resp = client.delete(f"/api/v1/meetings/{mid}/purge", headers=headers)
+        assert resp.status_code == 204, resp.text
+
+        with Session(engine) as db:
+            assert db.get(Meeting, mid) is None
+            assert db.get(Voiceprint, voice_id) is None
+            assert (
+                db.exec(
+                    select(VoiceprintTemplate).where(
+                        VoiceprintTemplate.voiceprint_id == voice_id
+                    )
+                ).first()
+                is None
+            )

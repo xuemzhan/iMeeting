@@ -1,0 +1,12 @@
+﻿GET /api/v1/live: 200
+GET /api/v1/health: {'status': 'disabled', 'version': '0.1.0', 'models': {'streaming': {'name': 'streaming', 'loaded': False, 'loading': False, 'error': None, 'load_seconds': 0.0, 'device': 'cpu'}, 'offline': {'name': 'offline', 'loaded': False, 'loading': False, 'error': None, 'load_seconds': 0.0, 'device': 'cpu'}}, 'active_sessions': 0}
+GET /metrics (no token): (200, True)
+GET /api/v1/meetings (no token): 401
+POST /auth/login: (200, True)
+GET /api/v1/meetings (pending password): 428
+PUT /api/v1/config (pending password): 428
+POST /auth/password: 200
+POST /api/v1/meetings: 405
+GET /api/v1/meetings (ok): 0
+POST bulk-export-jobs with non-numeric id: EXC ValueError: invalid literal for int() with base 10: 'x'
+GET /api/v1/config/schema (no token): 401

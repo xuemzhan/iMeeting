@@ -2,9 +2,11 @@
 
 为什么不是「一条质心算到底」
 --------------------------
-实测同一个人换个设备/距离/情绪，跨句相似度会掉到 0.54–0.58，而命中阈值是
-0.68。单条质心要么认不出，要么逼着把阈值降到会认错人。这里每人保留 **≤5 条
-场景化模板**，让「同人不同场景」和「不同人的相近声音」不再抢同一个阈值。
+实测同一个人换个设备/距离/情绪，跨句相似度会掉到 0.54–0.58；而「命中」阈值
+（``spk.enrolled_threshold``，默认 0.75）要求更高，单条质心要么认不出，要么
+逼着把阈值降到会认错人。这里每人保留 **≤5 条场景化模板**，让「同人不同场景」
+和「不同人的相近声音」不再抢同一个阈值。
+阈值只从 ``CONFIG_SCHEMA`` 取，本文提到的数字仅作说明，不构成第二份默认值。
 
 slot 与历史
 -----------
@@ -17,6 +19,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import os
 from dataclasses import dataclass
 from datetime import timedelta
 from typing import Sequence
@@ -45,6 +48,11 @@ DEFAULT_MERGE_SIM = 0.92
 DEFAULT_CLUSTER_SIM = 0.65
 #: 新质心与已有模板「同场景」的对齐阈值（FR-2.4）
 DEFAULT_ALIGN_SIM = 0.85
+
+#: 跨会议复用同一 ``speaker_key`` 时的取样闸门：取样质心必须与此声纹已有证据
+#: 至少这么像，才允许写进模板。``speaker_key`` 只是会议内的声学簇键，跨会议
+#: 复用不代表同一人；没有闸门就会把别的会议的声音灌进既有身份（身份漂移）。
+DEFAULT_REBUILD_GUARD_SIM = 0.80
 
 STATE_ACTIVE = ("active",)
 
@@ -452,6 +460,18 @@ def store_template(
     row = db.get(VoiceprintTemplate, contribution.template_id) if contribution else None
     if row is not None and (row.slot < 0 or row.superseded_by is not None):
         return row  # Replaying retired evidence must not resurrect it.
+    if row is not None and row.confirmed and not confirmed:
+        if contribution.embedding == encoded:
+            return row  # Automatic replay cannot alter approved evidence/metadata.
+        # Keep changed automatic evidence separate until a person approves it.
+        source_key += ":candidate:" + hashlib.sha256(encoded).hexdigest()
+        contribution = db.exec(select(VoiceprintTemplateSource).where(
+            VoiceprintTemplateSource.voiceprint_id == voiceprint_id,
+            VoiceprintTemplateSource.source_key == source_key,
+        )).first()
+        row = db.get(VoiceprintTemplate, contribution.template_id) if contribution else None
+        if row is not None and (row.confirmed or row.slot < 0 or row.superseded_by is not None):
+            return row
     if preferred_slot is not None and not 0 <= preferred_slot <= 4:
         raise ValueError("模板槽位必须在0到4之间")
     if row is None and preferred_slot is None:
@@ -554,9 +574,9 @@ def _file_signature(path) -> str | None:
 def sample_signature(
     file_signature: str, start_ms: int, end_ms: int, gain: float, model: str = ""
 ) -> str:
-    """缓存键成分：音频身份 + 片段边界 + 增益 + 声纹模型名。
+    """缓存键成分：音频身份 + 片段边界 + 增益 + 声纹模型配置签名。
 
-    换上不同的声纹模型后，同一段音频的向量不再是同一个东西，必须让旧缓存失效，
+    模型名称、hub、revision或更新策略变化时，必须让旧缓存失效，
     否则会拿旧模型的向量去和新模型的向量比。
     """
     raw = f"{file_signature}|{int(start_ms)}|{int(end_ms)}|{float(gain):.4f}|{model}"
@@ -743,12 +763,14 @@ def _sample_vectors(
     candidates = sorted(candidates[: max(3, sample_max)], key=lambda seg: seg.start_ms)
 
     file_signature = _file_signature(audio_path) if _cache_enabled() else None
-    model_name = str(get_config("spk.embedding_model") or "")
+    from .speaker import embedding_model_signature
+    model_name = repr(embedding_model_signature())
     known = cached_samples(db, meeting_id) if file_signature else {}
 
     vectors: list[np.ndarray] = []
     weights: list[float] = []
     used: list[Segment] = []
+    pending_samples = []
     for seg in candidates:
         gain = float(seg.adaptive_gain or 1.0)
         signature = (
@@ -774,19 +796,16 @@ def _sample_vectors(
             if vector is None:
                 continue
             if signature:
-                _remember_sample(
-                    db,
-                    known,
-                    meeting_id=meeting_id,
-                    segment_id=seg.segment_id,
-                    signature=signature,
-                    vector=vector,
-                )
+                pending_samples.append((seg.segment_id, signature, vector))
             if stats is not None:
                 stats["extracted"] = int(stats.get("extracted", 0)) + 1
         vectors.append(vector)
         weights.append(_quality_of(seg))
         used.append(seg)
+    # Inference must finish before acquiring SQLite's single writer lock.
+    for segment_id, signature, vector in pending_samples:
+        _remember_sample(db, known, meeting_id=meeting_id, segment_id=segment_id,
+                         signature=signature, vector=vector)
     return vectors, weights, used
 
 
@@ -800,6 +819,57 @@ def _audio_path(db: Session, meeting_id: int):
         return None
     path = Path(meeting.audio_path)
     return path if path.exists() else None
+
+
+def _own_meeting(row: Voiceprint) -> int | None:
+    """这条声纹属于哪场会议；历史数据两列都为空时返回 None（不设闸门）。"""
+    return row.meeting_id if row.meeting_id is not None else row.source_meeting_id
+
+
+def _sample_belongs_to(
+    db: Session,
+    voiceprint: Voiceprint,
+    vectors: Sequence[np.ndarray],
+    weights: Sequence[float],
+    meeting_id: int,
+) -> bool:
+    """本次取样是不是真的属于这条声纹。
+
+    同一会议（或历史无来源）的声纹直接放行；**别的会议**的声纹则要求取样质心
+    与它已有的活跃模板/基准向量足够相似，否则判定为「同一 key、不同声音」并
+    拒绝写入。这样一次错配不会被会后重建永久固化。
+    """
+    own = _own_meeting(voiceprint)
+    if own is None or own == meeting_id:
+        return True
+    raw = get_config("spk.rebuild_guard_sim")
+    try:
+        guard = DEFAULT_REBUILD_GUARD_SIM if raw is None else float(raw)
+    except (TypeError, ValueError):
+        guard = DEFAULT_REBUILD_GUARD_SIM
+    if guard <= 0:
+        return True
+    if not vectors:
+        return False
+    centroid = _weighted_centroid(vectors, weights)
+    known = [
+        vec
+        for vec in (_vec(item.embedding) for item in active_templates(db, voiceprint.id))
+        if vec is not None
+    ]
+    baseline = _vec(voiceprint.embedding)
+    if baseline is not None:
+        known.append(baseline)
+    if not known:
+        return False
+    best = max(cosine(centroid, vec) for vec in known)
+    if best < guard:
+        logger.warning(
+            "会后聚类拒绝跨会议取样 voiceprint=%s guard=%.2f best=%.3f meeting=%s",
+            voiceprint.id, guard, best, meeting_id,
+        )
+        return False
+    return True
 
 
 def rebuild_meeting_templates(meeting_id: int, *, job_id: int | None = None) -> dict:
@@ -828,6 +898,7 @@ def rebuild_meeting_templates(meeting_id: int, *, job_id: int | None = None) -> 
     updated = 0
     skipped_no_voiceprint = 0
     skipped_no_samples = 0
+    skipped_mismatch = 0
     cache_hits = 0
     cache_misses = 0
     processed = 0
@@ -878,11 +949,20 @@ def rebuild_meeting_templates(meeting_id: int, *, job_id: int | None = None) -> 
                             Voiceprint.disabled.is_(False),  # type: ignore[union-attr]
                         )
                     ).all()
-                    voiceprint = next((row for row in matching_voices if visible_voiceprint(db, row, meeting_id)), None)
-                    if voiceprint is None:
+                    visible = [
+                        row for row in matching_voices
+                        if visible_voiceprint(db, row, meeting_id)
+                    ]
+                    if not visible:
                         skipped_no_voiceprint += 1
                         logger.info("会后聚类跳过 %s：未登记声纹", speaker_key)
                         continue
+                    # 本会议自己的声纹优先：跨会议复用的 speaker_key 可能对应不同人，
+                    # 先精确命中 (meeting_id, speaker_key)，再退回任意可见声纹。
+                    voiceprint = next(
+                        (row for row in visible if _own_meeting(row) == meeting_id),
+                        None,
+                    ) or visible[0]
                     stats = {"cached": 0, "extracted": 0}
                     vectors, weights, segments = _sample_vectors(
                         db, meeting_id, speaker_key, stats=stats
@@ -892,6 +972,9 @@ def rebuild_meeting_templates(meeting_id: int, *, job_id: int | None = None) -> 
                     if not vectors:
                         skipped_no_samples += 1
                         logger.info("会后聚类跳过 %s：没有可用取样片段", speaker_key)
+                        continue
+                    if not _sample_belongs_to(db, voiceprint, vectors, weights, meeting_id):
+                        skipped_mismatch += 1
                         continue
                     clusters = cluster_vectors(
                         vectors,
@@ -949,9 +1032,10 @@ def rebuild_meeting_templates(meeting_id: int, *, job_id: int | None = None) -> 
                 "meeting_id": meeting_id,
                 "created": created,
                 "updated": updated,
-                "skipped": skipped_no_voiceprint + skipped_no_samples,
+                "skipped": skipped_no_voiceprint + skipped_no_samples + skipped_mismatch,
                 "skipped_no_voiceprint": skipped_no_voiceprint,
                 "skipped_no_samples": skipped_no_samples,
+                "skipped_mismatch": skipped_mismatch,
                 "speakers": len(speakers),
                 "cache_hits": cache_hits,
                 "cache_misses": cache_misses,
@@ -1034,6 +1118,17 @@ def backfill_legacy_templates() -> int:
     return written
 
 
+def _baseline_fallback_enabled() -> bool:
+    """无模板身份是否用基准向量兜底参与匹配（默认关闭）。"""
+    try:
+        raw = get_config("spk.baseline_fallback_enabled")
+    except Exception:  # noqa: BLE001 - 配置读取异常不得影响匹配主链路
+        raw = None
+    if raw is None:
+        raw = os.environ.get("SPK_BASELINE_FALLBACK_ENABLED", "")
+    return str(raw).strip().lower() in ("1", "true", "yes", "on")
+
+
 def templates_matrix(meeting_id: int | None = None, owner_id: int | None = None) -> tuple[np.ndarray, list[dict]]:
     """加载活跃模板为矩阵（供匹配用）。
 
@@ -1073,6 +1168,43 @@ def templates_matrix(meeting_id: int | None = None, owner_id: int | None = None)
                     ),
                 }
             )
+        # 可开关的兜底：旧版本录入、或模板被停用的正式身份，此前完全不参与匹配
+        # （真实录音里丁效就是这样整场漏检）。默认关闭以保持既有契约，运行时用
+        # app_config ``spk.baseline_fallback_enabled`` 或环境变量开启。
+        if _baseline_fallback_enabled():
+            covered = {row["voiceprint_id"] for row in rows}
+            # 只要这条身份「曾经有过任何模板行」就不兜底：模板被停用/退役是用户
+            # 明确的治理动作（"别再拿这条证据认人"），不能靠基准向量绕回去。
+            retired = {
+                int(row[0])
+                for row in db.exec(
+                    select(VoiceprintTemplate.voiceprint_id).distinct()
+                ).all()
+            }
+            base_query = select(Voiceprint).where(
+                Voiceprint.disabled.is_(False),  # type: ignore[union-attr]
+                Voiceprint.provisional.is_(False),  # type: ignore[union-attr]
+                Voiceprint.id.in_(visible_voiceprint_ids(db, meeting_id, owner_id)),
+            )
+            for voice in db.exec(base_query).all():
+                if voice.id in covered or voice.id in retired:
+                    continue
+                vector = _vec(voice.embedding)
+                if vector is None:
+                    continue
+                vectors.append(vector)
+                rows.append(
+                    {
+                        "template_id": None,
+                        "voiceprint_id": voice.id,
+                        "name": voice.name,
+                        "provisional": False,
+                        "confirmed": False,
+                        "quality": 0.3,
+                        "scenario": Scenario(),
+                        "source": "baseline",
+                    }
+                )
     if not vectors:
         return np.zeros((0, EMBED_DIM), dtype=np.float32), []
     return np.vstack(vectors), rows

@@ -1,0 +1,9 @@
+﻿
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_adaptive_speaker.py::test_ambiguous_global_voiceprint_is_not_confirmed
+FAILED tests/test_adaptive_speaker.py::test_near_known_identity_is_not_absorbed_by_cluster
+2 failed, 741 passed, 176 warnings in 511.65s (0:08:31)
+--- collected ---
+
+743 tests collected in 3.60s

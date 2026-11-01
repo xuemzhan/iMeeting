@@ -6,6 +6,7 @@ import logging
 from datetime import timedelta
 
 from sqlalchemy import delete as sa_delete
+from sqlalchemy import update as sa_update
 from sqlmodel import select
 
 from .db import session_scope
@@ -15,11 +16,14 @@ from .models import (
     Job,
     Meeting,
     MeetingMember,
+    MeetingParticipant,
     MeetingSession,
     Minutes,
+    PersonAttribute,
     Segment,
     SegmentEmbedding,
     ShareLink,
+    SpeakerRole,
     TemplateRebuildState,
     TemplateSampleEmbedding,
     TranscriptReview,
@@ -33,6 +37,18 @@ logger = logging.getLogger(__name__)
 
 def _delete_rows(db, meeting: Meeting) -> None:
     mid = meeting.id
+    from .application.voiceprint_lifecycle import remove_dependents
+
+    for voice in db.exec(select(Voiceprint).where(
+        Voiceprint.meeting_id == mid, Voiceprint.provisional.is_(True)
+    )).all():
+        remove_dependents(db, voice.id)
+        db.delete(voice)
+    db.flush()
+    db.execute(sa_delete(MeetingParticipant).where(MeetingParticipant.meeting_id == mid))
+    # Keep reusable person knowledge, but detach its deleted source meeting.
+    db.execute(sa_update(PersonAttribute).where(PersonAttribute.meeting_id == mid).values(meeting_id=None))
+    db.execute(sa_delete(SpeakerRole).where(SpeakerRole.meeting_id == mid))
     db.execute(sa_delete(Segment).where(Segment.meeting_id == mid))
     db.execute(sa_delete(Minutes).where(Minutes.meeting_id == mid))
     db.execute(sa_delete(MeetingSession).where(MeetingSession.meeting_id == mid))
@@ -46,12 +62,6 @@ def _delete_rows(db, meeting: Meeting) -> None:
     # 否则会像 GAP-15 那样在父会议删除时触发 FOREIGN KEY 约束错误。
     db.execute(sa_delete(TemplateRebuildState).where(TemplateRebuildState.meeting_id == mid))
     db.execute(sa_delete(TemplateSampleEmbedding).where(TemplateSampleEmbedding.meeting_id == mid))
-    db.execute(
-        sa_delete(Voiceprint).where(
-            Voiceprint.meeting_id == mid,
-            Voiceprint.provisional == True,  # noqa: E712
-        )
-    )
     db.delete(meeting)
 
 

@@ -14,7 +14,7 @@ from ....audit import verify_audit_chain
 from ....db import engine, get_session
 from ....maintenance import drain_status, set_draining
 from ....models import AuditLog, Job, User, utcnow
-from ....schemas import JobOut
+from ....schemas import DenoiseEvalRequest, JobOut, MaintenanceDrainRequest, SearchReindexRequest
 from .deps import require_admin
 
 router = APIRouter(prefix="/api/v1/admin", tags=["admin-ops"])
@@ -22,7 +22,7 @@ router = APIRouter(prefix="/api/v1/admin", tags=["admin-ops"])
 
 @router.post("/search/reindex")
 def reindex_search(
-    payload: dict | None = None,
+    payload: SearchReindexRequest | None = None,
     _: User = Depends(require_admin),
 ):
     from ....application.jobs import enqueue_job
@@ -30,10 +30,10 @@ def reindex_search(
 
     if not enabled():
         raise HTTPException(status_code=400, detail="语义检索未配置")
-    meeting_id = (payload or {}).get("meeting_id")
+    meeting_id = payload.meeting_id if payload is not None else None
     job = enqueue_job(
         kind="embedding_reindex",
-        meeting_id=int(meeting_id) if meeting_id is not None else None,
+        meeting_id=meeting_id,
         payload={"meeting_id": meeting_id},
         dedupe_key=f"embedding:{meeting_id or 'all'}",
         priority=80,
@@ -43,7 +43,7 @@ def reindex_search(
 
 @router.post("/denoise-eval")
 async def denoise_eval(
-    payload: dict,
+    payload: DenoiseEvalRequest,
     _: User = Depends(require_admin),
 ):
     from ....session_registry import active_session_count
@@ -52,17 +52,14 @@ async def denoise_eval(
         raise HTTPException(status_code=409, detail="会议进行中，暂不执行离线去噪评估")
     from ....denoise_eval import evaluate_denoise
 
-    meeting_id = int(payload.get("meeting_id") or 0)
-    if meeting_id <= 0:
-        raise HTTPException(status_code=400, detail="meeting_id 无效")
     try:
         import asyncio
 
         return await asyncio.to_thread(
             evaluate_denoise,
-            meeting_id,
-            limit=int(payload.get("limit") or 8),
-            strength=float(payload.get("strength") or 0.3),
+            payload.meeting_id,
+            limit=payload.limit,
+            strength=payload.strength,
         )
     except RuntimeError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -113,10 +110,10 @@ def maintenance_status(_: User = Depends(require_admin)) -> dict:
 
 @router.post("/maintenance/drain")
 def start_drain(
-    payload: dict | None = None,
+    payload: MaintenanceDrainRequest | None = None,
     _: User = Depends(require_admin),
 ) -> dict:
-    reason = str((payload or {}).get("reason") or "release")[:500]
+    reason = (payload.reason if payload is not None else "release")[:500]
     set_draining(True, reason)
     from ....session_registry import active_session_count
 

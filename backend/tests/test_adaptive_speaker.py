@@ -32,13 +32,58 @@ def test_adaptive_profile_lowers_vad_threshold_and_adds_gain():
     assert profile.max_segment_ms <= 18000
 
 
+def _pin_thresholds(monkeypatch, *, hit: float, suspect: float) -> None:
+    """把「命中 / 疑似」两个阈值钉死在本用例要验证的数值上。
+
+    这些用例验证的是**分档逻辑**（命中 / 疑似 / 匿名簇三者的优先级），
+    不应该随 CONFIG_SCHEMA 的默认值调整而变红；阈值默认值的正确性
+    由 ``test_thresholds_have_single_source_of_truth`` 单独守。
+    """
+    from imeeting.settings import config_store
+
+    monkeypatch.setitem(config_store._db_overrides, "spk.enrolled_threshold", hit)
+    monkeypatch.setitem(config_store._db_overrides, "spk.enrolled_ambiguous_threshold", suspect)
+
+
+def test_thresholds_have_single_source_of_truth():
+    """引擎用的阈值必须等于 CONFIG_SCHEMA 的默认值，不得有第二份字面量。"""
+    from imeeting.engine import speaker, speaker_reconcile
+    from imeeting.engine.voice_match import _float
+    from imeeting.settings import SCHEMA_BY_KEY, config_float
+
+    hit_default = SCHEMA_BY_KEY["spk.enrolled_threshold"].default
+    suspect_default = SCHEMA_BY_KEY["spk.enrolled_ambiguous_threshold"].default
+    resolver = speaker.SpeakerResolver(threshold=0.5, meeting_id=1)
+
+    assert resolver.enrolled_threshold == hit_default
+    assert resolver.ambiguous_threshold == min(hit_default, max(0.5, suspect_default))
+    assert config_float("spk.enrolled_threshold") == hit_default
+    assert _float("spk.enrolled_threshold") == hit_default
+    assert _float("spk.enrolled_ambiguous_threshold") == suspect_default
+    assert speaker_reconcile.reconcile_meeting_speakers.__defaults__ is None
+    assert all(
+        value is None
+        for value in speaker_reconcile.reconcile_meeting_speakers.__kwdefaults__.values()
+    ), "复核阈值不得再以字面量默认参数形式存在"
+
+
+def test_thresholds_follow_config_override(monkeypatch):
+    """后台改阈值后，引擎必须立刻跟着变（证明只有一处事实来源）。"""
+    from imeeting.engine import speaker
+
+    _pin_thresholds(monkeypatch, hit=0.9, suspect=0.85)
+    resolver = speaker.SpeakerResolver(threshold=0.5, meeting_id=1)
+    assert resolver.enrolled_threshold == 0.9
+    assert resolver.ambiguous_threshold == 0.85
+
+
 def test_ambiguous_global_voiceprint_is_not_confirmed(monkeypatch):
     from imeeting.engine import speaker
 
-    def fake_match(_emb, threshold, _meeting_id=None, **_kwargs):
-        if threshold <= 0.6:
-            return ("旧姓名", 0.62, 99, "spk_old")
-        return None
+    _pin_thresholds(monkeypatch, hit=0.68, suspect=0.58)
+
+    def fake_match(_emb, _threshold, _meeting_id=None, **_kwargs):
+        return ("旧姓名", 0.62, 99, "spk_old")
 
     monkeypatch.setattr(speaker, "match_enrolled", fake_match)
     resolver = speaker.SpeakerResolver(threshold=0.5, meeting_id=1)
@@ -75,6 +120,8 @@ def test_enrolled_identity_wins_over_anonymous_cluster(monkeypatch):
 def test_near_known_identity_is_not_absorbed_by_cluster(monkeypatch):
     """已知 0.64、匿名簇 0.60 时保留“疑似姓名”，不要并入匿名簇。"""
     from imeeting.engine import speaker
+
+    _pin_thresholds(monkeypatch, hit=0.68, suspect=0.58)
 
     def fake_match(_emb, _threshold, _meeting_id=None, **_kwargs):
         return ("陈建峰", 0.64, 22, "spk_6b274da1")

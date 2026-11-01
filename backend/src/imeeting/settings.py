@@ -504,7 +504,7 @@ CONFIG_SCHEMA: list[ConfigField] = [
         label="已录入声纹命中阈值",
         group="说话人识别",
         type="float",
-        default=0.68,
+        default=0.75,
         min_value=0.4,
         max_value=0.95,
         help="跨会议识别姓名使用更严格阈值，宁可不给姓名，也避免认错老师。",
@@ -514,7 +514,7 @@ CONFIG_SCHEMA: list[ConfigField] = [
         label="疑似已录入声纹阈值",
         group="说话人识别",
         type="float",
-        default=0.58,
+        default=0.68,
         min_value=0.3,
         max_value=0.9,
         help="介于该值与命中阈值之间时显示“疑似姓名”，不直接确认身份。",
@@ -1579,7 +1579,13 @@ class ConfigStore:
         return out
 
     def load_overrides(self, rows: dict[str, str]) -> None:
-        """从数据库行加载覆盖值。"""
+        """从数据库行加载覆盖值。
+
+        密钥类字段在库里是 Fernet 密文（见 ``config.py`` 的写入路径），装载时
+        必须解密，否则进程重启后 ``llm.api_key`` 会以密文形式被当成 Bearer 发出去：
+        当次填完当场可用，重启后全线 401，且后台只显示 ``********``，极难排查。
+        旧版本落库的明文（没有 ``gAAAAA`` 前缀）原样保留，不因升级丢密钥。
+        """
         parsed: dict[str, Any] = {}
         for key, raw in rows.items():
             meta = SCHEMA_BY_KEY.get(key)
@@ -1587,9 +1593,12 @@ class ConfigStore:
                 logger.debug("忽略未知配置项 %s", key)
                 continue
             try:
-                parsed[key] = json.loads(raw)
+                value: Any = json.loads(raw)
             except (json.JSONDecodeError, TypeError):
-                parsed[key] = _coerce(raw, meta)
+                value = _coerce(raw, meta)
+            if meta.secret:
+                value = _decode_secret(key, value)
+            parsed[key] = value
         self._db_overrides = parsed
         logger.info("已加载 %d 项数据库配置覆盖", len(parsed))
 
@@ -1645,6 +1654,28 @@ def _coerce(raw: Any, meta: ConfigField | None) -> Any:
         return meta.default
 
 
+def _decode_secret(key: str, value: Any) -> Any:
+    """解密密钥类配置；明文（旧库）与空值原样返回。
+
+    解密失败时返回空串而不是密文：密文当密钥用会让供应商返回 401，
+    空串至少让 ``configured`` 判定为「未配置」，前端会明确提示去填。
+    """
+    if not isinstance(value, str) or not value:
+        return value
+    from .security import decrypt_value, is_encrypted_value
+
+    if not is_encrypted_value(value):
+        return value
+    plain = decrypt_value(value)
+    if not plain:
+        logger.error(
+            "配置项 %s 的密文无法解密（SECRET_KEY / CONFIG_ENCRYPTION_KEY 可能已变更），"
+            "请在后台重新录入该项；本次按未配置处理",
+            key,
+        )
+    return plain
+
+
 # 全局单例
 config_store = ConfigStore()
 
@@ -1652,6 +1683,21 @@ config_store = ConfigStore()
 def get_config(key: str, default: Any = None) -> Any:
     """便捷读取函数。"""
     return config_store.get(key, default)
+
+
+def config_float(key: str) -> float:
+    """按 float 读取一个**已注册**的配置项。
+
+    引擎里原来写的是 ``float(get_config("spk.enrolled_threshold") or 0.68)``：
+    ``or 0.68`` 是第二份默认值，改了 CONFIG_SCHEMA 的 default 后它不会跟着变，
+    于是后台显示 0.75、配置项为空时实际却是 0.68。这里以 schema 为唯一事实来源，
+    未知键直接抛 KeyError（拼写错误应当立刻报错，而不是静默用兜底值）。
+    """
+    meta = SCHEMA_BY_KEY.get(key)
+    if meta is None:
+        raise KeyError(f"未注册的配置项：{key}")
+    value = get_config(key, meta.default)
+    return float(meta.default if value is None else value)
 
 
 def validate_update(values: dict[str, Any]) -> tuple[dict[str, Any], dict[str, str]]:

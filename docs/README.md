@@ -1,5 +1,7 @@
 # iMeeting 文档中心
 
+最新独立复核修复见[2026-11-01修复报告](reports/2026-11-01-review-fixes.md)及[验证证据](reviews/evidence/2026-11-01-review-fixes/README.md)：覆盖批准来源保护、会议清理、推理写锁和模型版本缓存失效。
+
 面向维护者和接手人。整理日期：2026-10-31。当前使用和部署入口分别是[项目 README](../README.md)和[部署手册](../deploy/README.md)。下表区分文档状态与实现状态，编号用于跨文档追溯。
 
 ## 设计、需求与计划
@@ -36,6 +38,10 @@
 | IM-EVD-007 | [主模板验证证据](reviews/evidence/2026-10-31-template-primary/README.md) | 阶段快照 | 715 项后端回归、Ruff、迁移部分唯一索引/降级与未验证边界 |
 | IM-RPT-007 | [2026-11-01 模板合并](reports/2026-11-01-template-merge.md) | 阶段快照 | 合并两条模板的口径、接口与审计；跨设备向导仍未做 |
 | IM-EVD-008 | [模板合并验证证据](reviews/evidence/2026-11-01-template-merge/README.md) | 阶段快照 | 722 项后端回归、Ruff 与合并用例（服务层+接口层） |
+| IM-REV-004 | [2026-11-01 全面审查](reviews/2026-11-01-comprehensive-project-review.md) | 阶段快照 | 全栈复核：2 条 P0、2 条 P1、4 条 P2、5 条 P3；均已在本轮修复 |
+| IM-EVD-009 | [全面审查验证证据](reviews/evidence/2026-11-01-comprehensive-review/README.md) | 阶段快照 | 审查当时的 743 项后端测试原始输出（2 失败）、Ruff、前端四项检查与 4 个独立探针 |
+| IM-RPT-008 | [2026-11-01 全面审查问题修复](reports/2026-11-01-comprehensive-review-fixes.md) | 阶段快照 | 11 项逐条处置、行为变化与影响面、未完成项 |
+| IM-EVD-010 | [修复验证证据](reviews/evidence/2026-11-01-comprehensive-review-fixes/README.md) | 阶段快照 | 修复后的后端 765 项全绿、Ruff、前端四项检查与 0 断链结果 |
 
 报告列表见[报告索引](reports/README.md)，新增和归档规则见[子项目文档规制](governance/README.md)。最新修复结果查 IM-RPT-007、IM-RPT-006 与 IM-RPT-005；旧模型数据与漏洞扫描仍只在各期原范围内有效，本次未生产部署。
 

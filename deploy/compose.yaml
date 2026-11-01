@@ -27,6 +27,13 @@ services:
       ASR_MODE: ${ASR_MODE:-normal}
       LLM_BASE_URL: ${LLM_BASE_URL:-}
       LLM_API_KEY: ${LLM_API_KEY:-}
+      # 后端只被 compose 内的 nginx 访问，因此信任 RFC1918 网段的转发头：
+      # 否则所有请求的来源 IP 都是 nginx 容器地址，按 IP 的登录限流会退化成一个
+      # 全局桶（连错 5 次锁所有人），审计日志的来源 IP 也失真。
+      # 若把 backend 端口也发布到宿主机/公网，必须把这里改成具体的代理地址。
+      FORWARDED_ALLOW_IPS: ${FORWARDED_ALLOW_IPS:-172.16.0.0/12,10.0.0.0/8,192.168.0.0/16}
+      # 设为非空后 /metrics 需要 Bearer 令牌；为空时生产只允许环回访问。
+      METRICS_TOKEN: ${METRICS_TOKEN:-}
       LLM_MODEL: ${LLM_MODEL:-}
     volumes:
       - imeeting-data:/data

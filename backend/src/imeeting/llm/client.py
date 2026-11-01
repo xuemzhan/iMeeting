@@ -24,6 +24,10 @@ class LLMError(Exception):
     """LLM 调用失败。"""
 
 
+class LLMTruncatedError(LLMError):
+    """The provider exhausted the output budget; content is incomplete."""
+
+
 class LLMClient:
     """轻量 OpenAI 兼容客户端。"""
 
@@ -126,6 +130,7 @@ class LLMClient:
                             raise LLMError(f"LLM 返回 {resp.status_code}：{detail}")
 
                         data = resp.json()
+                        finish_reason = data["choices"][0].get("finish_reason", "unknown")
                         content = data["choices"][0]["message"]["content"] or ""
                         usage = data.get("usage") or {}
                         prompt_chars = sum(
@@ -144,13 +149,15 @@ class LLMClient:
                         )
                         logger.info(
                             "llm_call model=%s attempt=%d prompt_tokens=%d "
-                            "completion_tokens=%d cost_usd=%.6f elapsed_ms=%.0f",
+                            "completion_tokens=%d cost_usd=%.6f elapsed_ms=%.0f "
+                            "meeting=%s purpose=%s finish_reason=%s max_tokens=%s",
                             use_model,
                             attempt + 1,
                             prompt_tokens,
                             completion_tokens,
                             cost,
                             (time.perf_counter() - t0) * 1000,
+                            meeting_id, purpose, finish_reason, payload["max_tokens"],
                         )
                         self._record_usage(
                             meeting_id=meeting_id,
@@ -163,6 +170,8 @@ class LLMClient:
                             cost_usd=cost,
                             elapsed_ms=int((time.perf_counter() - t0) * 1000),
                         )
+                        if finish_reason == "length":
+                            raise LLMTruncatedError("模型输出达到长度上限，未采用不完整内容")
                         return content
 
                 except (httpx.TimeoutException, httpx.NetworkError) as exc:

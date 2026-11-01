@@ -12,7 +12,7 @@ from ....application.jobs import enqueue_job
 from ....application.meeting_access import owned_meeting as _owned
 from ....db import get_session
 from ....models import Job, User
-from ....schemas import JobOut
+from ....schemas import BulkExportJobRequest, ExportJobRequest, JobOut
 from .deps import get_current_user_or_anonymous
 
 router = APIRouter(prefix="/api/v1", tags=["exports"])
@@ -21,7 +21,7 @@ router = APIRouter(prefix="/api/v1", tags=["exports"])
 @router.post("/meetings/{meeting_id}/export-jobs", response_model=JobOut)
 def create_single_export(
     meeting_id: int,
-    payload: dict,
+    payload: ExportJobRequest,
     user: User = Depends(get_current_user_or_anonymous),
     db: Session = Depends(get_session),
 ):
@@ -30,7 +30,7 @@ def create_single_export(
         kind="export_single",
         meeting_id=meeting_id,
         owner_id=user.id,
-        payload={"ids": [meeting_id], "format": str(payload.get("format") or "md")},
+        payload={"ids": [meeting_id], "format": str(payload.format or "md")},
         priority=50,
     )
     return job
@@ -38,19 +38,16 @@ def create_single_export(
 
 @router.post("/meetings/bulk-export-jobs", response_model=JobOut)
 def create_bulk_export(
-    payload: dict,
+    payload: BulkExportJobRequest,
     user: User = Depends(get_current_user_or_anonymous),
     db: Session = Depends(get_session),
 ):
-    ids = [int(value) for value in payload.get("ids") or []]
-    if not ids:
-        raise HTTPException(status_code=400, detail="没有要导出的会议")
-    for meeting_id in ids:
+    for meeting_id in payload.ids:
         _owned(meeting_id, user, db)
     job = enqueue_job(
         kind="export_bulk",
         owner_id=user.id,
-        payload={"ids": ids, "format": str(payload.get("format") or "md")},
+        payload={"ids": list(payload.ids), "format": str(payload.format or "md")},
         priority=60,
     )
     return job

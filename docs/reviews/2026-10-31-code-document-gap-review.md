@@ -2,7 +2,7 @@
 
 <!-- doc-governance: FA-REV-003 -->
 > 文档类型：评审；状态：阶段快照；内容基准日期：2026-10-31。
-> 维护责任：待指派（FunASR / iMeeting 维护者）。[台账](../../../docs/governance/CATALOG.md) · [规则](../../../docs/governance/POLICY.md)。
+> 维护责任：待指派（FunASR / iMeeting 维护者）。台账与规则在外层工作区（`docs/governance/CATALOG.md`、`docs/governance/POLICY.md`，不在本仓库内）；独立检出时以本仓库[文档规制](../governance/README.md)为准。
 
 ## 结论
 
@@ -24,9 +24,9 @@
 
 | 领域 | 文档 → 实现 | 本轮结果与边界 |
 |---|---|---|
-| HTTP 密钥、请求体、上传时限和容量 | [P0 方案](../../../docs/production-optimization-plan.md) → [asgi_limits.py](../../../funasr/utils/asgi_limits.py)、REST 工厂及服务入口 | 对应边界测试通过；不推广到全部原生服务 |
-| 安全解析与解压 | 同上 → [safe_parse.py](../../../funasr/utils/safe_parse.py)、[分卷解压](../../../portable/extract_from_split.py) | 请求/解析/归档相关测试通过 |
-| Rust / Python 分块音频缓冲 | [音频报告](../../../docs/rust-audio-optimization.md) → [audio_buffer.py](../../../funasr/utils/audio_buffer.py)、[Rust 扩展](../../../runtime/rust/audio_buffer/README.md) | 缓冲测试通过；本轮未重测历史性能数字 |
+| HTTP 密钥、请求体、上传时限和容量 | P0 方案（外层 `docs/production-optimization-plan.md`） → 外层 `funasr/utils/asgi_limits.py`、REST 工厂及服务入口 | 对应边界测试通过；不推广到全部原生服务 |
+| 安全解析与解压 | 同上 → 外层 `funasr/utils/safe_parse.py`、外层 `portable/extract_from_split.py` | 请求/解析/归档相关测试通过 |
+| Rust / Python 分块音频缓冲 | 外层 `docs/rust-audio-optimization.md` → 外层 `funasr/utils/audio_buffer.py`、外层 `runtime/rust/audio_buffer/README.md` | 缓冲测试通过；本轮未重测历史性能数字 |
 | 人员模型、基本确认/绑定/别名 | [REQ-001](../requirements/REQ-001-person-ontology.md) → models、persons、persons 路由 | 普通路径已有测试；重名、改名传播和对象归属存在反例 |
 | 场景桶、模板存储和冲突评估函数 | [REQ-002](../requirements/REQ-002-voiceprint-multiscene.md) → voice_template、voice_match、templates 路由 | 组件已实现；接线、状态、兼容和删除存在反例 |
 | 参会人面板与声纹页 | 阶段记录 → [ParticipantsPanel](../../frontend/src/components/ParticipantsPanel.tsx)、[冲突列表](../../frontend/src/components/VoiceprintConflictList.tsx) | 前端 86 项测试及类型检查通过；这些不是 DOM / 完整交互验收 |
@@ -187,7 +187,7 @@
 
 1. **先测量重建成本与队列影响。** 会后模板挂在 final_minutes 复合任务之后，耗时仍占 heavy worker；失败只记日志。应拆成独立可重试任务，保存进度，复用同一来源嵌入并保证幂等，再比较纪要耗时、模板完成耗时、队列等待和CPU。
 2. **再做匹配查询与缓存优化。** 当前先算全矩阵再筛选；按 meeting_id 缓存完整矩阵的字典没有容量淘汰。先修作用域与确认过滤，再选版本化、有限容量的缓存和真正先筛后算。未经规模/延迟数据，不直接引入 ANN 索引。
-3. **按原提案推进导入优化。** [funasr/__init__.py](../../../funasr/__init__.py#L78)仍调用全量 import_submodules；[register.py](../../../funasr/register.py)重名注册仍覆盖。这说明 10-18 提案尚未完整实施，不是该提案承诺已完成后的回归。先建立模型注册清单和基础环境/训练插件兼容测试，再改变导入行为。
+3. **按原提案推进导入优化。** 外层 `funasr/__init__.py`（第 78 行附近）仍调用全量 import_submodules；`funasr/register.py` 重名注册仍覆盖。这说明 10-18 提案尚未完整实施，不是该提案承诺已完成后的回归。先建立模型注册清单和基础环境/训练插件兼容测试，再改变导入行为。
 4. **跨语言重写仍保留为提案。** 目前没有新的目标硬件测量证明 Go 网关能改善端到端延迟；先关闭身份、安全和任务正确性问题，再评估 C++ 推理侧车。
 
 ## 测试为什么没有挡住

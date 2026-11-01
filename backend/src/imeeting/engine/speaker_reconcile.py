@@ -12,6 +12,7 @@ from sqlmodel import select
 
 from ..db import session_scope
 from ..models import Meeting, Segment, Voiceprint, utcnow
+from ..settings import config_float
 from .speaker import EMBED_DIM, cosine, extract_embedding, load_enrolled
 
 logger = logging.getLogger(__name__)
@@ -55,16 +56,24 @@ def _mean_vector(vectors: list[np.ndarray]) -> np.ndarray | None:
 def reconcile_meeting_speakers(
     meeting_id: int,
     *,
-    max_samples: int = 5,
-    threshold: float = 0.68,
-    segment_threshold: float = 0.62,
+    max_samples: int | None = None,
+    threshold: float | None = None,
+    segment_threshold: float | None = None,
 ) -> dict:
     """重建会议内临时簇，并把高置信片段回溯到正式声纹。
 
     只处理 `spk_*` 临时簇。先用较长、文本正常的片段重建簇向量，命中
     正式身份后，再逐段复核；低相似片段保留为原「说话人 N」，避免把开场
     杂谈或旁人误标成主讲人。
+
+    阈值一律走配置：函数默认参数是第二份默认值，schema 调整后它会静默背离
+    （这里原来写死 0.68 / 0.62 / 5）。
     """
+    if max_samples is None:
+        max_samples = int(config_float("spk.reconcile_max_samples"))
+    threshold = config_float("spk.enrolled_threshold") if threshold is None else threshold
+    if segment_threshold is None:
+        segment_threshold = config_float("spk.reconcile_segment_threshold")
     with session_scope() as db:
         meeting = db.get(Meeting, meeting_id)
         if meeting is None or not meeting.audio_path:
@@ -217,8 +226,18 @@ def reconcile_meeting_speakers(
             vp = db.get(Voiceprint, voiceprint_id)
             if vp is None:
                 continue
+            owner_meeting = vp.meeting_id if vp.meeting_id is not None else vp.source_meeting_id
+            if owner_meeting not in (None, meeting_id):
+                # 别的会议建立的声纹：它的基准向量是那场会议的生物证据，
+                # 本场会后复核不得改写（否则一场错配就会把别人的身份向量换掉）。
+                logger.info(
+                    "会后复核跳过改写声纹 %s：归属会议 %s", vp.id, owner_meeting
+                )
+                continue
             if residual is None or residual.size != EMBED_DIM:
-                db.delete(vp)
+                # 只回收本场的临时簇；正式身份/有人员关联的声纹一律保留。
+                if vp.person_id is None and vp.provisional:
+                    db.delete(vp)
                 continue
             vp.embedding = residual.astype(np.float32).tobytes()
             vp.updated_at = utcnow()

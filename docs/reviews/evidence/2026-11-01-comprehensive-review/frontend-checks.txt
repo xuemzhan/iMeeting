@@ -1,0 +1,26 @@
+# 前端检查原始输出（2026-11-01，Windows / Node v24.14.0）
+#
+# 说明：npm 把进度写入 stderr，PowerShell 会把它标成 NativeCommandError；
+# 下面只保留每条命令的判定行，"FullyQualifiedErrorId" 噪声已删除。
+
+## npm test（vitest run）
+ ✓ src/components/transcriptScroll.test.ts (15 tests) 11ms
+ Test Files  11 passed (11)
+      Tests  89 passed (89)
+   Duration  892ms (transform 1.93s, setup 0ms, import 2.61s, tests 188ms, environment 2ms)
+
+## npm run typecheck（tsc -b --noEmit）
+> tsc -b --noEmit
+（无错误输出，退出码 0）
+
+## npm run build（tsc -b && vite build）
+> tsc -b && vite build
+dist/assets/index-WTJ4Z8EE.js   453.46 kB │ gzip: 138.15 kB
+✓ built in 4.95s
+
+## npm run lint（eslint .）
+> imeeting-frontend@0.1.0 lint
+> eslint .
+'eslint' is not recognized as an internal or external command,
+operable program or batch file.
+（退出码 1：eslint 既未安装也无配置文件）

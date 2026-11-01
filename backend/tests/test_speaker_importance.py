@@ -432,6 +432,89 @@ class TestSpeakerStateApi:
         assert row["state"] == STATE_DELETED
 
 
+class TestSpeakerIdentityDisambiguation:
+    """同名不同声音：只按姓名写会落到别人的行上，必须用 speaker_key 精确定位。
+
+    现场数据（2026-11-01 会议 13）里「周YJ」同时对应 spk_e8cfb8ba 与
+    spk_9804104f，只发姓名时后端只能猜「最近发言的那一行」。
+    """
+
+    @staticmethod
+    def _two_same_names(admin_user) -> int:
+        meeting_id = _make_meeting(admin_user.id, "同名两个声音")
+        _make_segments(
+            meeting_id,
+            [
+                {"text": "我先说。", "speaker": "周YJ", "speaker_key": "spk_a", "start_ms": 0},
+                {"text": "我也叫周YJ。", "speaker": "周YJ", "speaker_key": "spk_b", "start_ms": 9000},
+            ],
+        )
+        return meeting_id
+
+    def test_state_by_key_deletes_only_that_speaker(
+        self, client, auth_headers, admin_user
+    ):
+        mid = self._two_same_names(admin_user)
+        res = client.put(
+            f"/api/v1/meetings/{mid}/speakers/state",
+            headers=auth_headers,
+            json={"speaker": "周YJ", "speaker_key": "spk_a", "state": STATE_DELETED},
+        )
+        assert res.status_code == 200, res.text
+        by_key = {item["speaker_key"]: item["state"] for item in res.json()}
+        assert by_key["spk_a"] == STATE_DELETED
+        assert by_key.get("spk_b", STATE_VISIBLE) == STATE_VISIBLE
+
+    def test_state_without_key_keeps_legacy_name_lookup(
+        self, client, auth_headers, admin_user
+    ):
+        mid = self._two_same_names(admin_user)
+        res = client.put(
+            f"/api/v1/meetings/{mid}/speakers/state",
+            headers=auth_headers,
+            json={"speaker": "周YJ", "state": STATE_DELETED},
+        )
+        assert res.status_code == 200, res.text
+        by_key = {item["speaker_key"]: item["state"] for item in res.json()}
+        # 旧口径：按显示名定位到最近发言的那一条
+        assert by_key["spk_b"] == STATE_DELETED
+
+    def test_state_unknown_key_is_404(self, client, auth_headers, admin_user):
+        mid = self._two_same_names(admin_user)
+        res = client.put(
+            f"/api/v1/meetings/{mid}/speakers/state",
+            headers=auth_headers,
+            json={"speaker": "周YJ", "speaker_key": "spk_不存在", "state": STATE_DELETED},
+        )
+        assert res.status_code == 404
+
+    def test_importance_by_key_hits_exact_speaker(
+        self, client, auth_headers, admin_user
+    ):
+        mid = self._two_same_names(admin_user)
+        res = client.put(
+            f"/api/v1/meetings/{mid}/speakers/importance",
+            headers=auth_headers,
+            json={"speaker": "周YJ", "speaker_key": "spk_b", "importance": 1},
+        )
+        assert res.status_code == 200, res.text
+        by_key = {item["speaker_key"]: item["importance"] for item in res.json()}
+        assert by_key["spk_b"] == 1
+        assert by_key["spk_a"] == IMPORTANCE_NORMAL
+
+    def test_label_key_targets_speaker_without_key(self, client, auth_headers, admin_user):
+        mid = _make_meeting(admin_user.id, "无 key 的历史会议")
+        _make_segments(mid, [{"text": "老数据。", "speaker": "张三", "speaker_key": None}])
+        res = client.put(
+            f"/api/v1/meetings/{mid}/speakers/state",
+            headers=auth_headers,
+            json={"speaker": "张三", "speaker_key": "label:张三", "state": STATE_CONFIRMED},
+        )
+        assert res.status_code == 200, res.text
+        by_key = {item["speaker_key"]: item["state"] for item in res.json()}
+        assert by_key["label:张三"] == STATE_CONFIRMED
+
+
 class TestSpeakerStateStore:
     def test_set_state_is_idempotent_single_row(self, admin_user):
         meeting_id = _make_meeting(admin_user.id, "状态幂等")

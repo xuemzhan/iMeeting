@@ -128,11 +128,27 @@ def _secret() -> str:
     return key
 
 
-def create_access_token(subject: str, role: str, extra: dict[str, Any] | None = None) -> str:
-    expire = datetime.now(timezone.utc) + timedelta(
-        minutes=SERVER_CONFIG["access_token_expire_minutes"]
+def create_access_token(
+    subject: str,
+    role: str,
+    extra: dict[str, Any] | None = None,
+    *,
+    expires_minutes: int | None = None,
+) -> str:
+    """签发访问令牌。
+
+    ``expires_minutes`` 供分享链接之类的短期凭证单独指定有效期：分享接口对外
+    声明的是 2 小时（``ShareOpenOut.expires_in``），但此前沿用登录令牌的
+    24 小时默认值，声明与实际生命周期不一致。
+    """
+    minutes = (
+        SERVER_CONFIG["access_token_expire_minutes"]
+        if expires_minutes is None
+        else int(expires_minutes)
     )
-    payload: dict[str, Any] = {"sub": subject, "role": role, "exp": expire, "iat": datetime.now(timezone.utc)}
+    now = datetime.now(timezone.utc)
+    expire = now + timedelta(minutes=minutes)
+    payload: dict[str, Any] = {"sub": subject, "role": role, "exp": expire, "iat": now}
     if extra:
         payload.update(extra)
     return jwt.encode(payload, _secret(), algorithm=ALGORITHM)
@@ -172,6 +188,16 @@ def encrypt_value(plain: str) -> str:
     if not plain:
         return ""
     return _fernet().encrypt(plain.encode()).decode()
+
+
+def is_encrypted_value(value: str) -> bool:
+    """判断一个配置值是否为本项目主键加密后的 Fernet 令牌。
+
+    Fernet 的 base64 编码结果始终以 ``gAAAAA`` 开头（版本字节 0x80 经
+    urlsafe-base64 后的固定前缀）。用它区分「密文」与「旧版本明文」，
+    避免升级后把明文当成坏密文清空。
+    """
+    return bool(value) and value.startswith("gAAAAA")
 
 
 def decrypt_value(token: str) -> str:

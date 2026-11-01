@@ -423,10 +423,11 @@ def test_prefilter_does_not_change_the_matched_identity(monkeypatch):
     scenario = Scenario(device="local_mic", distance="near", noise="quiet", voice="normal")
     voice_match.invalidate_cache()
     prefiltered = voice_match.match(unit(0), meeting_id=None, scenario=scenario, speech_ms=3000)
+    # 打桩要跟随 `_int` 的新签名（default 现在可选，已注册键的默认值来自 schema）
     monkeypatch.setattr(
         voice_match,
         "_int",
-        lambda key, default: 10**9 if key == "spk.stage1_min_templates" else default,
+        lambda key, default=None: 10**9 if key == "spk.stage1_min_templates" else (default or 0),
     )
     voice_match.invalidate_cache()
     full = voice_match.match(unit(0), meeting_id=None, scenario=scenario, speech_ms=3000)

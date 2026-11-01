@@ -34,7 +34,7 @@ from ..models import (
     VoiceprintTemplate,
     utcnow,
 )
-from ..settings import get_config
+from ..settings import config_float, get_config
 from . import voice_template
 from .speaker import EMBED_DIM
 from .voice_template import Scenario
@@ -157,20 +157,33 @@ def _normalize(vector: Sequence[float] | np.ndarray) -> np.ndarray | None:
     return (arr / norm).astype(np.float32)
 
 
-def _float(key: str, default: float) -> float:
+def _float(key: str, default: float | None = None) -> float:
+    """读 float 配置。default 只在「键未注册」时兜底，已注册键以 schema 为准。
+
+    早期写法是 ``_float("spk.enrolled_threshold", 0.68)``：字面量成了第二份默认值，
+    schema 改成 0.75 后这里仍是 0.68，后台显示值与实际生效值背离。
+    """
     try:
-        value = get_config(key)
-        return float(default if value is None else value)
-    except (TypeError, ValueError):
-        return default
+        return config_float(key)
+    except KeyError:
+        if default is None:
+            raise
+        return float(default)
 
 
-def _int(key: str, default: int) -> int:
+def _int(key: str, default: int | None = None) -> int:
+    """读 int 配置，语义同 ``_float``。"""
     try:
         value = get_config(key)
-        return int(default if value is None else value)
+        if value is None:
+            if default is None:
+                raise KeyError(f"未注册的配置项：{key}")
+            return int(default)
+        return int(value)
     except (TypeError, ValueError):
-        return default
+        if default is None:
+            raise
+        return int(default)
 
 
 # ---------------------------------------------------------------------------
@@ -197,8 +210,8 @@ def match(
     if matrix.shape[0] == 0 or not rows:
         return None
 
-    stage1_min = _int("spk.stage1_min_templates", 50)
-    top_k = _int("spk.stage1_topk", 200)
+    stage1_min = _int("spk.stage1_min_templates")
+    top_k = _int("spk.stage1_topk")
     eligible = np.arange(matrix.shape[0])
     if matrix.shape[0] >= stage1_min and scenario is not None:
         mask = scenario_mask(rows, scope["codes"], scope["vocab"], scenario)
@@ -208,10 +221,10 @@ def match(
     scores[eligible] = matrix[eligible] @ query
     candidates = eligible[np.argsort(scores[eligible])[::-1][:max(1, top_k)]]
 
-    w_emb = _float("spk.fuse_w_emb", 0.85)
-    w_scene = _float("spk.fuse_w_scene", 0.05)
-    w_dur = _float("spk.fuse_w_dur", 0.05)
-    w_ctx = _float("spk.fuse_w_ctx", 0.05)
+    w_emb = _float("spk.fuse_w_emb")
+    w_scene = _float("spk.fuse_w_scene")
+    w_dur = _float("spk.fuse_w_dur")
+    w_ctx = _float("spk.fuse_w_ctx")
     if scenario is None and speech_ms <= 0 and not context_same_speaker:
         w_emb, w_scene, w_dur, w_ctx = 1.0, 0.0, 0.0, 0.0
     total_weight = max(1e-6, w_emb + w_scene + w_dur + w_ctx)
@@ -224,6 +237,7 @@ def match(
 
     best: dict | None = None
     best_per_person: dict[int, float] = {}
+    best_emb_per_person: dict[int, float] = {}
     for index in candidates:
         row = rows[int(index)]
         s_emb = float(scores[int(index)])
@@ -239,6 +253,9 @@ def match(
         voiceprint_id = int(row["voiceprint_id"])
         best_per_person[voiceprint_id] = max(
             best_per_person.get(voiceprint_id, -1.0), fused
+        )
+        best_emb_per_person[voiceprint_id] = max(
+            best_emb_per_person.get(voiceprint_id, -1.0), s_emb
         )
         if best is None or fused > best["score"]:
             best = {
@@ -267,22 +284,28 @@ def match(
                 "name": row["name"],
                 "template_id": row["template_id"],
                 "score": ranked_score,
-                "emb_score": float(scores[int(np.argmax(scores))]) if scores.size else 0.0,
+                "emb_score": float(best_emb_per_person.get(ranked_person, 0.0)),
                 "scenario_score": 0.0,
                 "source": "template",
             }
     runner_up = ranked[1][1] if len(ranked) > 1 else 0.0
 
-    tau_high = threshold if threshold is not None else _float("spk.enrolled_threshold", 0.68)
-    tau_low = _float("spk.enrolled_ambiguous_threshold", 0.58)
-    margin = _float("spk.arbitration_margin", 0.03)
+    tau_high = threshold if threshold is not None else _float("spk.enrolled_threshold")
+    tau_low = _float("spk.enrolled_ambiguous_threshold")
+    margin = _float("spk.arbitration_margin")
 
     if best["score"] >= tau_high + 0.06 and best["score"] - runner_up >= margin:
         # early-exit 情形：分数足够高且领先明显，不再细分档
         best["low_confidence"] = False
         return best
     if best["score"] >= tau_high:
-        best["low_confidence"] = False
+        # 分数够高但领先不足 margin：两个相近身份分不清，降级成「疑似」交给人工，
+        # 而不是按最高分直接定人（错配一旦写进模板就会被会后重建固化）。
+        if best["score"] - runner_up >= margin:
+            best["low_confidence"] = False
+            return best
+        best["low_confidence"] = True
+        best["name"] = f"疑似 {best['name']}"
         return best
     if best["score"] <= tau_low:
         return None
@@ -356,9 +379,9 @@ def evaluate_confirm(
 ) -> dict:
     """确认前的冲突评估；同时在需要时落一条 ``voiceprint_conflict``。"""
     self_score, other_score, other_id = best_scores_for(voiceprint_id, embedding, include_legacy=include_legacy)
-    self_min = _float("spk.self_min_sim", 0.45)
-    conflict_sim = _float("spk.conflict_sim", 0.60)
-    conflict_margin = _float("spk.conflict_margin", 0.05)
+    self_min = _float("spk.self_min_sim")
+    conflict_sim = _float("spk.conflict_sim")
+    conflict_margin = _float("spk.conflict_margin")
 
     diverge = self_score is None or self_score < self_min
     conflict = other_score >= conflict_sim and other_score >= (self_score or 0.0) + conflict_margin

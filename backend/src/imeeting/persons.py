@@ -1103,16 +1103,26 @@ def ensure_auto_participant(
         meeting_id=meeting_id,
         label=display,
     )
-    db.add(
-        MeetingParticipant(
-            meeting_id=meeting_id,
-            person_id=person.id,
-            speaker_key=speaker_key,
-            state=STATE_PENDING,
-            confidence=AUTO_CONFIDENCE,
-        )
-    )
-    db.flush()
+    # A second acoustic key can resolve to a person already in this meeting.
+    # Reuse that relationship without replacing its confirmed key/state.
+    if participant_of(db, meeting_id, person.id) is not None:
+        return _participant_item(db, meeting_id, person.id)
+    from sqlalchemy.exc import IntegrityError
+
+    try:
+        with db.begin_nested():
+            db.add(MeetingParticipant(
+                meeting_id=meeting_id,
+                person_id=person.id,
+                speaker_key=speaker_key,
+                state=STATE_PENDING,
+                confidence=AUTO_CONFIDENCE,
+            ))
+            db.flush()
+    except IntegrityError:
+        # Another writer may have inserted this relationship after our read.
+        if participant_of(db, meeting_id, person.id) is None:
+            raise
     return _participant_item(db, meeting_id, person.id)
 
 

@@ -108,6 +108,7 @@ export function useSpeakerRoles(
           meetingId,
           row.speaker,
           value,
+          row.speakerKey,
         )
         adopt(list)
       } catch (err) {
@@ -134,6 +135,7 @@ export function useSpeakerRoles(
           meetingId,
           row.speaker,
           value,
+          row.speakerKey,
         )
         adopt(list)
       } catch (err) {

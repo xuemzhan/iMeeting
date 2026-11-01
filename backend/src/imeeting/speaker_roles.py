@@ -12,6 +12,7 @@
 
 from __future__ import annotations
 
+from sqlalchemy import or_
 from sqlmodel import Session, select
 
 from .models import Segment, SpeakerRole, utcnow
@@ -81,13 +82,40 @@ def speaker_key_for(speaker_key: str | None, speaker: str | None) -> str:
 
 
 def resolve_speaker_key(
-    db: Session, meeting_id: int, speaker: str
+    db: Session, meeting_id: int, speaker: str, speaker_key: str | None = None
 ) -> str | None:
-    """按显示名找到该说话人的键。
+    """定位「要改哪一行」的稳定键。
 
-    先按显示名找最近一条片段（改名后仍能定位），再兼容「传进来的是 key」。
-    找不到返回 ``None``（由调用方决定是 404 还是忽略）。
+    优先用调用方给的 ``speaker_key``：同一场会议里可能出现两个说话人共用同一个
+    显示名（声纹把不同声音认成同一个人），只按姓名找会落到最近说话的那个人
+    身上——用户点了 A 行的「删除」，消失的却是 B 行。给了键就必须精确命中，
+    命中不了返回 ``None``（由调用方 404），不做静默降级。
+
+    没给键时退回旧口径：先按显示名找最近一条片段（改名后仍能定位），再兼容
+    「传进来的是 key」。
     """
+    explicit = (speaker_key or "").strip()
+    if explicit:
+        if explicit.startswith(_LABEL_PREFIX):
+            label = explicit[len(_LABEL_PREFIX) :].strip()
+            if not label:
+                return None
+            row = db.exec(
+                select(Segment.id).where(
+                    Segment.meeting_id == meeting_id,
+                    Segment.speaker == label,
+                    or_(Segment.speaker_key.is_(None), Segment.speaker_key == ""),
+                )
+            ).first()
+            return explicit if row is not None else None
+        row = db.exec(
+            select(Segment.id).where(
+                Segment.meeting_id == meeting_id,
+                Segment.speaker_key == explicit,
+            )
+        ).first()
+        return explicit if row is not None else None
+
     name = (speaker or "").strip()
     if not name:
         return None
@@ -189,12 +217,16 @@ def list_speakers(db: Session, meeting_id: int) -> list[dict]:
 
 
 def set_importance(
-    db: Session, meeting_id: int, speaker: str, importance: int
+    db: Session,
+    meeting_id: int,
+    speaker: str,
+    importance: int,
+    speaker_key: str | None = None,
 ) -> list[dict]:
     """写入某说话人的重要程度（不存在则创建），返回刷新后的说话人清单。"""
-    key = resolve_speaker_key(db, meeting_id, speaker)
+    key = resolve_speaker_key(db, meeting_id, speaker, speaker_key)
     if key is None:
-        raise LookupError(f"会议 {meeting_id} 中没有说话人：{speaker}")
+        raise LookupError(f"会议 {meeting_id} 中没有说话人：{speaker_key or speaker}")
     value = normalize_importance(importance)
     row = db.exec(
         select(SpeakerRole).where(
@@ -221,16 +253,20 @@ def set_importance(
 
 
 def set_state(
-    db: Session, meeting_id: int, speaker: str, state: int
+    db: Session,
+    meeting_id: int,
+    speaker: str,
+    state: int,
+    speaker_key: str | None = None,
 ) -> list[dict]:
     """写入某说话人的处理状态（不存在则创建），返回刷新后的说话人清单。
 
     「确认」与「删除」都只是标记：不删片段、不改重要程度，仅让该说话人从
     参会人面板消失（前端按 ``state`` 过滤）。重复提交同一状态是幂等的。
     """
-    key = resolve_speaker_key(db, meeting_id, speaker)
+    key = resolve_speaker_key(db, meeting_id, speaker, speaker_key)
     if key is None:
-        raise LookupError(f"会议 {meeting_id} 中没有说话人：{speaker}")
+        raise LookupError(f"会议 {meeting_id} 中没有说话人：{speaker_key or speaker}")
     value = normalize_state(state)
     row = db.exec(
         select(SpeakerRole).where(

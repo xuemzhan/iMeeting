@@ -29,6 +29,8 @@ build/
 # Node / frontend
 node_modules/
 frontend/dist/
+frontend/dist-next/
+frontend/coverage/
 frontend/.tmp/
 frontend/test-results/
 frontend/playwright-report/

@@ -63,10 +63,11 @@ def persist_segments(
     duration_ms: int,
     *,
     final_status: str | None = "finished",
+    session_id: str | None = None,
 ) -> None:
     with _persist_lock:
         persist_segments_locked(
-            meeting_id, segments, duration_ms, final_status=final_status
+            meeting_id, segments, duration_ms, final_status=final_status, session_id=session_id
         )
 
 
@@ -76,6 +77,7 @@ def persist_segments_locked(
     duration_ms: int,
     *,
     final_status: str | None = "finished",
+    session_id: str | None = None,
 ) -> None:
     """把定稿片段批量落库，并更新会议状态。
 
@@ -131,6 +133,12 @@ def persist_segments_locked(
 
             meeting = db.get(Meeting, meeting_id)
             if meeting is not None:
+                if final_status is not None and session_id is not None:
+                    latest = db.exec(select(MeetingSession).where(
+                        MeetingSession.meeting_id == meeting_id
+                    ).order_by(MeetingSession.id.desc())).first()
+                    if latest is not None and latest.session_id != session_id:
+                        final_status = None
                 if final_status is not None:
                     meeting.status = final_status
                     meeting.finished_at = datetime.now(timezone.utc)

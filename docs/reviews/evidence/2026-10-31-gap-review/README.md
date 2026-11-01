@@ -2,7 +2,7 @@
 
 <!-- doc-governance: FA-EVD-002 -->
 > 文档类型：证据；状态：阶段快照；日期：2026-10-31。
-> 维护责任：待指派（FunASR / iMeeting 维护者）。[台账](../../../../../docs/governance/CATALOG.md) · [规则](../../../../../docs/governance/POLICY.md)。
+> 维护责任：待指派（FunASR / iMeeting 维护者）。台账与规则在外层工作区（`docs/governance/CATALOG.md`、`docs/governance/POLICY.md`，不在本仓库内）；独立检出时以本仓库[文档规制](../../../governance/README.md)为准。
 
 正文：[核查报告](../../2026-10-31-code-document-gap-review.md)。下一步：[修复与优化计划](../../../plans/2026-10-31-gap-remediation-plan.md)。
 

@@ -372,8 +372,8 @@ class TestMatch:
         voiceprint_id = _make_voiceprint("张三", _unit(0))
         _add_template(voiceprint_id, _unit(0))
         voice_match.invalidate_cache()
-        # 融合分落在 (tau_low=0.58, tau_high=0.68) 之间
-        hit = voice_match.match(_mix(0.72, 0.69), speech_ms=500)
+        # 融合分落在 (tau_low=0.68, tau_high=0.75) 之间
+        hit = voice_match.match(_mix(0.90, 0.63), speech_ms=500)
         assert hit is not None
         assert hit["low_confidence"] is True
         assert hit["name"].startswith("疑似")

@@ -72,21 +72,54 @@ _IDLE_TIMEOUT_SECONDS = 90.0
 router = APIRouter()
 
 
+class SocketSender:
+    """Serialize sends and close; treat transport closure as a disconnect."""
+
+    def __init__(self, websocket: WebSocket) -> None:
+        self.websocket = websocket
+        self.lock = asyncio.Lock()
+        self.closed = False
+
+    async def send_json(self, payload: dict) -> None:
+        async with self.lock:
+            if self.closed:
+                raise WebSocketDisconnect(code=1006)
+            try:
+                await self.websocket.send_json(payload)
+            except (WebSocketDisconnect, OSError):
+                self.closed = True
+                raise WebSocketDisconnect(code=1006) from None
+            except RuntimeError as exc:
+                # Starlette and Uvicorn report a closed transport differently.
+                if 'close' not in str(exc).lower():
+                    raise
+                self.closed = True
+                raise WebSocketDisconnect(code=1006) from exc
+
+    async def close(self, code: int = 1000) -> None:
+        async with self.lock:
+            if self.closed:
+                return
+            self.closed = True
+            await self.websocket.close(code=code)
+
+
 @router.websocket("/ws/stream")
 async def stream_endpoint(websocket: WebSocket) -> None:
     await websocket.accept()
+    sender = SocketSender(websocket)
 
     from ...maintenance import is_draining
 
     if is_draining():
-        await websocket.send_json(
+        await sender.send_json(
             {
                 "type": "error",
                 "code": "SERVER_DRAINING",
                 "message": "服务正在发布维护，请稍后重新开始会议",
             }
         )
-        await websocket.close(code=1013)
+        await sender.close(code=1013)
         return
 
     session: StreamSession | None = None
@@ -114,7 +147,7 @@ async def stream_endpoint(websocket: WebSocket) -> None:
         if payload.get("type") == "final":
             pending_segments.append(payload)
         try:
-            await websocket.send_json(payload)
+            await sender.send_json(payload)
         except (RuntimeError, WebSocketDisconnect):
             logger.debug("发送失败，连接可能已断开")
         # 增量落库：先保证前端拿到字幕，再写库；单条 commit 只有毫秒级。
@@ -138,28 +171,28 @@ async def stream_endpoint(websocket: WebSocket) -> None:
         try:
             first = await asyncio.wait_for(websocket.receive(), _HANDSHAKE_TIMEOUT_SECONDS)
         except asyncio.TimeoutError:
-            await websocket.send_json({"type": "error", "code": "START_TIMEOUT",
+            await sender.send_json({"type": "error", "code": "START_TIMEOUT",
                                        "message": "等待开始消息超时，请重新连接"})
-            await websocket.close(code=1008)
+            await sender.close(code=1008)
             return
         if first.get("text") is None:
-            await websocket.send_json({"type": "error", "code": "EXPECTED_START",
+            await sender.send_json({"type": "error", "code": "EXPECTED_START",
                                        "message": "首帧必须是 start 消息"})
-            await websocket.close(code=1002)
+            await sender.close(code=1002)
             return
 
         try:
             hello = json.loads(first["text"])
         except json.JSONDecodeError:
-            await websocket.send_json({"type": "error", "code": "BAD_JSON",
+            await sender.send_json({"type": "error", "code": "BAD_JSON",
                                        "message": "首帧不是合法 JSON"})
-            await websocket.close(code=1002)
+            await sender.close(code=1002)
             return
 
         if not isinstance(hello, dict) or hello.get("type") != "start":
-            await websocket.send_json({"type": "error", "code": "EXPECTED_START",
+            await sender.send_json({"type": "error", "code": "EXPECTED_START",
                                        "message": "首帧必须是 start 消息"})
-            await websocket.close(code=1002)
+            await sender.close(code=1002)
             return
 
         # ---- 鉴权（token 可选，配置关闭鉴权时允许匿名）----
@@ -168,20 +201,20 @@ async def stream_endpoint(websocket: WebSocket) -> None:
             user_id, username = _anonymous_identity()
             must_change_password = False
         if must_change_password:
-            await websocket.send_json(
+            await sender.send_json(
                 {
                     "type": "error",
                     "code": "PASSWORD_CHANGE_REQUIRED",
                     "message": "请先修改初始密码后再开始会议",
                 }
             )
-            await websocket.close(code=1008)
+            await sender.close(code=1008)
             return
 
         if _auth_required() and user_id is None:
-            await websocket.send_json({"type": "error", "code": "UNAUTHORIZED",
+            await sender.send_json({"type": "error", "code": "UNAUTHORIZED",
                                        "message": "请重新登录后开始会议"})
-            await websocket.close(code=1008)
+            await sender.close(code=1008)
             return
 
         if str(get_config("asr.mode") or "normal") == "normal":
@@ -193,26 +226,26 @@ async def stream_endpoint(websocket: WebSocket) -> None:
                 for prefix in ("streaming", "offline"):
                     await asyncio.to_thread(pool.get_model, prefix)
             if not pool.is_ready("streaming") or not pool.is_ready("offline"):
-                await websocket.send_json({"type": "error", "code": "MODELS_NOT_READY",
+                await sender.send_json({"type": "error", "code": "MODELS_NOT_READY",
                                            "message": "识别模型尚未就绪，请稍后重试"})
-                await websocket.close(code=1013)
+                await sender.close(code=1013)
                 return
 
         # ---- 并发限流 ----
         if session_registry.count() >= get_config("session.max_concurrent"):
-            await websocket.send_json({
+            await sender.send_json({
                 "type": "error",
                 "code": "TOO_MANY_SESSIONS",
                 "message": f"当前并发会话已达上限（{get_config('session.max_concurrent')}），请稍后再试",
             })
-            await websocket.close(code=1013)
+            await sender.close(code=1013)
             return
 
         meeting_id = _resolve_meeting(hello, user_id)
         if meeting_id is None:
-            await websocket.send_json({"type": "error", "code": "MEETING_FAILED",
+            await sender.send_json({"type": "error", "code": "MEETING_FAILED",
                                        "message": "无法创建或找到会议"})
-            await websocket.close(code=1011)
+            await sender.close(code=1011)
             return
         audio_chunk_seq = _load_audio_seq(meeting_id)
 
@@ -258,7 +291,7 @@ async def stream_endpoint(websocket: WebSocket) -> None:
         while True:
             remaining = deadline - asyncio.get_running_loop().time()
             if remaining <= 0:
-                await websocket.send_json({"type": "error", "code": "SESSION_LIMIT",
+                await sender.send_json({"type": "error", "code": "SESSION_LIMIT",
                                            "message": "已达到单会话最长时长，请重新开始"})
                 break
             try:
@@ -266,7 +299,7 @@ async def stream_endpoint(websocket: WebSocket) -> None:
                     websocket.receive(), min(_IDLE_TIMEOUT_SECONDS, remaining)
                 )
             except asyncio.TimeoutError:
-                await websocket.send_json({"type": "error", "code": "SESSION_TIMEOUT",
+                await sender.send_json({"type": "error", "code": "SESSION_TIMEOUT",
                                            "message": "会话等待超时，请重新连接"})
                 break
 
@@ -281,10 +314,10 @@ async def stream_endpoint(websocket: WebSocket) -> None:
                     seq = pending_audio_seq
                     pending_audio_seq = None
                     if seq is not None and seq <= audio_chunk_seq:
-                        await websocket.send_json({"type": "audio_ack", "seq": seq})
+                        await sender.send_json({"type": "audio_ack", "seq": seq})
                         continue
                     if session.duration_ms / 1000 + len(pcm) / 16000 > max_duration_s:
-                        await websocket.send_json({"type": "error", "code": "SESSION_LIMIT",
+                        await sender.send_json({"type": "error", "code": "SESSION_LIMIT",
                                                    "message": "已达到单会话最长时长，请重新开始"})
                         break
                     await asyncio.to_thread(sink.push, pcm)
@@ -294,7 +327,7 @@ async def stream_endpoint(websocket: WebSocket) -> None:
                         await asyncio.to_thread(
                             _record_audio_seq, meeting_id, audio_chunk_seq
                         )
-                        await websocket.send_json({"type": "audio_ack", "seq": seq})
+                        await sender.send_json({"type": "audio_ack", "seq": seq})
                 continue
 
             # 文本帧 = 控制消息
@@ -312,7 +345,7 @@ async def stream_endpoint(websocket: WebSocket) -> None:
 
             kind = cmd.get("type")
             if kind == "ping":
-                await websocket.send_json({"type": "pong", "ts": _now_ms()})
+                await sender.send_json({"type": "pong", "ts": _now_ms()})
             elif kind == "audio_chunk":
                 try:
                     pending_audio_seq = int(cmd.get("seq"))
@@ -331,7 +364,7 @@ async def stream_endpoint(websocket: WebSocket) -> None:
         logger.exception("WebSocket 会话异常 (meeting=%s)", meeting_id)
         failed = True
         try:
-            await websocket.send_json({
+            await sender.send_json({
                 "type": "error",
                 "code": "INTERNAL",
                 "message": "服务端处理异常，请重试",
@@ -385,6 +418,7 @@ async def stream_endpoint(websocket: WebSocket) -> None:
                 pending_segments,
                 session.meeting_end_ms if session else 0,
                 final_status=final_status,
+                session_id=session.session_id if session else None,
             )
             persisted = len(pending_segments)
 
@@ -428,6 +462,7 @@ async def stream_endpoint(websocket: WebSocket) -> None:
                 pending_segments,
                 session.meeting_end_ms if session else 0,
                 final_status=final_status,
+                session_id=session.session_id if session else None,
             )
 
         # 音频收尾（回填 WAV 头）并把路径写进会议记录
@@ -494,8 +529,8 @@ async def stream_endpoint(websocket: WebSocket) -> None:
 
         try:
             if closed_payload is not None:
-                await websocket.send_json(closed_payload)
-            await websocket.close()
+                await sender.send_json(closed_payload)
+            await sender.close()
         except Exception:
             pass
 
@@ -626,7 +661,12 @@ async def _progressive_minutes_loop(meeting_id: int, session) -> None:
             )
             if payload is None:
                 continue
-            last_chars = chars
+            # A bounded batch may cover only part of the backlog. Count what
+            # was actually consumed so the next tick continues without waiting
+            # for further speech (including when the speaker has paused).
+            covered_end = payload.get("transcript_end_ms", 0)
+            last_chars = sum(len(line.text) for line in lines
+                             if (line.end_ms or line.start_ms + 1000) <= covered_end)
             await session._emit(
                 {
                     "type": "minutes_update",

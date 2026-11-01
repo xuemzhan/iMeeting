@@ -1,0 +1,58 @@
+{
+  "verified_at": "2026-11-01T10:57:57.098788+08:00",
+  "pid": 21696,
+  "base_url": "http://127.0.0.1:8000",
+  "health": {
+    "status": "ok",
+    "version": "0.1.0",
+    "models": {
+      "streaming": {
+        "name": "streaming",
+        "loaded": true,
+        "loading": false,
+        "error": null,
+        "load_seconds": 64.35,
+        "device": "cpu"
+      },
+      "offline": {
+        "name": "offline",
+        "loaded": true,
+        "loading": false,
+        "error": null,
+        "load_seconds": 91.25,
+        "device": "cpu"
+      }
+    },
+    "active_sessions": 1
+  },
+  "homepage_status": 200,
+  "new_meetings_after_restart": [
+    [
+      16,
+      "recording",
+      3
+    ]
+  ],
+  "source_sha256": {
+    "api/ws/stream.py": "b93835f0c84abf4337bee49ed56eab84f21986775107db642e1142df9a9fa07a",
+    "application/meeting_sessions.py": "8196a2dbb5a8f55f9870d9301e89ed1715a68c9bdc0e9c5baa0ad5f7264b4781",
+    "engine/speaker.py": "7ccb36078315db8cf8322a886cf77a9a61dd1482d165eeebf467240e25f1caaf",
+    "llm/client.py": "6b46b9440469171e4f440f9eafe656a5b7847f6119b530658bc6671eaacf09fe",
+    "llm/progressive.py": "c4f95dadb5de208ca37de24b7589c2baf600eb164dbf1b65207a8ac1a0c174af",
+    "persons.py": "fea9c849ec4220df5951ce5f405e5bb0a61087428e1203d3c13976080868f034"
+  },
+  "checks": {
+    "expanded_regression": {
+      "passed": 160,
+      "failed": 0
+    },
+    "final_targeted_regression": {
+      "passed": 37,
+      "failed": 0
+    },
+    "paused_backlog_test": {
+      "passed": 1,
+      "failed": 0
+    }
+  }
+}

@@ -2,7 +2,7 @@
 
 <!-- doc-governance: FA-PLN-003 -->
 > 文档类型：计划；状态：持续维护；日期：2026-10-31。
-> 维护责任：待指派（FunASR / iMeeting 维护者）。[台账](../../../docs/governance/CATALOG.md) · [规则](../../../docs/governance/POLICY.md)。
+> 维护责任：待指派（FunASR / iMeeting 维护者）。台账与规则在外层工作区（`docs/governance/CATALOG.md`、`docs/governance/POLICY.md`，不在本仓库内）；独立检出时以本仓库[文档规制](../governance/README.md)为准。
 
 本计划基于[代码—文档核查](../reviews/2026-10-31-code-document-gap-review.md)和隔离反例。用户随后要求基于本方案修复，实施与验证记录见[修复报告](../../docs/reports/2026-10-31-gap-fixes.md)、[R6 续作报告](../../docs/reports/2026-10-31-r6-optimization.md)、[身份统一续作](../../docs/reports/2026-10-31-identity-unify.md)与[主模板续作](../../docs/reports/2026-10-31-template-primary.md)。下面保留各批验收目标，不把本地回归等同于目标环境验收。
 

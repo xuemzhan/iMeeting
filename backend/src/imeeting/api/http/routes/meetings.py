@@ -207,7 +207,20 @@ def _delete_meeting_rows(db: Session, meeting: Meeting) -> None:
     db.execute(sa_delete(ActionItem).where(ActionItem.meeting_id == mid))
     db.execute(sa_delete(ShareLink).where(ShareLink.meeting_id == mid))
     db.execute(sa_delete(SegmentEmbedding).where(SegmentEmbedding.meeting_id == mid))
-    # 只删除本场自动发现的临时声纹；人工命名的正式身份保留给其它会议使用
+    # 只删除本场自动发现的临时声纹；人工命名的正式身份保留给其它会议使用。
+    # 必须先清掉这些声纹的模板/模板来源/冲突记录，否则删除会撞上外键
+    # （voiceprint_template 引用 voiceprint），用户点「删除会议」直接 500。
+    from ....application.voiceprint_lifecycle import remove_dependents
+
+    provisional = db.exec(
+        select(Voiceprint).where(
+            Voiceprint.meeting_id == mid, Voiceprint.provisional == True  # noqa: E712
+        )
+    ).all()
+    for voice in provisional:
+        remove_dependents(db, voice.id)
+    if provisional:
+        db.flush()
     db.execute(
         sa_delete(Voiceprint).where(
             Voiceprint.meeting_id == mid, Voiceprint.provisional == True  # noqa: E712
@@ -799,16 +812,21 @@ def update_speaker_importance(
     _owned(meeting_id, user, db, write=True)
     try:
         items = speaker_roles.set_importance(
-            db, meeting_id, payload.speaker, payload.importance
+            db,
+            meeting_id,
+            payload.speaker,
+            payload.importance,
+            speaker_key=payload.speaker_key,
         )
     except LookupError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
         ) from exc
     logger.info(
-        "会议 %s 说话人 %s 重要程度设为 %s",
+        "会议 %s 说话人 %s（%s）重要程度设为 %s",
         meeting_id,
         payload.speaker,
+        payload.speaker_key or payload.speaker,
         payload.importance,
     )
     return [MeetingSpeakerOut(**item) for item in items]
@@ -828,16 +846,21 @@ def update_speaker_state(
     _owned(meeting_id, user, db, write=True)
     try:
         items = speaker_roles.set_state(
-            db, meeting_id, payload.speaker, payload.state
+            db,
+            meeting_id,
+            payload.speaker,
+            payload.state,
+            speaker_key=payload.speaker_key,
         )
     except LookupError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)
         ) from exc
     logger.info(
-        "会议 %s 说话人 %s 状态设为 %s",
+        "会议 %s 说话人 %s（%s）状态设为 %s",
         meeting_id,
         payload.speaker,
+        payload.speaker_key or payload.speaker,
         speaker_roles.STATE_LABELS.get(payload.state, payload.state),
     )
     return [MeetingSpeakerOut(**item) for item in items]

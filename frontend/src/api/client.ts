@@ -427,18 +427,41 @@ export const meetingApi = {
   speakers: (id: number) =>
     request<MeetingSpeaker[]>(`/api/v1/meetings/${id}/speakers`),
 
-  /** 设置说话人重要程度；返回刷新后的全部说话人。 */
-  setSpeakerImportance: (id: number, speaker: string, importance: number) =>
+  /**
+   * 设置说话人重要程度；返回刷新后的全部说话人。
+   *
+   * 带上 `speakerKey` 才能精确落到某一行：同一场会议里可能出现两个说话人
+   * 共用同一个显示名（声纹把不同声音认成同一人），只发姓名会改到别人的行。
+   */
+  setSpeakerImportance: (
+    id: number,
+    speaker: string,
+    importance: number,
+    speakerKey?: string | null,
+  ) =>
     request<MeetingSpeaker[]>(`/api/v1/meetings/${id}/speakers/importance`, {
       method: 'PUT',
-      body: JSON.stringify({ speaker, importance }),
+      body: JSON.stringify({
+        speaker,
+        importance,
+        ...(speakerKey ? { speaker_key: speakerKey } : {}),
+      }),
     }),
 
   /** 确认（1）或删除（2）一位参会人；返回刷新后的全部说话人。 */
-  setSpeakerState: (id: number, speaker: string, state: number) =>
+  setSpeakerState: (
+    id: number,
+    speaker: string,
+    state: number,
+    speakerKey?: string | null,
+  ) =>
     request<MeetingSpeaker[]>(`/api/v1/meetings/${id}/speakers/state`, {
       method: 'PUT',
-      body: JSON.stringify({ speaker, state }),
+      body: JSON.stringify({
+        speaker,
+        state,
+        ...(speakerKey ? { speaker_key: speakerKey } : {}),
+      }),
     }),
 
   addMember: (id: number, username: string, role: string) =>
@@ -619,8 +642,13 @@ export const voiceprintApi = {
       if (!(error instanceof ApiError) || error.status !== 409 || !error.detail || typeof error.detail !== 'object' || !('kind' in error.detail) || error.detail.kind !== 'voiceprint_confirmation') throw error
       const confirmation = error.detail as VoiceConfirmation
       const choice = await askVoiceConfirmation(confirmation)
+      if (choice.decision === 'cancel') {
+        // 必须在发请求之前拦住：后端只把 decision 当作「跳过 409 冲突检查」的开关，
+        // 并不识别 cancel。此前先发请求再判断，导致用户点了「取消」仍被改名。
+        // 取消是用户选择，不是故障；挂 cause 便于日志追溯到那次 409。
+        throw new Error('已取消声纹确认，原说话人保持不变', { cause: error })
+      }
       const result = await request<Result>('/api/v1/voiceprints/relabel', { method: 'POST', body: JSON.stringify({ ...body, ...choice, conflict_id: confirmation.assessment.conflict_id }) })
-      if (choice.decision === 'cancel') throw new Error('已取消声纹确认，原说话人保持不变')
       window.dispatchEvent(new CustomEvent('imeeting-participants-changed', { detail: meetingId }))
       return result
     }

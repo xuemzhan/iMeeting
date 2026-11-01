@@ -198,21 +198,26 @@ class SpeakerImportanceUpdate(BaseModel):
     """设置某位说话人的重要程度。
 
     ``importance``：1 = 关键（最高）、2 = 次要、3 = 一般。
-    用显示名（speaker）指定：后端按片段里的 speaker_key 落到稳定键上，
-    因此之后给该说话人改名不会丢设置。
+    **优先用 ``speaker_key`` 定位**：同一场会议里可能出现两个说话人共用同一个
+    显示名（声纹把不同的声音认成同一个人），只按姓名写会落到别人的那一行。
+    没给 ``speaker_key`` 时退回按显示名找（兼容旧客户端），后端落到片段里的
+    稳定键上，因此之后给该说话人改名不会丢设置。
     """
 
     speaker: str = Field(min_length=1, max_length=64)
+    speaker_key: str | None = Field(default=None, max_length=128)
     importance: int = Field(ge=1, le=3)
 
 
 class SpeakerStateUpdate(BaseModel):
     """设置某位说话人的处理状态：1 = 确认参会人，2 = 删除（不是参会人）。
 
-    用显示名（speaker）指定，后端落到稳定的 speaker_key 上，改名不丢状态。
+    与重要程度一样优先按 ``speaker_key`` 精确定位；缺省时才按显示名找，
+    避免同名说话人被一起确认或删除。
     """
 
     speaker: str = Field(min_length=1, max_length=64)
+    speaker_key: str | None = Field(default=None, max_length=128)
     state: int = Field(ge=1, le=2)
 
 
@@ -275,6 +280,53 @@ class MeetingBulkExportRequest(BaseModel):
     ids: list[int] = Field(min_length=1, max_length=50)
     format: str = "json"
 
+
+
+# ---------------------------------------------------------------------------
+# 请求体校验（原来用裸 dict：非法输入会抛 ValueError 变成 500）
+# ---------------------------------------------------------------------------
+
+
+class ExportJobRequest(BaseModel):
+    """单个会议导出任务；``format`` 由导出 worker 再按白名单校验。"""
+
+    format: str = "md"
+
+
+class BulkExportJobRequest(BaseModel):
+    """批量导出任务。
+
+    这里用 ``list[int]`` 而不是路由里 ``int(value)``：非数字 id 应当在参数校验
+    阶段返回 422，而不是抛 ValueError 变成 500。
+    """
+
+    ids: list[int] = Field(min_length=1, max_length=200)
+    format: str = "md"
+
+
+class DenoiseEvalRequest(BaseModel):
+    meeting_id: int = Field(gt=0)
+    limit: int = Field(default=8, ge=1, le=64)
+    strength: float = Field(default=0.3, ge=0.0, le=1.0)
+
+
+class SearchReindexRequest(BaseModel):
+    meeting_id: int | None = Field(default=None, ge=1)
+
+
+class MaintenanceDrainRequest(BaseModel):
+    reason: str = Field(default="release", max_length=500)
+
+
+class RedactRequest(BaseModel):
+    dry_run: bool = False
+
+
+class RetentionUpdateRequest(BaseModel):
+    """保留策略更新；字段缺省表示「不改这一项」。"""
+
+    retention_days: int | None = Field(default=None, ge=0, le=3650)
+    legal_hold: bool | None = None
 
 class TranscriptItem(BaseModel):
     """供 LLM 使用的紧凑转写条目。"""

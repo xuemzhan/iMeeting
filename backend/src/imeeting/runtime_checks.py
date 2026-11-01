@@ -51,3 +51,32 @@ def validate_production_settings(
     if errors:
         detail = "\n".join(f"- {item}" for item in errors)
         raise RuntimeError(f"生产环境配置不安全，拒绝启动：\n{detail}")
+
+
+def production_config_warnings(
+    env: Mapping[str, str] | None = None,
+) -> list[str]:
+    """生产环境下「不致命但会削弱防护」的配置，返回提示而不是拒绝启动。
+
+    典型场景：后端跑在 nginx/Caddy 后面却没人告诉它信任代理，于是
+    ``request.client.host`` 永远是代理地址——按 IP 的登录限流退化成一个全局桶
+    （任何人连错几次就能把所有人锁在门外），审计日志的来源 IP 也失去意义。
+    """
+    values = os.environ if env is None else env
+    if values.get("APP_ENV", "development").strip().lower() != "production":
+        return []
+
+    warnings: list[str] = []
+    forwarded = values.get("FORWARDED_ALLOW_IPS", "").strip()
+    if not forwarded or forwarded == "127.0.0.1":
+        warnings.append(
+            "未配置 FORWARDED_ALLOW_IPS：前端经反代访问时，后端看到的是代理 IP，"
+            "登录按 IP 限流会退化成全局桶、审计 IP 失真。"
+            "用 compose 部署时设为代理网段（默认已给出 RFC1918 段）。"
+        )
+    if not values.get("METRICS_TOKEN", "").strip():
+        warnings.append(
+            "未配置 METRICS_TOKEN：/metrics 仅接受环回访问（127.0.0.1/::1）。"
+            "若 Prometheus 从其他主机/容器采集，需要设置该令牌。"
+        )
+    return warnings

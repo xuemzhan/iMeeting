@@ -117,7 +117,18 @@ def _migrate_schema() -> None:
     3. 回填历史多会话会议的时间轴偏移，让重连后的片段按真实先后排序。
 
     全部操作幂等，可在每次启动时安全执行。
+
+    **只对 SQLite 生效**：这里的 DDL 用到了 SQLite 专有语法（``CREATE TRIGGER
+    ... RAISE(ABORT)``、``PRAGMA`` 相关假设、``DATETIME`` 亲和类型）。别的方言
+    一律跳过，交给 Alembic 管理——否则按 ``DATABASE_URL=postgresql+psycopg://``
+    切库时会在启动迁移阶段直接语法报错。
     """
+    if engine.dialect.name != "sqlite":
+        logger.info(
+            "数据库方言为 %s：跳过 SQLite 专用兼容迁移，表结构以 Alembic 为准",
+            engine.dialect.name,
+        )
+        return
     inspector = inspect(engine)
     tables = set(inspector.get_table_names())
 
@@ -150,8 +161,20 @@ def _migrate_schema() -> None:
                             "ON voiceprint_template(voiceprint_id) WHERE pinned = 1"
                         )
                     )
-            if conn.execute(text("SELECT count(*) FROM voiceprint_template WHERE slot > 4")).scalar():
-                raise RuntimeError("旧声纹模板超出五槽范围；请备份并整理后重新启动")
+            over = conn.execute(
+                text("SELECT count(*) FROM voiceprint_template WHERE slot > 4")
+            ).scalar()
+            if over:
+                # 宁可拒绝启动也不要带着越界数据跑：槽位上限是模板匹配的前提。
+                # 给出可执行的自救路径，避免运维只看到一句「整理后重新启动」。
+                raise RuntimeError(
+                    f"发现 {over} 条旧声纹模板的 slot > 4（超出五槽范围），拒绝启动。"
+                    "处理步骤：1) 备份 data/meeting.db；"
+                    "2) 执行 UPDATE voiceprint_template SET slot = slot % 5 WHERE slot > 4;"
+                    "3) 复查 SELECT voiceprint_id, COUNT(*) FROM voiceprint_template "
+                    "GROUP BY voiceprint_id HAVING COUNT(*) > 5; 并按需删除多余模板；"
+                    "4) 重新启动。"
+                )
             for action, suffix in (("INSERT", "insert"), ("UPDATE OF slot", "update")):
                 conn.execute(text(f"CREATE TRIGGER IF NOT EXISTS template_slot_{suffix} BEFORE {action} ON voiceprint_template WHEN NEW.slot > 4 BEGIN SELECT RAISE(ABORT, 'template slot must be <= 4'); END"))
         if "user" in tables:
