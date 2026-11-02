@@ -858,6 +858,29 @@ CONFIG_SCHEMA: list[ConfigField] = [
         ),
     ),
     _f(
+        key="spk.auto_identity_min_segments",
+        label="自动身份最少片段数",
+        group="说话人识别",
+        type="int",
+        default=3,
+        min_value=1,
+        max_value=50,
+        help=(
+            "会后清理：本场自动生成的「待命名」声纹，片段数少于该值**且**累计语音不足"
+            "下一项时会被停用（停用可恢复，不删除）。人工命名过的身份不受影响。"
+        ),
+    ),
+    _f(
+        key="spk.auto_identity_min_ms",
+        label="自动身份最少语音（毫秒）",
+        group="说话人识别",
+        type="int",
+        default=3000,
+        min_value=300,
+        max_value=60000,
+        help="与上一项同时不满足才会停用；3000 表示「不到 3 秒且不到 3 段」的簇视为噪声。",
+    ),
+    _f(
         key="spk.stage1_min_templates",
         label="启用粗筛的库规模",
         group="说话人识别",

@@ -1028,6 +1028,9 @@ def rebuild_meeting_templates(meeting_id: int, *, job_id: int | None = None) -> 
                             note=speaker_key,
                         )
                         db.commit()
+            noise_disabled = disable_noise_identities(db, meeting_id)
+            if noise_disabled:
+                db.commit()
             result = {
                 "meeting_id": meeting_id,
                 "created": created,
@@ -1039,6 +1042,8 @@ def rebuild_meeting_templates(meeting_id: int, *, job_id: int | None = None) -> 
                 "speakers": len(speakers),
                 "cache_hits": cache_hits,
                 "cache_misses": cache_misses,
+                # 会后顺手停用的「证据不足」自动声纹（可恢复，不删除）。
+                "noise_disabled": len(noise_disabled),
             }
             _write_rebuild_state(
                 db,
@@ -1079,6 +1084,54 @@ def rebuild_meeting_templates(meeting_id: int, *, job_id: int | None = None) -> 
             logger.exception("写入模板重建失败状态失败 meeting=%s", meeting_id)
         raise
 
+
+
+def disable_noise_identities(db: Session, meeting_id: int) -> list[str]:
+    """停用本场「证据不足」的自动待命名声纹（停用而非删除，随时可恢复）。
+
+    审查 2026-11-01 第 5 节第 4 条：只由一两句话生成的簇不该留下一个能被匹配到的身份
+    （实测库里 person 5/6 就来自 1.8 秒的单句）。规则只作用于**本场自动生成**的临时
+    声纹：人工命名过的、别的会议的、已停用的都不动；片段数与累计语音**同时**不达标才停用。
+    门槛取自 ``spk.auto_identity_min_segments``（默认 3）与 ``spk.auto_identity_min_ms``
+    （默认 3000），管理员可在设置里调。
+    """
+    try:
+        min_segments = int(get_config("spk.auto_identity_min_segments") or 3)
+        min_ms = int(get_config("spk.auto_identity_min_ms") or 3000)
+    except (TypeError, ValueError):
+        min_segments, min_ms = 3, 3000
+    candidates = db.exec(
+        select(Voiceprint).where(
+            Voiceprint.meeting_id == meeting_id,
+            Voiceprint.provisional.is_(True),
+            Voiceprint.disabled.is_(False),  # type: ignore[union-attr]
+        )
+    ).all()
+    disabled: list[str] = []
+    for row in candidates:
+        if not row.speaker_key:
+            continue
+        segments = db.exec(
+            select(Segment).where(
+                Segment.meeting_id == meeting_id,
+                Segment.speaker_key == row.speaker_key,
+            )
+        ).all()
+        speech_ms = sum(max(0, (seg.end_ms or 0) - (seg.start_ms or 0)) for seg in segments)
+        if len(segments) >= min_segments or speech_ms >= min_ms:
+            continue
+        row.disabled = True
+        row.updated_at = utcnow()
+        db.add(row)
+        disabled.append(row.name)
+        logger.info(
+            "停用证据不足的自动声纹 meeting=%s name=%s segments=%d speech_ms=%d",
+            meeting_id,
+            row.name,
+            len(segments),
+            speech_ms,
+        )
+    return disabled
 
 # ---------------------------------------------------------------------------
 # 兼容迁移
