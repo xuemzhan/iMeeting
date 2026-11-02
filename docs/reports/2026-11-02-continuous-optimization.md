@@ -17,17 +17,18 @@
 | 4 | 全库近邻合并的执行入口 | `POST /api/v1/voiceprints/merge-suggestions/apply` | 同一声纹一次只并一对；默认 `dry_run=true`；默认不合并两个已命名身份；逐对留 `voiceprint_bulk_merge` 审计；单对失败只回滚该对 |
 | 5 | 跨设备重新注册（REQ-002 FR-5 末项） | `POST /api/v1/voiceprints/{id}/enroll`、`VoiceprintTemplateSummary.tsx` | 旧路径是「同名录入覆盖质心」，等于把原基线扔掉；新路径**只追加**一条场景模板，原质心与其余场景样本保留；设备类型写入 `scenario_device` |
 | 6 | 文档口径与部署警示 | `deploy/README.md`、`docs/README.md`、`docs/requirements/README.md`、`docs/plans/2026-10-31-gap-remediation-plan.md` | 补 `ALLOW_BOOTSTRAP_PASSWORD` 危险开关说明；修 3 处过期口径；计划页 R0–R6 状态表刷新到当前事实 |
+| 7 | 一次改名只做一件事（第二轮补做） | `RelabelRequest.learn / rename_identity / bind_person`、`VoiceConfirmationDialog`、`client.relabel` | 三个效果各自可关：关 `learn` 不评估冲突、不写模板；关 `rename_identity` 不动声纹库名字、不新建身份；关 `bind_person` 不写参会人绑定。审计 payload 增加 `effects` 分别落账。默认仍全开，行为不变。冲突弹窗新增「只改本场显示名」一键走纯改标签路径 |
 
-新增回归用例：`tests/test_repair_template_slots.py`（4 项）、`tests/test_voiceprint_merge_bulk.py`（5 项）、`tests/test_voiceprint_reenroll.py`（3 项）。
+新增回归用例：`tests/test_repair_template_slots.py`（4 项）、`tests/test_voiceprint_merge_bulk.py`（5 项）、`tests/test_voiceprint_reenroll.py`（3 项）、`tests/test_relabel_scopes.py`（3 项）。
 
 ## 2 验证
 
 | 项 | 命令 | 结果 |
 |---|---|---|
 | 后端静态检查 | `ruff check src/imeeting tests scripts/repair_template_slots.py` | All checks passed |
-| 新增用例 | `pytest tests/test_repair_template_slots.py tests/test_voiceprint_merge_bulk.py tests/test_voiceprint_reenroll.py` | 12 passed |
+| 新增用例 | `pytest tests/test_repair_template_slots.py tests/test_voiceprint_merge_bulk.py tests/test_voiceprint_reenroll.py tests/test_relabel_scopes.py` | 15 passed |
 | 既有声纹接口 | `pytest tests/test_voiceprints_api.py` | 26 passed |
-| 全量后端 | `pytest tests -q` | **778 passed, 0 failed**（9 分 01 秒；改造前 766 项） |
+| 全量后端 | `pytest tests -q` | **781 passed, 0 failed**（9 分 45 秒；改造前 766 项） |
 | 脚本试运行 | `python scripts/repair_template_slots.py --db data/meeting.db` | `OK: 16 条模板均在 0..4 槽位范围内`（实库无越界数据） |
 | 前端类型 | `npm run typecheck` | 通过 |
 | 前端单测 | `npm test` | 101 passed（13 文件） |
@@ -38,7 +39,7 @@
 
 ### 3.1 需要产品决策，不能由实现方单方面改
 
-1. **一次确认只做一件事**：现在「确认说话人」一次点击同时写模板、改全局显示名、绑人员。拆分需要先定义三个动作各自的产品语义（改名 = 纠正叫错，还是另建一个人），并同步改前端交互与 172 项既有用例。已部分缓解：`voiceprints.py` 中「全局已命名身份被误匹配时不就地改名、改为按本场质心新建身份」的保护已存在。
+1. **一次确认只做一件事**（本轮已拆开机械部分，语义仍待决策）：`RelabelRequest` 现在有 `learn` / `rename_identity` / `bind_person` 三个开关，关掉任一项都不会产生对应副作用，审计里分别记账；冲突弹窗也给了「只改本场显示名」入口。**仍未定的**是默认语义本身：用户输入一个名字时，系统该默认「纠正叫错」（现在就是这样，会改全局身份名）还是「这是另一个人」（新建身份），这决定了三个开关的默认值，需要产品拍板。
 2. **允许一人多 speaker_key**：需要放宽 `UNIQUE(meeting_id, person_id)`（`models.py`）。SQLite 的 UNIQUE 约束无法就地删除，必须重建表并迁移历史数据；且多处按 `(meeting_id, person_id)` 取单行的代码要逐个改为按 `speaker_key`。属于数据结构变更，须单独排期与备份演练。
 3. **自动建档的最小证据门槛**（≥3 段且 ≥3 秒）：会改变实时转写链路的建号时机（`engine/streaming.py`、`engine/speaker.py`），可能让正常单人会议延迟出现姓名。需要先定「延迟可见」还是「事后清理」的口径。
 
