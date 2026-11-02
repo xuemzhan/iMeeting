@@ -169,11 +169,12 @@ def _migrate_schema() -> None:
                 # 给出可执行的自救路径，避免运维只看到一句「整理后重新启动」。
                 raise RuntimeError(
                     f"发现 {over} 条旧声纹模板的 slot > 4（超出五槽范围），拒绝启动。"
-                    "处理步骤：1) 备份 data/meeting.db；"
-                    "2) 执行 UPDATE voiceprint_template SET slot = slot % 5 WHERE slot > 4;"
+                    "处理步骤：1) 用 deploy/backup_sqlite.sh 备份 data/meeting.db；"
+                    "2) 在 backend/ 执行 python scripts/repair_template_slots.py "
+                    "--db data/meeting.db（默认 dry-run；确认后加 --apply，按"
+                    "主模板→已确认→质量重新分配 0..4 槽并退役多余模板）；"
                     "3) 复查 SELECT voiceprint_id, COUNT(*) FROM voiceprint_template "
-                    "GROUP BY voiceprint_id HAVING COUNT(*) > 5; 并按需删除多余模板；"
-                    "4) 重新启动。"
+                    "GROUP BY voiceprint_id HAVING COUNT(*) > 5; 4) 重新启动。"
                 )
             for action, suffix in (("INSERT", "insert"), ("UPDATE OF slot", "update")):
                 conn.execute(text(f"CREATE TRIGGER IF NOT EXISTS template_slot_{suffix} BEFORE {action} ON voiceprint_template WHEN NEW.slot > 4 BEGIN SELECT RAISE(ABORT, 'template slot must be <= 4'); END"))
