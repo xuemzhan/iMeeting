@@ -220,6 +220,8 @@ export interface ApiSegment {
   end_ms: number
   speaker: string | null
   speaker_key?: string | null
+  /** 解绑/改绑后保留的原标注；为空表示从未解绑过。 */
+  speaker_previous?: string
   speaker_score?: number
   speaker_source?: string
   speaker_low_confidence?: boolean

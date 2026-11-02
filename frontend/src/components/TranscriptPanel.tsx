@@ -162,6 +162,15 @@ export function TranscriptPanel({
                     {speakerLabel(paragraph.speaker)}
                   </button>
                 )}
+                {paragraph.speaker && paragraph.items[0]?.speaker_previous ? (
+                  <span
+                    className="chip mb-0.5 ml-1.5 inline-block align-middle"
+                    style={{ height: 18, background: 'var(--bg-subtle)', color: 'var(--text-tertiary)' }}
+                    title="该说话人已解绑或改绑；这里保留解绑前的标注，便于回溯"
+                  >
+                    原标注 {paragraph.items[0].speaker_previous}
+                  </span>
+                ) : null}
                 {importance === 1 && (
                   <span
                     className="chip mb-0.5 ml-1.5 inline-block align-middle"
