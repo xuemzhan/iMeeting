@@ -650,6 +650,16 @@ export const voiceprintApi = {
         // 取消是用户选择，不是故障；挂 cause 便于日志追溯到那次 409。
         throw new Error('已取消声纹确认，原说话人保持不变', { cause: error })
       }
+      if (choice.decision === 'label_only') {
+        // 只改本场显示名：不写模板、不改声纹库名、不绑人员（后端三个开关同时关）。
+        // 用户只是「名字写错了」时，不应该顺手改掉一个已经确认过的声纹身份。
+        const result = await request<Result>('/api/v1/voiceprints/relabel', {
+          method: 'POST',
+          body: JSON.stringify({ ...body, learn: false, rename_identity: false, bind_person: false }),
+        })
+        window.dispatchEvent(new CustomEvent('imeeting-participants-changed', { detail: meetingId }))
+        return result
+      }
       const result = await request<Result>('/api/v1/voiceprints/relabel', { method: 'POST', body: JSON.stringify({ ...body, ...choice, conflict_id: confirmation.assessment.conflict_id }) })
       window.dispatchEvent(new CustomEvent('imeeting-participants-changed', { detail: meetingId }))
       return result

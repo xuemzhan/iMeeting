@@ -85,7 +85,7 @@ export function VoiceConfirmationDialog() {
           与本人历史声纹：{score(assessment.self_score)}。
           {assessment.other && <>与 {assessment.other.name}：{score(assessment.other.score)}。</>}
         </p>
-        <p className="text-sm text-secondary">确认后才会更新声纹与转写；取消会保留原来的说话人。</p>
+        <p className="text-sm text-secondary">确认后才会更新声纹与转写；取消会保留原来的说话人；只想改本场显示名而不动声纹库时，用「只改本场显示名」。</p>
         {item.segment_id && <a className="text-sm underline" target="_blank" rel="noreferrer"
           href={`/history/${item.meeting_id}?t=${(item.start_ms ?? 0) / 1000}#${encodeURIComponent(item.segment_id)}`}>查看来源片段{item.start_ms != null ? `（${Math.floor(item.start_ms / 1000)}秒）` : ''}</a>}
         {item.requires_slot && <label className="block text-sm">已保存五条声纹，请选择替换项
@@ -111,6 +111,7 @@ export function VoiceConfirmationDialog() {
           <button className="btn btn-ghost" onClick={() => finish({ decision: 'cancel' })}>取消</button>
           <button className="btn btn-ghost" disabled={!target || !targetReady || (targetTemplates.length >= 5 && targetSlot === '')} onClick={() => finish({ decision: 'reassign', target_voiceprint_id: Number(target), ...(targetSlot !== '' ? { slot: Number(targetSlot) } : {}) })}>改为选中的人</button>
           <button className="btn btn-primary" disabled={item.requires_slot && slot === ''} onClick={() => finish({ decision: 'confirm_self', ...(slot !== '' ? { slot: Number(slot) } : {}) })}>确认为本人</button>
+          <button className="btn btn-ghost" onClick={() => finish({ decision: 'label_only' })}>只改本场显示名</button>
         </div>
       </div>
     </div>

@@ -13,7 +13,11 @@ export interface VoiceConfirmation {
 }
 
 export interface VoiceChoice {
-  decision: 'confirm_self' | 'reassign' | 'cancel'
+  /**
+   * - `confirm_self` / `reassign` / `cancel`：按声纹协议裁决
+   * - `label_only`：这次只改本场显示名，不写模板、不改声纹库名、不绑人员
+   */
+  decision: 'confirm_self' | 'reassign' | 'cancel' | 'label_only'
   target_voiceprint_id?: number
   slot?: number
 }
