@@ -1,8 +1,12 @@
 import { useCallback, useState } from 'react'
-import { ChevronDown, ChevronRight, Layers } from 'lucide-react'
+import { ChevronDown, ChevronRight, Layers, Loader2, Mic } from 'lucide-react'
 
 import { voiceprintApi } from '../api/client'
 import type { VoiceprintTemplateItem, VoiceprintTemplateList } from '../api/types'
+
+import { recordWav } from '../audio/recordWav'
+import { RECORD_SECONDS } from '../lib/voiceprintTexts'
+import { useSession } from '../store/session'
 
 const SCENARIO_LABELS: Record<string, string> = {
   local_mic: '本机麦',
@@ -40,6 +44,13 @@ export function VoiceprintTemplateSummary({ voiceprintId }: { voiceprintId: numb
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const [enrolling, setEnrolling] = useState(false)
+  const [device, setDevice] = useState('headset')
+  const [recording, setRecording] = useState(false)
+  const [enrollNotice, setEnrollNotice] = useState<string | null>(null)
+  const [enrollError, setEnrollError] = useState<string | null>(null)
+  const activeDeviceId = useSession((state) => state.activeDeviceId)
+
   const load = useCallback(async () => {
     setLoading(true)
     try {
@@ -73,6 +84,28 @@ export function VoiceprintTemplateSummary({ voiceprintId }: { voiceprintId: numb
       await load()
     } catch (err) {
       setError(err instanceof Error ? err.message : '合并模板失败')
+    }
+  }
+
+  /** 换设备/换房间重新注册：只追加一条场景模板，不覆盖原质心。 */
+  const reenroll = async () => {
+    setEnrollError(null)
+    setEnrollNotice(null)
+    setRecording(true)
+    try {
+      const { blob, ms } = await recordWav(RECORD_SECONDS, {
+        deviceId: activeDeviceId ?? undefined,
+      })
+      const result = await voiceprintApi.enrollSample(voiceprintId, blob, device)
+      setEnrollNotice(
+        `已追加模板 ${result.slot + 1}（${(ms / 1000).toFixed(1)} 秒，${device === 'phone' ? '手机' : device === 'room_array' ? '会议麦' : device === 'local_mic' ? '本机麦' : '耳机'}）`,
+      )
+      setEnrolling(false)
+      await load()
+    } catch (err) {
+      setEnrollError(err instanceof Error ? err.message : '重新注册失败')
+    } finally {
+      setRecording(false)
     }
   }
 
@@ -169,6 +202,63 @@ export function VoiceprintTemplateSummary({ voiceprintId }: { voiceprintId: numb
               )}
             </div>
           ))}
+
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-micro">
+            <button
+              type="button"
+              className="underline"
+              style={{ color: 'var(--text-tertiary)' }}
+              onClick={() => setEnrolling((value) => !value)}
+            >
+              {enrolling ? '收起重新注册' : '换设备重新注册'}
+            </button>
+            {enrolling && (
+              <>
+                <select
+                  value={device}
+                  onChange={(event) => setDevice(event.target.value)}
+                  aria-label="录音设备类型"
+                  className="rounded px-1 py-0.5 text-micro"
+                  style={{
+                    background: 'var(--bg-surface)',
+                    color: 'var(--text-primary)',
+                    border: '1px solid var(--border-default)',
+                  }}
+                >
+                  <option value="headset">耳机</option>
+                  <option value="phone">手机</option>
+                  <option value="room_array">会议麦</option>
+                  <option value="local_mic">本机麦</option>
+                </select>
+                <button
+                  type="button"
+                  className="btn btn-ghost text-micro"
+                  disabled={recording}
+                  onClick={() => void reenroll()}
+                >
+                  {recording ? (
+                    <>
+                      <Loader2 size={11} className="animate-spin" /> 录音中…
+                    </>
+                  ) : (
+                    <>
+                      <Mic size={11} /> 录 {RECORD_SECONDS} 秒
+                    </>
+                  )}
+                </button>
+              </>
+            )}
+          </div>
+          {enrollNotice && (
+            <p className="mt-1 text-micro" style={{ color: 'var(--accent-text)' }}>
+              {enrollNotice}
+            </p>
+          )}
+          {enrollError && (
+            <p className="mt-1 text-micro" style={{ color: 'var(--danger-text)' }}>
+              {enrollError}
+            </p>
+          )}
         </div>
       )}
     </li>

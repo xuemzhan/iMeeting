@@ -20,6 +20,7 @@ import { MindMapPanel } from '../components/MindMapPanel'
 import { MinutesSidebar } from '../components/MinutesSidebar'
 import { MinutesVersionsDialog } from '../components/MinutesVersionsDialog'
 import { ParticipantsPanel } from '../components/ParticipantsPanel'
+import { TemplateRebuildStatus } from '../components/TemplateRebuildStatus'
 import { ReviewPanel } from '../components/ReviewPanel'
 import { SegmentEditDialog } from '../components/SegmentEditDialog'
 import { ShareDialog } from '../components/ShareDialog'
@@ -227,6 +228,7 @@ export default function MeetingDetail() {
             className="mt-3"
           >
             <ParticipantsPanel meetingId={meetingId} />
+            <TemplateRebuildStatus meetingId={meetingId} />
           </div>
 
           <div

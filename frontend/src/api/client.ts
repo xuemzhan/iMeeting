@@ -31,6 +31,8 @@ import type {
   PersonSearchItem,
   VoiceprintConflictItem,
   VoiceprintTemplateList,
+  TemplateRebuildState,
+  MergeSuggestionApplyResult,
 } from './types'
 
 import { askVoiceConfirmation, type VoiceConfirmation } from '../lib/voiceConfirmation'
@@ -774,6 +776,51 @@ export const voiceprintApi = {
       `/api/v1/voiceprints/conflicts/${conflictId}/decide`,
       { method: 'POST', body: JSON.stringify({ action, ...extra }) },
     ),
+
+  /** 会后模板重建（R6）：独立任务，接口立即返回，进度查 rebuildStatus。 */
+  rebuildTemplates: (meetingId: number) =>
+    request<{ meeting_id: number; queued?: boolean; stage?: string }>(
+      `/api/v1/voiceprints/templates/rebuild?meeting_id=${meetingId}`,
+      { method: 'POST' },
+    ),
+
+  /** 某场会议的模板重建进度；从未重建过时 stage = idle。 */
+  rebuildStatus: (meetingId: number) =>
+    request<TemplateRebuildState>(
+      `/api/v1/voiceprints/templates/rebuild-status?meeting_id=${meetingId}`,
+    ),
+
+  /**
+   * 全库近邻合并：默认 dry_run 只出计划。
+   * 默认不合并两个已命名身份（include_named=false），避免只凭相似度就删除身份。
+   */
+  applyMergeSuggestions: (payload: {
+    threshold?: number
+    limit?: number
+    dry_run?: boolean
+    include_named?: boolean
+    meeting_id?: number | null
+  }) =>
+    request<MergeSuggestionApplyResult>(
+      '/api/v1/voiceprints/merge-suggestions/apply',
+      { method: 'POST', body: JSON.stringify(payload) },
+    ),
+
+  /**
+   * 跨设备重新注册：给已有声纹**追加**一条场景模板。
+   * 与 `create`（同名覆盖质心）不同，原基线与其他场景样本都会保留。
+   */
+  enrollSample: (id: number, blob: Blob, device?: string) => {
+    const form = new FormData()
+    form.append('file', blob, 'sample.wav')
+    if (device) form.append('device', device)
+    return request<{
+      voiceprint_id: number
+      template_id: number
+      slot: number
+      sample_ms: number
+    }>(`/api/v1/voiceprints/${id}/enroll`, { method: 'POST', body: form })
+  },
 }
 
 // ---------------------------------------------------------------------------

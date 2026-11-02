@@ -6,6 +6,7 @@ import { VoiceprintEnroll } from '../components/VoiceprintEnroll'
 import { VoiceprintAdminRow } from '../components/VoiceprintAdminRow'
 import { useVoiceprintAdmin } from '../hooks/useVoiceprintAdmin'
 import { VoiceprintConflictList } from '../components/VoiceprintConflictList'
+import { VoiceprintMergePanel } from '../components/VoiceprintMergePanel'
 import { VoiceprintTemplateSummary } from '../components/VoiceprintTemplateSummary'
 
 /**
@@ -98,32 +99,7 @@ export default function Voiceprints() {
           </section>
 
           {suggestions.length > 0 && (
-            <section className="panel mb-5 p-3">
-              <h2 className="mb-2 text-ui font-medium" style={{ color: 'var(--text-secondary)' }}>
-                可能重复的声纹
-              </h2>
-              <div className="space-y-1.5">
-                {suggestions.slice(0, 8).map((item) => (
-                  <div
-                    key={`${item.source.id}-${item.target.id}`}
-                    className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-meta"
-                    style={{ background: 'var(--bg-subtle)' }}
-                  >
-                    <span className="min-w-0 flex-1 truncate">
-                      {item.source.name} → {item.target.name}
-                    </span>
-                    <span className="text-tertiary">{Math.round(item.score * 100)}%</span>
-                    <button
-                      type="button"
-                      onClick={() => void merge(item.source, item.target.id)}
-                      className="btn btn-ghost text-micro"
-                    >
-                      合并
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </section>
+            <VoiceprintMergePanel suggestions={suggestions} onMerge={merge} onReload={load} />
           )}
 
           <VoiceprintConflictList prints={prints} onChanged={load} />

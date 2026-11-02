@@ -580,3 +580,59 @@ export interface VoiceprintConflictItem {
   segment_id: string | null
   created_at: string | null
 }
+
+
+// ---------------------------------------------------------------------------
+// 会后模板重建进度（R6）与全库近邻合并的执行结果
+// ---------------------------------------------------------------------------
+
+export type TemplateRebuildStage =
+  | 'idle'
+  | 'scanning'
+  | 'extracting'
+  | 'storing'
+  | 'done'
+  | 'failed'
+  | 'skipped'
+
+export interface TemplateRebuildState {
+  meeting_id: number
+  job_id: number | null
+  stage: TemplateRebuildStage
+  speakers_total: number
+  speakers_done: number
+  samples_done: number
+  samples_cached: number
+  samples_extracted: number
+  templates_created: number
+  templates_updated: number
+  note: string
+  last_error: string
+  started_at: string | null
+  finished_at: string | null
+  updated_at: string | null
+  /** 取样嵌入命中缓存的占比；没有取样时为 null。 */
+  cache_hit_rate: number | null
+}
+
+export interface MergeSuggestionPlanItem {
+  score: number
+  source: Voiceprint
+  target: Voiceprint
+}
+
+export interface MergeSuggestionApplyResult {
+  dry_run: boolean
+  threshold: number
+  candidates: number
+  plan: MergeSuggestionPlanItem[]
+  applied: {
+    source_id: number
+    source_name: string
+    target_id: number
+    target_name: string
+    score: number
+    updated_segments: number
+  }[]
+  failed: { source_id: number; target_id: number; detail: unknown }[]
+}
