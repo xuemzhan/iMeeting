@@ -54,6 +54,10 @@ jobs:
         run: npm run lint
       - name: Test
         run: npm test
+      - name: Coverage ratchet (fails only when coverage drops)
+        run: |
+          npm run test:coverage
+          npm run coverage:check
       - name: Typecheck
         run: npm run typecheck
       - name: Build

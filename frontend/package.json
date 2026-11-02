@@ -11,6 +11,8 @@
     "typecheck": "tsc -b --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "coverage:check": "node scripts/coverage-ratchet.mjs",
+    "coverage:baseline": "node scripts/coverage-ratchet.mjs --update",
     "e2e": "playwright test",
     "verify:features": "node scripts/verify-features.mjs",
     "verify:responsive": "node scripts/responsive-probe.mjs --strict --paths /,/login,/history,/knowledge,/voiceprints",
