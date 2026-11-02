@@ -32,6 +32,7 @@ export function TemplateRebuildStatus({ meetingId }: { meetingId: number }) {
   const [state, setState] = useState<TemplateRebuildState | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [notice, setNotice] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -76,9 +77,15 @@ export function TemplateRebuildStatus({ meetingId }: { meetingId: number }) {
   const rebuild = async () => {
     setBusy(true)
     setError(null)
+    setNotice(null)
     try {
-      await voiceprintApi.rebuildTemplates(meetingId)
+      const result = await voiceprintApi.rebuildTemplates(meetingId)
       await load()
+      if (result.noise_disabled) {
+        setNotice(
+          `另停用了 ${result.noise_disabled} 个证据不足的自动声纹（停用可恢复，见声纹管理）`,
+        )
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : '触发重建失败')
     } finally {
@@ -135,6 +142,11 @@ export function TemplateRebuildStatus({ meetingId }: { meetingId: number }) {
         {state?.last_error && (
           <p className="mt-1 text-micro" style={{ color: 'var(--danger-text)' }}>
             {state.last_error}
+          </p>
+        )}
+        {notice && (
+          <p className="mt-1 text-micro" style={{ color: 'var(--accent-text)' }}>
+            {notice}
           </p>
         )}
         {error && (

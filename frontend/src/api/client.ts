@@ -789,7 +789,7 @@ export const voiceprintApi = {
 
   /** 会后模板重建（R6）：独立任务，接口立即返回，进度查 rebuildStatus。 */
   rebuildTemplates: (meetingId: number) =>
-    request<{ meeting_id: number; queued?: boolean; stage?: string }>(
+    request<{ meeting_id: number; queued?: boolean; stage?: string; noise_disabled?: number }>(
       `/api/v1/voiceprints/templates/rebuild?meeting_id=${meetingId}`,
       { method: 'POST' },
     ),
