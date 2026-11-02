@@ -154,3 +154,13 @@ readiness 告警使用 blackbox exporter 的 `probe_success{job="imeeting-ready"
 - 管理员首次登录必须修改初始密码，修改前无法访问业务页面；
 - `deploy/production.env` 不要提交到 Git；
 - `/metrics` 未通过 Nginx 暴露，监控系统应通过内网采集。
+
+### 危险开关：`ALLOW_BOOTSTRAP_PASSWORD`
+
+`ALLOW_BOOTSTRAP_PASSWORD=1` 会让 `POST /api/v1/auth/bootstrap` 在启动响应中**回传管理员初始口令**，
+仅供内网单机演示。`APP_ENV=production` 或 `REQUIRE_AUTH=1` 时它默认不生效；一旦显式打开，
+初始口令会出现在浏览器响应和可能的访问日志里。
+
+- 生产环境**永远不要**设置该变量；那等于把管理员口令交给任何能访问 bootstrap 接口的人；
+- 演示临时打开后，务必在同一轮演示结束时删掉该行并重启 backend；
+- 上线前用 `grep -n ALLOW_BOOTSTRAP_PASSWORD deploy/production.env` 确认没有残留。
