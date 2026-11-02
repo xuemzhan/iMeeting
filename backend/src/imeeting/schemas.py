@@ -152,6 +152,8 @@ class SegmentOut(BaseModel):
     speaker_key: str | None = None
     speaker_score: float = 0.0
     speaker_source: str = ""
+    #: 解绑后保留的原标注；为空表示从未解绑过。
+    speaker_previous: str = ""
     #: 由后端统一按“全局阈值 / 短片段阈值”计算，前端不再各自硬编码。
     speaker_low_confidence: bool = False
     asr_source: str = ""

@@ -97,6 +97,9 @@ class Segment(SQLModel, table=True):
     speaker_key: Optional[str] = Field(default=None, max_length=32, index=True)
     speaker_score: float = Field(default=0.0)
     speaker_source: str = Field(default="", max_length=32)
+    #: 解绑/改绑时保留的原标注（例如「郭睿」）。只做追溯与展示，
+    #: 判定仍以 ``speaker`` / ``speaker_source`` 为准。
+    speaker_previous: str = Field(default="", max_length=32)
     #: 逐段诊断：offline / streaming_fallback / echo
     asr_source: str = Field(default="", max_length=32)
     asr_error: Optional[str] = Field(default=None, max_length=1000)

@@ -277,6 +277,56 @@ def test_reverse_order_rebind_frees_unique_key_before_assignment():
         assert participants[second["person_id"]]["speaker_key"] is None
 
 
+def test_rebinding_keeps_the_previous_speaker_label():
+    """解绑/改绑只改当前标注，原标注必须留在 speaker_previous。
+
+    审查第 5 节第 3 条：旧实现把旧 key 的片段就地写成「未确认说话人」，
+    原标注（「郭睿」）从此不存在于任何地方，反复改标定会把文本证据抹干净。
+    """
+    owner, _ = setup_pair()
+    meeting_id = meeting_with_intro(owner)
+    with Session(engine) as db:
+        person = persons.add_manual_participant(db, meeting_id=meeting_id, name="郭睿", speaker_key="spk-keep")
+        db.commit()
+        for seg in db.exec(select(Segment).where(Segment.meeting_id == meeting_id)).all():
+            seg.speaker_key = "spk-keep"
+            seg.speaker = "郭睿"
+            db.add(seg)
+        db.commit()
+
+        persons.bind_speaker(db, meeting_id=meeting_id, person_id=person["person_id"], speaker_key=None)
+        db.commit()
+
+        segments = db.exec(select(Segment).where(Segment.meeting_id == meeting_id)).all()
+        assert segments
+        for seg in segments:
+            assert seg.speaker == "未确认说话人"
+            assert seg.speaker_source == "unknown"
+            assert seg.speaker_previous == "郭睿", "原标注必须保留，不能被抹掉"
+
+
+
+def test_speaker_previous_migration_round_trip(tmp_path):
+    """新增列必须能在老库上补上、也能降级掉，且默认值为空串。"""
+    migration_root = Path(__file__).resolve().parents[1] / "migrations/versions"
+    isolated = create_engine(f"sqlite:///{(tmp_path / 'previous.db').as_posix()}")
+    with isolated.begin() as conn:
+        conn.execute(sa.text("CREATE TABLE segment (id INTEGER PRIMARY KEY, meeting_id INTEGER)"))
+        spec = importlib.util.spec_from_file_location(
+            "segment_speaker_previous", migration_root / "20261102_01_segment_speaker_previous.py"
+        )
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with Operations.context(MigrationContext.configure(conn)):
+            module.upgrade()
+        assert "speaker_previous" in {column["name"] for column in sa.inspect(conn).get_columns("segment")}
+        conn.execute(sa.text("INSERT INTO segment(meeting_id) VALUES (1)"))
+        assert conn.execute(sa.text("SELECT speaker_previous FROM segment")).scalar() == ""
+        with Operations.context(MigrationContext.configure(conn)):
+            module.downgrade()
+        assert "speaker_previous" not in {column["name"] for column in sa.inspect(conn).get_columns("segment")}
+    isolated.dispose()
+
 def test_matching_respects_callers_stricter_threshold():
     owner, _ = setup_pair()
     voice_id = make_voiceprint(owner)

@@ -704,6 +704,8 @@ def bind_speaker(
     old_key = row.speaker_key
     if old_key and old_key != speaker_key:
         for seg in db.exec(select(Segment).where(Segment.meeting_id == meeting_id, Segment.speaker_key == old_key)).all():
+            # 只做标注：把原标注留在 speaker_previous，改绑/解绑不再抹掉文本证据。
+            seg.speaker_previous = (seg.speaker or "")[:32]
             seg.speaker = "未确认说话人"
             seg.speaker_source = "unknown"
             seg.speaker_score = 0.0

@@ -300,6 +300,7 @@ def _migrate_schema() -> None:
             for name, ddl in (
                 ("speaker_score", "FLOAT DEFAULT 0"),
                 ("speaker_source", "VARCHAR(32) DEFAULT ''"),
+                ("speaker_previous", "VARCHAR(32) DEFAULT ''"),
                 ("asr_source", "VARCHAR(32) DEFAULT ''"),
                 ("asr_error", "VARCHAR(1000)"),
                 ("finalize_reason", "VARCHAR(32) DEFAULT ''"),
