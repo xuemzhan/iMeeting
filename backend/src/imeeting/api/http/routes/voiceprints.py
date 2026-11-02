@@ -130,23 +130,8 @@ def list_voiceprints(
     return [_out(r) for r in rows if user.role == "admin" or identity_owner(db, r) == user.id]
 
 
-@router.get("/merge-suggestions")
-def merge_suggestions(
-    meeting_id: int | None = None,
-    threshold: float = 0.62,
-    user: User = Depends(get_current_user_or_anonymous),
-    db: Session = Depends(get_session),
-):
-    """返回可能属于同一人的声纹对，供人工确认后合并。"""
-    rows = db.exec(select(Voiceprint).where(Voiceprint.disabled == False)).all()  # noqa: E712
-    rows = [r for r in rows if user.role == "admin" or identity_owner(db, r) == user.id]
-    if meeting_id is not None:
-        owned_meeting(meeting_id, user, db)
-        rows = [
-            row
-            for row in rows
-            if row.meeting_id in (None, meeting_id) or not row.provisional
-        ]
+def _suggestion_pairs(rows: list[Voiceprint], threshold: float) -> list[dict]:
+    """按余弦相似度给出「可能同一人」的声纹对（只计算，不写库）。"""
     vectors = []
     for row in rows:
         vec = np.frombuffer(row.embedding, dtype=np.float32)
@@ -169,6 +154,26 @@ def merge_suggestions(
                     }
                 )
     return sorted(out, key=lambda item: item["score"], reverse=True)[:100]
+
+
+@router.get("/merge-suggestions")
+def merge_suggestions(
+    meeting_id: int | None = None,
+    threshold: float = 0.62,
+    user: User = Depends(get_current_user_or_anonymous),
+    db: Session = Depends(get_session),
+):
+    """返回可能属于同一人的声纹对，供人工确认后合并。"""
+    rows = db.exec(select(Voiceprint).where(Voiceprint.disabled == False)).all()  # noqa: E712
+    rows = [r for r in rows if user.role == "admin" or identity_owner(db, r) == user.id]
+    if meeting_id is not None:
+        owned_meeting(meeting_id, user, db)
+        rows = [
+            row
+            for row in rows
+            if row.meeting_id in (None, meeting_id) or not row.provisional
+        ]
+    return _suggestion_pairs(rows, threshold)
 
 
 @router.post("/rebuild-identity", response_model=VoiceprintOut)
@@ -645,14 +650,8 @@ def relabel_speaker(
     )
 
 
-@router.post("/{source_id}/merge/{target_id}", response_model=RelabelResponse)
-def merge_voiceprints(
-    source_id: int,
-    target_id: int,
-    user: User = Depends(get_current_user_or_anonymous),
-    db: Session = Depends(get_session),
-):
-    """把一条声纹合并进另一条。
+def _merge_pair(db: Session, user: User, source_id: int, target_id: int) -> RelabelResponse:
+    """把 source 合并进 target：接口与批量执行共用同一份口径。
 
     真实场景：同一个人的话被聚类拆成了「说话人 2 / 说话人 3 / 说话人 4」，
     用户想把它们并成一个。光靠「改名」做不到——目标名字已存在会冲突；
@@ -710,13 +709,33 @@ def merge_voiceprints(
     if scoped_meeting is not None:
         try:
             from ....engine import streaming
-
             streaming.rename_active_speaker(scoped_meeting, from_label, to_name)
         except Exception:
             logger.exception("通知活跃会话合并失败 meeting=%s", scoped_meeting)
     return RelabelResponse(
         renamed_voiceprint=True, updated_segments=len(segs), name=to_name
     )
+
+
+@router.post("/{source_id}/merge/{target_id}", response_model=RelabelResponse)
+def merge_voiceprints(
+    source_id: int,
+    target_id: int,
+    user: User = Depends(get_current_user_or_anonymous),
+    db: Session = Depends(get_session),
+):
+    """把一条声纹合并进另一条。
+
+    真实场景：同一个人的话被聚类拆成了「说话人 2 / 说话人 3 / 说话人 4」，
+    用户想把它们并成一个。光靠「改名」做不到——目标名字已存在会冲突；
+    所以需要这个显式的合并操作：把 source 名下的转写片段全部改挂到
+    target 名下，再删掉 source。
+
+    合并后的向量取 target 的（不重新求平均）：平均两个可能来自不同
+    录音条件的向量，未必比 target 本身更可靠，而 target 通常是用户
+    已经确认过的那一个。
+    """
+    return _merge_pair(db, user, source_id, target_id)
 
 
 @router.patch("/{voiceprint_id}", response_model=VoiceprintOut)
@@ -822,3 +841,191 @@ def delete_voiceprint(
     from ....engine import voice_match
     voice_match.invalidate_cache()
     return None
+
+
+class MergeSuggestionsApply(BaseModel):
+    """「全库近邻合并」的执行参数。
+
+    ``dry_run`` 默认 True：先出计划再动手。``include_named`` 默认 False，
+    即只允许把「待命名」并进更完整的一条，不自动合并两个已命名身份 ——
+    自动合并是破坏性操作（source 会被删除），不能只凭相似度。
+    """
+
+    threshold: float = 0.92
+    limit: int = 20
+    dry_run: bool = True
+    include_named: bool = False
+    meeting_id: int | None = None
+
+
+@router.post("/merge-suggestions/apply")
+def apply_merge_suggestions(
+    payload: MergeSuggestionsApply,
+    user: User = Depends(get_current_user_or_anonymous),
+    db: Session = Depends(get_session),
+):
+    """执行全库近邻合并：每对只并一次，冲突对跳过，逐对留审计。
+
+    ``GET /merge-suggestions`` 只给建议、从不闭环，导致「同一人两条声纹」
+    长期并存。这里补上执行入口，但保留两道闸：默认 dry-run，默认不合并
+    两个已命名身份。
+    """
+    threshold = min(max(float(payload.threshold), 0.5), 0.999)
+    limit = max(1, min(int(payload.limit), 50))
+    rows = db.exec(select(Voiceprint).where(Voiceprint.disabled == False)).all()  # noqa: E712
+    rows = [r for r in rows if user.role == "admin" or identity_owner(db, r) == user.id]
+    if payload.meeting_id is not None:
+        owned_meeting(payload.meeting_id, user, db)
+        rows = [
+            row
+            for row in rows
+            if row.meeting_id in (None, payload.meeting_id) or not row.provisional
+        ]
+    candidates = _suggestion_pairs(rows, threshold)
+
+    used: set[int] = set()
+    plan: list[dict] = []
+    for item in candidates:
+        source, target = item["source"], item["target"]
+        if source["id"] in used or target["id"] in used:
+            continue
+        if not payload.include_named and not (source["provisional"] or target["provisional"]):
+            continue
+        used.update({int(source["id"]), int(target["id"])})
+        plan.append({"score": item["score"], "source": source, "target": target})
+        if len(plan) >= limit:
+            break
+
+    if payload.dry_run:
+        return {
+            "dry_run": True,
+            "threshold": threshold,
+            "candidates": len(candidates),
+            "plan": plan,
+            "applied": [],
+            "failed": [],
+        }
+
+    applied: list[dict] = []
+    failed: list[dict] = []
+    for item in plan:
+        source_id = int(item["source"]["id"])
+        target_id = int(item["target"]["id"])
+        try:
+            result = _merge_pair(db, user, source_id, target_id)
+        except HTTPException as exc:
+            db.rollback()
+            failed.append({"source_id": source_id, "target_id": target_id, "detail": exc.detail})
+            continue
+        applied.append(
+            {
+                "source_id": source_id,
+                "source_name": item["source"]["name"],
+                "target_id": target_id,
+                "target_name": item["target"]["name"],
+                "score": item["score"],
+                "updated_segments": result.updated_segments,
+            }
+        )
+    if applied:
+        db.add(
+            AuditLog(
+                user_id=user.id,
+                username=user.username,
+                action="voiceprint_bulk_merge",
+                target=f"owner:{user.id}",
+                payload=json.dumps({"threshold": threshold, "applied": applied}, ensure_ascii=False),
+            )
+        )
+        db.commit()
+    return {
+        "dry_run": False,
+        "threshold": threshold,
+        "candidates": len(candidates),
+        "plan": plan,
+        "applied": applied,
+        "failed": failed,
+    }
+
+
+@router.post("/{voiceprint_id}/enroll")
+async def enroll_voiceprint_sample(
+    voiceprint_id: int,
+    file: UploadFile = File(...),
+    slot: int | None = Form(None),
+    device: str = Form(""),
+    user: User = Depends(get_current_user_or_anonymous),
+    db: Session = Depends(get_session),
+):
+    """跨设备重新注册：把新环境录的一段音频追加为该人的一条场景模板。
+
+    与 ``POST /voiceprints`` 的关键差别：同名录入会**覆盖质心**，等于用新环境
+    替换旧基线；这里只新增一条模板，原有基线与其他场景样本都保留
+    （REQ-002 FR-5 的「跨设备重新注册向导」就建在这条路径上）。
+    """
+    row = owned_voiceprint(db, voiceprint_id, user, write=True)
+    data = await file.read()
+    if not data:
+        raise HTTPException(status_code=400, detail="没有收到音频数据")
+    pcm, _ = _decode_wav(data)
+    ms = int(len(pcm) / 16000 * 1000)
+    if ms < MIN_MS:
+        raise HTTPException(
+            status_code=400, detail=f"录音太短（{ms}ms），请至少录制 {MIN_MS // 1000} 秒"
+        )
+    if ms > MAX_MS:
+        raise HTTPException(
+            status_code=400, detail=f"录音太长（{ms}ms），请控制在 {MAX_MS // 1000} 秒内"
+        )
+    emb = speaker.extract_embedding(pcm)
+    if emb is None:
+        raise HTTPException(
+            status_code=400,
+            detail="没能提取出声纹特征。请靠近麦克风、正常语速连续说话几秒后重试。",
+        )
+
+    from ....engine import voice_template
+
+    scenario = voice_template.Scenario(device=(device or "").strip()[:16])
+    try:
+        template = voice_template.store_template(
+            db,
+            voiceprint_id=row.id,
+            embedding=np.asarray(emb, dtype=np.float32),
+            scenario=scenario,
+            quality=0.85,
+            sample_ms=ms,
+            confirmed=True,
+            confirmed_by=user.id,
+            preferred_slot=slot,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    db.add(
+        AuditLog(
+            user_id=user.id,
+            username=user.username,
+            action="voiceprint_reenroll",
+            target=f"voiceprint:{row.id}",
+            payload=json.dumps(
+                {
+                    "template_id": template.id,
+                    "slot": template.slot,
+                    "sample_ms": ms,
+                    "device": scenario.device,
+                },
+                ensure_ascii=False,
+            ),
+        )
+    )
+    db.commit()
+    speaker.invalidate_cache()
+    from ....engine import voice_match
+    voice_match.invalidate_cache()
+    return {
+        "voiceprint_id": row.id,
+        "template_id": template.id,
+        "slot": template.slot,
+        "sample_ms": ms,
+    }
