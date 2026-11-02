@@ -33,7 +33,6 @@ def main() -> int:
     torch.set_num_threads(args.ncpu)
 
     import soundfile as sf
-
     from funasr import AutoModel
 
     t0 = time.time()
