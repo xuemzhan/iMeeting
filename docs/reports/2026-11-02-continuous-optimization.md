@@ -20,6 +20,7 @@
 | 7 | 一次改名只做一件事（第二轮补做） | `RelabelRequest.learn / rename_identity / bind_person`、`VoiceConfirmationDialog`、`client.relabel` | 三个效果各自可关：关 `learn` 不评估冲突、不写模板；关 `rename_identity` 不动声纹库名字、不新建身份；关 `bind_person` 不写参会人绑定。审计 payload 增加 `effects` 分别落账。默认仍全开，行为不变。冲突弹窗新增「只改本场显示名」一键走纯改标签路径 |
 | 8 | 解绑不再抹掉原标注（第三轮补做） | `Segment.speaker_previous`、`persons.bind_speaker`、`schemas.SegmentOut`、`TranscriptPanel`、迁移 `20261102_01` | 改绑/解绑时旧 key 的片段仍改为「未确认说话人」，但原标注（如「郭睿」）写进 `speaker_previous` 并在转写里显示「原标注 X」；反复改标定不再销毁文本证据。兼容 DDL 与 Alembic 两条路径都补列 |
 | 9 | 证据不足的自动声纹会后停用（第三轮补做） | `engine/voice_template.disable_noise_identities`、两个 `spk.auto_identity_min_*` 配置、`TemplateRebuildStatus` | 会后重建结束时扫一遍**本场自动生成**的「待命名」声纹：片段数 < 3 **且** 累计语音 < 3 秒就停用（停用可恢复，不删除；人工命名过的、别的会议的都不动）。重建返回值新增 `noise_disabled`，前端给一行提示 |
+| 10 | 前端覆盖率棘轮（第三轮补做） | `frontend/scripts/coverage-ratchet.mjs`、`coverage-baseline.json`、`vitest.config.ts`、`.github/workflows/ci.yml` | 不设绝对阈值（现状 11.5% 行覆盖，一设就长期红），改为**只保证不倒退**：基线 11.5 / 11.13 / 7.94 / 9.64（行/语句/函数/分支），任一项下降超过 0.2 个百分点即失败；`--update` 显式抬高门槛。CI 的 frontend job 增加该步骤 |
 
 新增回归用例：`tests/test_repair_template_slots.py`（4 项）、`tests/test_voiceprint_merge_bulk.py`（5 项）、`tests/test_voiceprint_reenroll.py`（3 项）、`tests/test_relabel_scopes.py`（3 项）、`tests/test_noise_identity_cleanup.py`（2 项）、`tests/test_identity_workflows.py`（+2 项：解绑保留原标注、迁移升降级）。
 
@@ -37,6 +38,7 @@
 | 前端单测 | `npm test` | 101 passed（13 文件） |
 | 前端 lint | `npm run lint` | 0 error，17 warn（与改造前同数，新增文件 0 warn） |
 | 前端构建 | `npm run build` | 通过，`dist` 已产出 |
+| 覆盖率棘轮 | `npm run test:coverage && npm run coverage:check` | 四项指标与基线持平（11.5 / 11.13 / 7.94 / 9.64）；人为把基线抬高 1 个百分点后确实 exit 1（已复原） |
 
 ## 3 仍未完成（本轮明确不做，附原因）
 
@@ -56,7 +58,7 @@
 
 ### 3.3 结构性技术债
 - 迁移仍是 `create_all` + 手写兼容 DDL + Alembic 三处并存，彻底收敛需在 PostgreSQL 上跑通升降级；
-- 前端覆盖率 12% 且无阈值，直接设门禁会让 CI 长期红灯；
+- 前端覆盖率仍只有 11.5%（行）/ 7.94%（函数），**棘轮只能防倒退、不能代替补测**；下一步应优先补 `pages/` 与 `hooks/` 的关键路径再抬基线；后端还没有覆盖率门禁（未引入 `pytest-cov`）；
 - 17 条既有 eslint warn（`set-state-in-effect` 等）需逐处结合业务判断。
 
 ## 4 关联文档
