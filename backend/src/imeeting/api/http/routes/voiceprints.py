@@ -316,6 +316,12 @@ class RelabelRequest(BaseModel):
     conflict_id: int | None = None
     target_voiceprint_id: int | None = None
     slot: int | None = Field(default=None, ge=0, le=4)
+    #: 是否把这段样本写进声纹模板。关掉时只改标签，不评估冲突、不写模板。
+    learn: bool = True
+    #: 是否顺手改掉匹配到的声纹名字。关掉时只改本场转写，不动声纹库。
+    rename_identity: bool = True
+    #: 是否同步人员绑定（会议参会人与人员实体）。
+    bind_person: bool = True
 
 
 class RelabelResponse(BaseModel):
@@ -438,11 +444,13 @@ def relabel_speaker(
         from ....engine.streaming import rename_active_speaker
         rename_active_speaker(payload.meeting_id, payload.from_label, payload.to_name)
         return RelabelResponse(renamed_voiceprint=False, updated_segments=len(segments), name=payload.to_name)
-    from ....application.speaker_confirmation import preflight_relabel
-    chosen_name = preflight_relabel(db, user, payload, scoped_owner, _meeting_speaker_vector)
-    if chosen_name is None:
-        return RelabelResponse(renamed_voiceprint=False, updated_segments=0, name=payload.from_label)
-    payload = payload.model_copy(update={"to_name": chosen_name})
+    if payload.learn:
+        # 只有「要记住这段声音」才走评估/写模板；关掉时纯改标签，不产生冲突、不写模板。
+        from ....application.speaker_confirmation import preflight_relabel
+        chosen_name = preflight_relabel(db, user, payload, scoped_owner, _meeting_speaker_vector)
+        if chosen_name is None:
+            return RelabelResponse(renamed_voiceprint=False, updated_segments=0, name=payload.from_label)
+        payload = payload.model_copy(update={"to_name": chosen_name})
     meeting_id = int(payload.meeting_id)
     from_label = payload.from_label.strip()
     to_name = payload.to_name.strip()
@@ -463,7 +471,8 @@ def relabel_speaker(
             seg.speaker_source = "manual"
             seg.speaker_score = 1.0
             db.add(seg)
-        sync_identity(segs)
+        if payload.bind_person:
+            sync_identity(segs)
         db.add(
             AuditLog(
                 user_id=user.id,
@@ -514,7 +523,7 @@ def relabel_speaker(
             .order_by(Voiceprint.updated_at.desc())
         ).first()
     speaker_key = vp.speaker_key if vp is not None else None
-    if vp is not None:
+    if vp is not None and payload.rename_identity:
         clash = db.exec(
             select(Voiceprint).where(Voiceprint.id.in_(scoped_ids), Voiceprint.name == to_name, Voiceprint.id != vp.id)
         ).first()
@@ -556,7 +565,7 @@ def relabel_speaker(
             vp.updated_at = utcnow()
             db.add(vp)
             renamed = True
-    else:
+    elif payload.rename_identity:
         vector = _meeting_speaker_vector(db, meeting_id, from_label, speaker_key)
         if vector is not None:
             db.add(
@@ -593,7 +602,8 @@ def relabel_speaker(
         s.speaker_source = "manual"
         s.speaker_score = 1.0
         db.add(s)
-    sync_identity(segs)
+    if payload.bind_person:
+        sync_identity(segs)
 
     # 2.1) 迁移「按显示名兜底」的说话人重要程度（历史数据没有 speaker_key 时用）。
     try:
@@ -622,6 +632,12 @@ def relabel_speaker(
                     "voiceprint": vp.id if vp is not None else None,
                     "identity_created": identity_created,
                     "corrected_false_match": corrected_false_match,
+                    # 三个效果分别落账：改名 / 学声纹 / 绑人员。用户可能只想要其中一个。
+                    "effects": {
+                        "renamed": renamed,
+                        "learned": bool(payload.learn),
+                        "bound": bool(payload.bind_person),
+                    },
                 },
                 ensure_ascii=False,
             ),
