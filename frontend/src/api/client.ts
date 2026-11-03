@@ -556,6 +556,15 @@ export const glossaryApi = {
     }),
   remove: (id: number) =>
     request<void>(`/api/v1/glossary/${id}`, { method: 'DELETE' }),
+  /** 导入 CSV。走统一的 request()，失败时能拿到后端的 detail 文案。 */
+  importCsv: (file: File) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    return request<{ imported: number }>('/api/v1/glossary/import', {
+      method: 'POST',
+      body: fd,
+    })
+  },
 }
 
 export const shareApi = {

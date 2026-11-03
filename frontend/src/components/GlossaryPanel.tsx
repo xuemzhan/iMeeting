@@ -10,6 +10,7 @@ export function GlossaryPanel() {
   const [category, setCategory] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
 
   const load = () =>
     glossaryApi
@@ -81,20 +82,24 @@ export function GlossaryPanel() {
                 const file = e.target.files?.[0]
                 e.currentTarget.value = ''
                 if (!file) return
-                const form = new FormData()
-                form.append('file', file)
-                const token = localStorage.getItem('imeeting-token')
-                await fetch('/api/v1/glossary/import', {
-                  method: 'POST',
-                  headers: token ? { Authorization: `Bearer ${token}` } : {},
-                  body: form,
-                })
-                await load()
+                setBusy(true)
+                setError(null)
+                setNotice(null)
+                try {
+                  const { imported } = await glossaryApi.importCsv(file)
+                  await load()
+                  setNotice(`已导入 ${imported} 条词条`)
+                } catch (err) {
+                  setError(err instanceof Error ? err.message : '导入失败')
+                } finally {
+                  setBusy(false)
+                }
               }}
             />
           </label>
         </div>
         {error && <p className="mb-2 text-meta" style={{ color: 'var(--danger-text)' }}>{error}</p>}
+        {notice && <p className="mb-2 text-meta text-tertiary">{notice}</p>}
         <div className="space-y-1">
           {terms.length === 0 && (
             <p className="py-8 text-center text-meta text-tertiary">还没有企业词条</p>

@@ -249,8 +249,12 @@ def bootstrap(db: Session = Depends(get_session)):
     )
     expose_password = using_default and bootstrap_password_exposed()
 
+    # 只有开发形态（连口令都允许回传）才给出库里的真实用户名。生产形态下
+    # 管理员通常已改名，回传它等于把一个有效账号名交给未登录访问者。
     result = AuthBootstrapOut(
-        default_username=admin.username if admin is not None else env_username,
+        default_username=(
+            admin.username if (expose_password and admin is not None) else env_username
+        ),
         default_password=env_password if expose_password else None,
         using_default_password=using_default,
     )

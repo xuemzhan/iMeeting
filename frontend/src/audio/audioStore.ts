@@ -87,3 +87,34 @@ export async function clearMeeting(meetingId: number): Promise<void> {
   const chunks = await listChunks(meetingId)
   await Promise.all(chunks.map((chunk) => deleteChunk(meetingId, chunk.seq)))
 }
+
+/** 本地音频块的最长保留时间；超过即视为上一轮遗留，可安全丢弃。 */
+const MAX_CHUNK_AGE_MS = 24 * 60 * 60 * 1000
+
+/**
+ * 清掉过期的本地音频块。
+ *
+ * 正常情况下每个块都会在服务端 `audio_ack` 后删除；但浏览器被杀、断电、
+ * 或 `close()` 之后 ack 没赶上，就会留下没人认领的块。这里按写入时间兜底，
+ * 避免 IndexedDB 长期只增不减，最终写不进去（`putChunk` 是静默失败）。
+ */
+export async function clearStaleChunks(
+  maxAgeMs: number = MAX_CHUNK_AGE_MS,
+): Promise<void> {
+  const db = await openDb()
+  if (!db) return
+  const cutoff = Date.now() - maxAgeMs
+  await new Promise<void>((resolve) => {
+    const tx = db.transaction(STORE, 'readwrite')
+    const store = tx.objectStore(STORE)
+    const request = store.getAll()
+    request.onsuccess = () => {
+      for (const chunk of request.result as StoredChunk[]) {
+        if (chunk.createdAt < cutoff) store.delete(chunk.key)
+      }
+    }
+    tx.oncomplete = () => resolve()
+    tx.onerror = () => resolve()
+    tx.onabort = () => resolve()
+  })
+}

@@ -14,6 +14,12 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
   test: {
     environment: 'node',
+    // 并行 worker 在部分 Windows + Node 24 组合下会偶发崩掉：没有断言失败，
+    // 整个 run 却以 1（worker exited）甚至 0xC0000409（进程级）退出。
+    // 这里退回 fork 池并关掉文件级并行——22 个文件串行仍在半分钟内，
+    // 换来的是稳定可复现的结果。
+    pool: 'forks',
+    fileParallelism: false,
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
     setupFiles: ['./src/test-setup.ts'],
     coverage: {

@@ -121,6 +121,22 @@ class TestEnrollment:
         )
         assert r.status_code == 400
 
+    def test_oversized_upload_rejected_before_decode(self, client, stub_embedding):
+        """超过上限的音频必须被挡在读入内存之前（413）。
+
+        此前这里是裸 ``await file.read()``：时长检查发生在解码之后，
+        大文件早就整个进内存了。
+        """
+        from imeeting.api.http.routes.voiceprints import MAX_UPLOAD_BYTES
+
+        r = client.post(
+            "/api/v1/voiceprints",
+            data={"name": "张工"},
+            files={"file": ("huge.wav", b"\0" * (MAX_UPLOAD_BYTES + 1), "audio/wav")},
+        )
+        assert r.status_code == 413, r.text
+        assert "过大" in r.json()["detail"]
+
 
 class TestRename:
     def _enroll(self, client, name="说话人 1", provisional=False):

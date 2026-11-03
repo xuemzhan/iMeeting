@@ -32,6 +32,10 @@ router = APIRouter(prefix="/api/v1/voiceprints", tags=["voiceprints"])
 MIN_MS = 1500
 MAX_MS = 15000
 
+# 15 秒 16kHz/16bit 单声道 WAV 约 480KB；给 8 倍余量即可，
+# 目的是在读入内存之前拦住超大文件（时长检查在解码之后，拦不住）。
+MAX_UPLOAD_BYTES = 4 * 1024 * 1024
+
 
 class VoiceprintOut(BaseModel):
     id: int
@@ -256,7 +260,12 @@ async def create_voiceprint(
     if len(name) > 32:
         raise HTTPException(status_code=400, detail="姓名过长（最多 32 字）")
 
-    data = await file.read()
+    data = await file.read(MAX_UPLOAD_BYTES + 1)
+    if len(data) > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"音频文件过大（最多 {MAX_UPLOAD_BYTES // (1024 * 1024)}MB）",
+        )
     if not data:
         raise HTTPException(status_code=400, detail="没有收到音频数据")
 
@@ -980,7 +989,12 @@ async def enroll_voiceprint_sample(
     （REQ-002 FR-5 的「跨设备重新注册向导」就建在这条路径上）。
     """
     row = owned_voiceprint(db, voiceprint_id, user, write=True)
-    data = await file.read()
+    data = await file.read(MAX_UPLOAD_BYTES + 1)
+    if len(data) > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"音频文件过大（最多 {MAX_UPLOAD_BYTES // (1024 * 1024)}MB）",
+        )
     if not data:
         raise HTTPException(status_code=400, detail="没有收到音频数据")
     pcm, _ = _decode_wav(data)

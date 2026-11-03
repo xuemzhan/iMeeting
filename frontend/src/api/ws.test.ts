@@ -8,7 +8,17 @@
  */
 
 import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest'
+import { clearMeeting, deleteChunk } from '../audio/audioStore'
 import { TranscriptSocket } from './ws'
+
+/** 本地音频缓冲换成替身：这里只关心「块有没有被删掉 / 被清掉」。 */
+vi.mock('../audio/audioStore', () => ({
+  putChunk: vi.fn(async () => {}),
+  deleteChunk: vi.fn(async () => {}),
+  listChunks: vi.fn(async () => []),
+  clearMeeting: vi.fn(async () => {}),
+  clearStaleChunks: vi.fn(async () => {}),
+}))
 
 /** 可手动驱动的假 WebSocket，用来精确模拟"连上 → 断开 → 重连"。 */
 class FakeWebSocket {
@@ -198,5 +208,72 @@ describe('TranscriptSocket 重连', () => {
     const second = FakeWebSocket.instances[FakeWebSocket.instances.length - 1]
     second.open()
     expect(second.startPayload()).not.toHaveProperty('meeting_id')
+  })
+})
+
+describe('TranscriptSocket 收尾', () => {
+  /** 用一个「延迟执行」的定时器覆盖 beforeEach 的同步 setTimeout。 */
+  function useDeferredTimers(): Array<() => void> {
+    const pending: Array<() => void> = []
+    vi.stubGlobal('window', {
+      setTimeout: (fn: () => void) => {
+        pending.push(fn)
+        return 0
+      },
+      setInterval: () => 0,
+      clearInterval: () => {},
+      clearTimeout: () => {},
+    })
+    return pending
+  }
+
+  function readySocket(meetingId: number) {
+    const sock = makeSocket()
+    sock.connect({ type: 'start', title: '收尾' })
+    const ws = FakeWebSocket.instances[FakeWebSocket.instances.length - 1]
+    ws.open()
+    ws.serverPush({
+      type: 'ready',
+      meeting_id: meetingId,
+      session_id: 's1',
+      sample_rate: 16000,
+    })
+    return { sock, ws }
+  }
+
+  it('停止之后、连接关闭之前到达的 audio_ack 仍会删掉本地块', () => {
+    const pending = useDeferredTimers()
+    vi.mocked(deleteChunk).mockClear()
+    vi.mocked(clearMeeting).mockClear()
+
+    const { sock, ws } = readySocket(33)
+    sock.close()
+    expect(sock.currentMeetingId).toBeNull()
+
+    // 服务端在关闭前补发 ack：此时 meetingId 已置空，仍必须能找到归属
+    ws.serverPush({ type: 'audio_ack', seq: 7 })
+    expect(deleteChunk).toHaveBeenCalledWith(33, 7)
+
+    // 1.2 秒到：关闭连接并兜底清掉残留块
+    pending.splice(0).forEach((fn) => fn())
+    expect(clearMeeting).toHaveBeenCalledWith(33)
+  })
+
+  it('延迟关闭不会误关之后新建的连接', () => {
+    const pending = useDeferredTimers()
+
+    const { sock, ws: first } = readySocket(55)
+    sock.close()
+
+    // 用户在 1.2 秒内重新开始
+    sock.connect({ type: 'start', title: '下一场' })
+    const second = FakeWebSocket.instances[FakeWebSocket.instances.length - 1]
+    second.open()
+    expect(second.readyState).toBe(FakeWebSocket.OPEN)
+
+    // 旧定时器此刻才触发：只能关旧连接
+    pending.splice(0).forEach((fn) => fn())
+    expect(first.readyState).toBe(FakeWebSocket.CLOSED)
+    expect(second.readyState).toBe(FakeWebSocket.OPEN)
   })
 })

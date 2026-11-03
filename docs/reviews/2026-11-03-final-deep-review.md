@@ -7,7 +7,10 @@
 ## 0 结论
 
 **没有阻断级缺陷**：没有功能错误、没有测试断言失败、没有可利用的越权或注入、迁移链单一 head、文档零断链。
-但**不能直接宣布收尾完成**：有 1 项会让 CI 偶发变红的稳定性问题、2 项录音链路的真实缺陷、1 项与项目自身标准不一致的上传防护缺口，以及 P5–P7 明确未启动。
+但审查当时**不能直接宣布收尾完成**：有 1 项会让 CI 偶发变红的稳定性问题、2 项录音链路的真实缺陷、1 项与项目自身标准不一致的上传防护缺口，以及 P5–P7 明确未启动。
+
+> **2026-11-03 修复完成**：§2.1–§2.6 六项代码问题与「文档指针」共 7 项已全部处置，回归证据见 §6。
+> 当时阻塞收尾的判据（测试抖动、录音链路、上传防护）已经消失；P5–P7 仍是未启动项，不作为本次修复范围。
 
 ## 1 实跑结果（本次亲自执行）
 
@@ -107,3 +110,28 @@
 - [逐项优化报告](../reports/2026-11-02-continuous-optimization.md)（IM-RPT-010）
 - [全面审查](2026-11-01-comprehensive-project-review.md)（上一轮独立复核）
 - [文档中心](../README.md)
+
+## 6 修复结果（2026-11-03）
+
+| # | 问题 | 处置 | 证据 |
+|---|---|---|---|
+| 2.1 | 前端测试偶发 worker 崩溃 | `frontend/vitest.config.ts` 退回 `pool: 'forks'` 并 `fileParallelism: false`。线程池方案先被否掉：它把 worker 报错变成进程级 `0xC0000409`，风险更高 | 连续 8 次 `npx vitest run` 全部退出码 0（38–57s/次）；改前为 3 跑 2 崩 |
+| 2.2 | 录音 chunk 本地缓存永不回收 | `frontend/src/api/ws.ts` 新增 `closingMeetingId` 接住 `close()` 之后到达的 `audio_ack`，`finishClosing()` 兜底 `clearMeeting()`；`frontend/src/audio/audioStore.ts` 新增 `clearStaleChunks()`（24h TTL），`connect()` 时清一次 | `ws.test.ts` 2 项、新增 `audioStore.test.ts` 2 项 |
+| 2.3 | 延迟关闭误杀新连接 | `close()` 改为捕获局部 `ws` 再延迟关闭；同时修正 `onclose` 的身份判断（不再把被取代的旧连接当成掉线），并让 `connect()` 先摘掉仍 OPEN 的旧连接（否则 `open()` 会直接返回、新会话发不出去） | `ws.test.ts` 2 项，含「旧定时器触发后新连接仍 OPEN」 |
+| 2.4 | 声纹上传缺少大小上限 | `voiceprints.py` 新增 `MAX_UPLOAD_BYTES = 4MB`，两个端点改为 `read(limit + 1)` 并在超限时返回 413 | 新增用例 `test_oversized_upload_rejected_before_decode` |
+| 2.5 | bootstrap 生产回传真实管理员用户名 | `auth.py` 在 `expose_password` 为假时回退到环境变量默认用户名，不再读库里的真实值 | 新增用例 `test_renamed_admin_username_is_not_exposed` |
+| 2.6 | 词表 CSV 导入静默失败 | `client.ts` 新增 `glossaryApi.importCsv()` 走统一 `request()`（带令牌、解析后端 detail）；`GlossaryPanel` 改为 await 该调用并给出成功/失败提示 | `client.test.ts` 2 项（FormData 与 Content-Type、403 抛出 detail） |
+| 2.7 | 文档指针落后一轮 | 上一提交已改 `docs/README.md` 的「最新修复结果」指针 | 该提交 `9e6e02d` |
+
+回归口径（本次实跑）：
+
+| 门禁 | 结果 |
+|---|---|
+| 后端 ruff（src/imeeting tests migrations scripts） | All checks passed |
+| 后端全量 pytest | **787 passed, 0 failed**（原 785 + 新增 2） |
+| 前端 typecheck / lint / build | 通过（lint 0 warning） |
+| 前端单测 | 22 文件 / **178 passed**（原 172 + 新增 6） |
+| 前端稳定性 | 连续 8 次全绿 |
+| 覆盖率棘轮 | 23.51 / 22.57 / 15.44 / 17.86，基线已用 `--update` 抬高 |
+
+仍未覆盖：`frontend/e2e` 的 4 个 spec 本机无法启动浏览器；P5–P7（覆盖率 27% 目标、Postgres 迁移往返、D1/D2/D3 决策债）未启动。

@@ -334,8 +334,35 @@ class TestBootstrap:
         body = client.get("/api/v1/auth/bootstrap").json()
         assert body["using_default_password"] is False
         assert body["default_password"] is None
-        # 用户名仍然照常回传：它是公开的默认值，预填省一次输入
+        # 口令已不是出厂的，此时也不再回传库里的真实用户名，只给默认值
         assert body["default_username"] == "admin"
+
+    def test_renamed_admin_username_is_not_exposed(self, client, admin_user):
+        """改密又改名后，公开预填接口只能回默认用户名，不能回真实账号名。
+
+        这是唯一无需登录就能读到的账号名来源；泄露它等于把爆破的搜索
+        空间从一个不确定值缩成一个确定值。
+        """
+        from sqlmodel import Session, select
+
+        from imeeting.api.http.routes import auth as auth_router
+        from imeeting.db import engine
+        from imeeting.models import User
+
+        _set_admin_password("admin", "brand-new-password-9")
+        with Session(engine) as db:
+            user = db.exec(select(User).where(User.username == "admin")).first()
+            assert user is not None
+            user.username = "chief-operator"
+            db.add(user)
+            db.commit()
+        auth_router._reset_bootstrap_cache()
+
+        body = client.get("/api/v1/auth/bootstrap").json()
+        assert body["using_default_password"] is False
+        assert body["default_password"] is None
+        assert body["default_username"] == "admin"
+        assert body["default_username"] != "chief-operator"
 
     def test_hidden_password_must_not_be_the_old_one(self, client, admin_user):
         """改密后回传的字段里不能残留旧口令（哪怕在别的键里）。"""

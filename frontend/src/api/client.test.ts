@@ -10,7 +10,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { askVoiceConfirmation } from '../lib/voiceConfirmation'
-import { AUTH_EXPIRED_EVENT, ApiError, getToken, setToken, voiceprintApi } from './client'
+import { AUTH_EXPIRED_EVENT, ApiError, getToken, setToken, glossaryApi, voiceprintApi } from './client'
 
 vi.mock('../lib/voiceConfirmation', () => ({
   askVoiceConfirmation: vi.fn(),
@@ -243,5 +243,32 @@ describe('relabel 的冲突分流', () => {
 
     await expect(voiceprintApi.relabel(13, '说话人 1', '张三')).rejects.toBeInstanceOf(ApiError)
     expect(mockedAsk).not.toHaveBeenCalled()
+  })
+})
+
+describe('词表 CSV 导入', () => {
+  it('以 FormData 提交，不手写 Content-Type，并带上令牌', async () => {
+    setToken('t-import')
+    fetchMock.mockResolvedValueOnce(reply({ imported: 3 }))
+
+    const file = new File(['term,alias\n'], 'glossary.csv', { type: 'text/csv' })
+    await expect(glossaryApi.importCsv(file)).resolves.toEqual({ imported: 3 })
+
+    const init = lastInit()
+    expect(init.method).toBe('POST')
+    expect(init.body).toBeInstanceOf(FormData)
+    expect((init.body as FormData).get('file')).toBe(file)
+
+    const headers = new Headers(init.headers)
+    // 手写 Content-Type 会丢掉 multipart boundary，后端直接解析失败
+    expect(headers.get('Content-Type')).toBeNull()
+    expect(headers.get('Authorization')).toBe('Bearer t-import')
+  })
+
+  it('被拒时抛出后端文案，不再静默成功', async () => {
+    fetchMock.mockResolvedValueOnce(reply({ detail: '需要管理员权限' }, 403))
+
+    const file = new File(['x'], 'glossary.csv', { type: 'text/csv' })
+    await expect(glossaryApi.importCsv(file)).rejects.toThrow('需要管理员权限')
   })
 })

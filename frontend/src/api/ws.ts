@@ -2,7 +2,7 @@
 
 import { getToken } from './client'
 import type { ServerMessage, WsState } from './types'
-import { deleteChunk, listChunks, putChunk } from '../audio/audioStore'
+import { clearMeeting, clearStaleChunks, deleteChunk, listChunks, putChunk } from '../audio/audioStore'
 
 export type MessageHandler = (msg: ServerMessage) => void
 export type StateHandler = (state: WsState) => void
@@ -34,6 +34,13 @@ export class TranscriptSocket {
    * 一场长会议会被网络抖动切成多条互相割裂的会议（导出/纪要都会对不上）。
    */
   private meetingId: number | null = null
+  /**
+   * 主动结束后、连接真正关闭前的收尾窗口里，未确认音频块归谁。
+   *
+   * ``close()`` 会立刻把 ``meetingId`` 置空，而服务端在这之后仍可能补发
+   * ``audio_ack``；需要这个字段让那些 ack 仍能找到归属。
+   */
+  private closingMeetingId: number | null = null
   /** 会议 id 尚未由服务端返回前，先暂存音频。 */
   private preReady: ArrayBuffer[] = []
   private nextSeq = 0
@@ -62,6 +69,15 @@ export class TranscriptSocket {
    * 不传则视为新会议，由服务端创建后通过 `ready` 告知。
    */
   connect(startPayload: Record<string, unknown>, meetingId?: number | null): void {
+    // 上一轮若被强杀/断电，本地缓冲可能留下过期块；开始新会话时清一次。
+    void clearStaleChunks()
+    // close() 的延迟关闭可能还没执行。旧连接必须先摘掉，否则下面的 open()
+    // 会因「已有一条 OPEN 连接」直接返回，新会话一个字节都发不出去。
+    if (this.ws) {
+      const stale = this.ws
+      this.ws = null
+      stale.close()
+    }
     this.manualClose = false
     this.pendingStart = startPayload
     if (meetingId != null) this.meetingId = meetingId
@@ -126,8 +142,9 @@ export class TranscriptSocket {
             void this.sendAudio(buffer)
           }
         }
-        if (msg.type === 'audio_ack' && this.meetingId !== null) {
-          void deleteChunk(this.meetingId, msg.seq)
+        const ackMeetingId = this.meetingId ?? this.closingMeetingId
+        if (msg.type === 'audio_ack' && ackMeetingId !== null) {
+          void deleteChunk(ackMeetingId, msg.seq)
         }
         this.opts.onMessage(msg)
       } catch {
@@ -141,6 +158,9 @@ export class TranscriptSocket {
 
     ws.onclose = () => {
       this.stopHeartbeat()
+      // 这条连接已被 close() 之后的 connect() 取代：不能当成「当前连接掉线」，
+      // 否则会再建一条重复连接，服务端多出一场空会话。
+      if (this.ws !== ws) return
       this.ws = null
       if (this.manualClose) {
         this.setState('closed')
@@ -227,16 +247,40 @@ export class TranscriptSocket {
       this.reconnectTimer = null
     }
 
-    if (this.ws?.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({ type: 'stop' }))
-      // 给服务端一点时间把最后一句定稿推回
-      window.setTimeout(() => this.ws?.close(), 1200)
+    // 闭包只捕获这一条连接。回调里的 this.ws 到 1.2 秒后可能已是下一次
+    // 「开始」新建的连接，读 this.ws 会把刚建好的连接关掉。
+    const ws = this.ws
+    const closingMeetingId = this.meetingId
+    this.closingMeetingId = closingMeetingId
+
+    if (ws?.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'stop' }))
+      // 给服务端一点时间把最后一句定稿与剩余 audio_ack 推回
+      window.setTimeout(() => {
+        ws.close()
+        this.finishClosing(closingMeetingId)
+      }, 1200)
     } else {
-      this.ws?.close()
+      ws?.close()
+      this.finishClosing(closingMeetingId)
     }
 
     // 主动结束会话后清空绑定，避免下一次「开始」被误当成继续旧会议
     this.meetingId = null
     this.setState('closed')
+  }
+
+  /**
+   * 收尾：等 ack 落完，再兜底清掉本地音频块。
+   *
+   * ``close()`` 必须立刻把 ``meetingId`` 置空（否则下次「开始」会被当成续录），
+   * 但服务端在关连接前还会补发若干 ``audio_ack``。没有 ``closingMeetingId``
+   * 接住这段窗口，那些 ack 就全部落空，对应 chunk 永远留在 IndexedDB 里。
+   */
+  private finishClosing(meetingId: number | null): void {
+    if (this.closingMeetingId === meetingId) this.closingMeetingId = null
+    // 已经用同一个 meeting id 重新开始（续录同一场会议）：不能清。
+    if (meetingId === null || this.meetingId === meetingId) return
+    void clearMeeting(meetingId)
   }
 }
