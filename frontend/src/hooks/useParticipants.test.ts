@@ -152,4 +152,53 @@ describe('useParticipants', () => {
 
     await waitFor(() => expect(mocked.participants).toHaveBeenCalledTimes(2))
   })
+
+  it('首次取数期间 loading 即为真，取到后转假（不靠 effect 里同步 setState）', async () => {
+    let resolve: (value: MeetingParticipantItem[]) => void = () => undefined
+    mocked.participants.mockImplementationOnce(
+      () =>
+        new Promise<MeetingParticipantItem[]>((res) => {
+          resolve = res
+        }),
+    )
+    const { result } = renderHook(() => useParticipants(7))
+
+    // 派生值在首帧就是 true：不需要 effect 再触发一轮渲染才看到加载态。
+    expect(result.current.loading).toBe(true)
+
+    await act(async () => {
+      resolve([person()])
+    })
+    await waitFor(() => expect(result.current.loading).toBe(false))
+    expect(result.current.items).toHaveLength(1)
+  })
+
+  it('切换会议会重新进入加载态', async () => {
+    const { result, rerender } = renderHook(({ id }: { id: number }) => useParticipants(id), {
+      initialProps: { id: 7 },
+    })
+    await waitFor(() => expect(result.current.items).toHaveLength(1))
+    expect(result.current.loading).toBe(false)
+
+    mocked.participants.mockImplementationOnce(
+      () => new Promise<MeetingParticipantItem[]>(() => undefined),
+    )
+    rerender({ id: 8 })
+
+    await waitFor(() => expect(result.current.loading).toBe(true))
+  })
+
+  it('meetingId 变为 null 后对外列表清空，也不再请求', async () => {
+    const { result, rerender } = renderHook(
+      ({ id }: { id: number | null }) => useParticipants(id),
+      { initialProps: { id: 7 as number | null } },
+    )
+    await waitFor(() => expect(result.current.items).toHaveLength(1))
+
+    rerender({ id: null })
+
+    expect(result.current.items).toEqual([])
+    expect(result.current.loading).toBe(false)
+    expect(mocked.participants).toHaveBeenCalledTimes(1)
+  })
 })

@@ -32,12 +32,18 @@ export interface ParticipantsController {
   clearError: () => void
 }
 
+/** meetingId 为空时对外恒为空列表：用模块级常量，避免每次渲染都返回新数组。 */
+const NO_ITEMS: MeetingParticipantItem[] = []
+
 export function useParticipants(
   meetingId: number | null,
   { pollMs = 0 }: Options = {},
 ): ParticipantsController {
   const [items, setItems] = useState<MeetingParticipantItem[]>([])
-  const [loading, setLoading] = useState(false)
+  // 「已经为哪个会议取完过一次数」。loading 由它派生，而不是在 effect 体里同步
+  // setLoading(true)：后者会多一轮提交，派生值天然「首帧就为真」，语义相同。
+  const [loadedFor, setLoadedFor] = useState<number | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const mounted = useRef(true)
@@ -49,12 +55,9 @@ export function useParticipants(
     }
   }, [])
 
-  const reload = useCallback(async () => {
-    if (meetingId == null) {
-      setItems([])
-      return
-    }
-    setLoading(true)
+  /** 只取数、不碰 loading：effect 体里调用它不会在提交阶段同步 setState。 */
+  const fetchList = useCallback(async () => {
+    if (meetingId == null) return
     try {
       const list = await personApi.participants(meetingId)
       if (mounted.current) {
@@ -66,16 +69,31 @@ export function useParticipants(
         setError(err instanceof Error ? err.message : '读取参会人失败')
       }
     } finally {
-      if (mounted.current) setLoading(false)
+      if (mounted.current) setLoadedFor(meetingId)
     }
   }, [meetingId])
 
+  /** 手动刷新：显式让派生出来的 loading 为真（只从事件/按钮里调用）。 */
+  const reload = useCallback(async () => {
+    if (meetingId == null) return
+    setRefreshing(true)
+    try {
+      await fetchList()
+    } finally {
+      if (mounted.current) setRefreshing(false)
+    }
+  }, [meetingId, fetchList])
+
   useEffect(() => {
-    void reload()
+    void fetchList()
     if (meetingId == null || pollMs <= 0) return
-    const timer = window.setInterval(() => void reload(), pollMs)
+    // 轮询每来一次不该闪一下加载态，所以走不碰 loading 的 fetchList。
+    const timer = window.setInterval(() => void fetchList(), pollMs)
     return () => window.clearInterval(timer)
-  }, [meetingId, pollMs, reload])
+  }, [meetingId, pollMs, fetchList])
+
+  // 派生而非存储：换会议时「还没取到」自然为真，也不需要在 effect 里清空。
+  const loading = meetingId != null && (loadedFor !== meetingId || refreshing)
 
   useEffect(() => {
     const changed = (event: Event) => {
@@ -201,5 +219,5 @@ export function useParticipants(
   }
   const clearError = useCallback(() => setError(null), [])
 
-  return { items, loading, busy, error, reload, extract, add, setState, rename, bind, confirmAll, editDetails, merge, clearError }
+  return { items: meetingId == null ? NO_ITEMS : items, loading, busy, error, reload, extract, add, setState, rename, bind, confirmAll, editDetails, merge, clearError }
 }
