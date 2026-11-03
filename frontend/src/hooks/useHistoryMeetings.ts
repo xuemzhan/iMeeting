@@ -43,18 +43,12 @@ export function useHistoryMeetings({ setOpNotice }: Options) {
     return new Date(Date.now() - days * 86400000).toISOString().slice(0, 10)
   }
 
+  /** 列表查询键：`refresh` 里要按同一条串读缓存，抽出来避免两处漂移。 */
+  const listKey = (targetPage: number) =>
+    ['meetings', view, debouncedQ, statusFilter, range, archivedFilter, tagFilter, targetPage, pageSize] as const
+
   const { data, isLoading, error } = useQuery({
-    queryKey: [
-      'meetings',
-      view,
-      debouncedQ,
-      statusFilter,
-      range,
-      archivedFilter,
-      tagFilter,
-      page,
-      pageSize,
-    ],
+    queryKey: listKey(page),
     queryFn: () => {
       // 日期范围在取数时计算：渲染期调用 Date.now() 既是不纯的，也会让
       // useMemo 的依赖与实际结果脱节。放进 queryFn 后，key 里用 range 即可。
@@ -81,13 +75,6 @@ export function useHistoryMeetings({ setOpNotice }: Options) {
   const allSelected =
     meetings.length > 0 && meetings.every((meeting) => selected.has(meeting.id))
 
-  // 删除/彻底删除后当前页可能为空，自动回退一页
-  useEffect(() => {
-    if (!isLoading && meetings.length === 0 && total > 0 && page > 0) {
-      setPage((current) => Math.max(0, current - 1))
-    }
-  }, [isLoading, meetings.length, total, page])
-
   const toggleOne = (id: number) => {
     setSelected((previous) => {
       const next = new Set(previous)
@@ -106,9 +93,23 @@ export function useHistoryMeetings({ setOpNotice }: Options) {
     })
   }
 
+  /**
+   * 刷新列表。
+   *
+   * 删除/彻底删除/恢复之后当前页可能变空，这里在失效完成后回退一页。
+   * 放在事件函数里而不是 effect 里：effect 体里同步 `setState` 会多一轮渲染
+   * （react-hooks/set-state-in-effect），而本页所有变更都走这个函数，覆盖面
+   * 与原来的 effect 等价——`queryClient` 关掉了 `refetchOnWindowFocus`，
+   * 不存在「别人删了导致静默刷新」的路径；将来若打开该选项，这里要补兜底。
+   */
   const refresh = async () => {
     setSelected(new Set())
     await qc.invalidateQueries({ queryKey: ['meetings'] })
+    if (page === 0) return
+    const current = qc.getQueryData<MeetingSearchResult>(listKey(page))
+    if (current && current.items.length === 0 && current.total > 0) {
+      setPage((value) => Math.max(0, value - 1))
+    }
   }
 
   const removeFromCaches = (ids: number[]) => {
