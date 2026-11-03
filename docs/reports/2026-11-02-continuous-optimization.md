@@ -27,9 +27,10 @@
 | 14 | 后端覆盖率门禁（第七轮补做） | `backend/scripts/coverage_ratchet.py`、`backend/coverage-baseline.json`、`pyproject.toml`（`pytest-cov` + `[tool.coverage.*]`）、`ci.yml` | 与前端同一套棘轮思路：当前 81.20%（11148 条语句）设为基线，低于基线减去 0.2 个百分点即失败；倒退时打印缺口最大的 5 个文件。CI 的 backend job 由「pytest」改为「pytest --cov + ratchet」，只多跑一次（约 11 分钟） |
 | 15 | eslint 告警清理（第八轮补做，17 → 10） | `ActionsPanel`/`MembersDialog`/`ShareDialog`、`pages/Meeting`、`useHistoryMeetings`、`Waveform` | 修 7 条：3 条 `exhaustive-deps`（把 `load` 收进 `useCallback` 并补进依赖，避免每次渲染重建导致的漏依赖）、2 条 `purity`（日期范围从渲染期 `Date.now()` 挪进取数函数，queryKey 改用 `range`）、1 条 `set-state-in-effect`（浏览器能力检查改惰性初始值，少一轮渲染）、1 条 `refs`（波形电平改为在 effect 里写 ref，符合渲染纯函数约束） |
 | 16 | eslint 告警清理（第九轮补做，10 → 9） | `components/PaneSplitter.tsx`、`components/PaneSplitter.test.tsx` | `aria-valuemax` 原本在**渲染期读容器 ref**（违反渲染纯函数约束）。改为用 `ResizeObserver` 把容器宽度量进 state：`observe` 后浏览器会异步回一次当前尺寸，因此不必在 effect 体里同步 measure；还没量到时用 `window.innerWidth` 兜底，保证 `aria-valuemax` 不小于 `aria-valuemin`。拖动/键盘换算仍在事件回调里读 ref（合法）。新增 7 项测试锁住上界跟随容器、窄容器收敛、键盘步进、禁用态、双击复位与拖动夹紧 |
+| 17 | 参会人 hook 去同步加载态（第九轮补做） | `hooks/useParticipants.ts`、`hooks/useParticipants.test.ts` | `loading` 从「effect 里 `setLoading(true)`」改成**派生值**（`loadedFor !== meetingId` 或 `refreshing`）：首帧即为真，少一轮提交；`meetingId` 为空时对外恒返回模块级空数组，不再在 effect 里清空。顺带修掉一个真实体验问题：**轮询每来一次都会闪一下「读取中…」**（`ParticipantsPanel` 的空态文案直接绑 `loading`），现在轮询走不碰 loading 的取数分支。新增 3 项测试：首帧 loading 为真、换会议重新进入加载态、`meetingId` 置空后列表清空且不再请求 |
 
 新增回归用例：`tests/test_repair_template_slots.py`（4 项）、`tests/test_voiceprint_merge_bulk.py`（5 项）、`tests/test_voiceprint_reenroll.py`（3 项）、`tests/test_relabel_scopes.py`（3 项）、`tests/test_noise_identity_cleanup.py`（2 项）、`tests/test_identity_workflows.py`（+2 项：解绑保留原标注、迁移升降级）。
-前端本轮补 `components/PaneSplitter.test.tsx`（7 项）。该组件此前零测试，而这轮动的正是它的上界计算。
+前端本轮补 `components/PaneSplitter.test.tsx`（7 项，该组件此前零测试，而这轮动的正是它的上界计算）与 `hooks/useParticipants.test.ts`（+3 项）。
 
 ## 2 验证
 
@@ -42,10 +43,10 @@
 | 脚本试运行 | `python scripts/repair_template_slots.py --db data/meeting.db` | `OK: 16 条模板均在 0..4 槽位范围内`（实库无越界数据） |
 | 迁移实库验证 | 拷贝 `data/meeting.db` 后跑 `init_db()`（兼容 DDL 路径与 Alembic 路径各一次） | 两条路径都补上 `segment.speaker_previous`；`alembic_version` 升到 `20261102_01`；2671 条片段无损 |
 | 前端类型 | `npm run typecheck` | 通过 |
-| 前端单测 | `npm test` | **164 passed**（19 文件；本轮 +7） |
-| 前端 lint | `npm run lint` | 0 error，**9 warn**（上一轮 10；剩下的全是 `set-state-in-effect`），新增文件 0 warn |
+| 前端单测 | `npm test` | **167 passed**（19 文件；本轮 +10） |
+| 前端 lint | `npm run lint` | 0 error，**9 warn**（本轮 10 → 9，全部是 `set-state-in-effect`，性质见 §3.3）；新增文件 0 warn |
 | 前端构建 | `npm run build` | 通过，`dist` 已产出 |
-| 覆盖率棘轮（前端） | `npm run test:coverage && npm run coverage:check` | 行 **20.90%** / 语句 20.07% / 函数 13.62% / 分支 15.99%，四项均高于基线（19.62/18.91/12.92/15.19）；已用 `--update` 把基线抬到当前值 |
+| 覆盖率棘轮（前端） | `npm run test:coverage && npm run coverage:check` | 行 **21.03%** / 语句 20.22% / 函数 13.69% / 分支 16.16%，四项均高于基线（20.90/20.07/13.62/15.99）；已用 `--update` 把基线抬到当前值 |
 | 覆盖率棘轮（后端） | `pytest -q --cov=imeeting --cov-report=json:coverage.json` + `python scripts/coverage_ratchet.py` | 语句覆盖 **81.20%**（11148 条语句、93 个文件）；持平通过；人为把基线抬高 2 个点后确实 exit 1 并列出缺口文件（已复原） |
 
 ## 3 仍未完成（本轮明确不做，附原因）
@@ -66,8 +67,8 @@
 
 ### 3.3 结构性技术债
 - 迁移仍是 `create_all` + 手写兼容 DDL + Alembic 三处并存，彻底收敛需在 PostgreSQL 上跑通升降级；
-- 前端覆盖率 20.90%（行）/ 13.62%（函数），**棘轮只能防倒退、不能代替补测**：`pages/History.tsx`、`pages/Meeting.tsx`、`components/TranscriptStream.tsx`、`store/session.ts` 的 `start/stop`（WebSocket + 录音）仍是大头；
-- 仍有 **9 条** eslint warn，全部是 `react-hooks/set-state-in-effect`：`VoiceConfirmationDialog.tsx`（2 处）、`VoiceprintConflictList.tsx`、`useConfigEditor.ts`、`useHistoryMeetings.ts`、`useParticipants.ts`、`useSharedMeeting.ts`、`useSpeakerRoles.ts`、`useVoiceprintAdmin.ts`。共性是「挂载即取数」的 hook 在 effect 体里**同步** `setLoading(true)` / `setItems([])`，会多一轮渲染。正确修法只有两条：把取数迁到 `useQuery`，或让 loading 由「首帧就为真」的初始值 + 派生状态表达——但后者要先定清「无数据时空转 spinner」的语义（例如 `meetingId == null` 时不该永远转圈），且多数 hook 没有测试兜底，所以不做盲改，见 IM-RPT-010 第 15、16 行；
+- 前端覆盖率 21.03%（行）/ 13.69%（函数），**棘轮只能防倒退、不能代替补测**：`pages/History.tsx`、`pages/Meeting.tsx`、`components/TranscriptStream.tsx`、`store/session.ts` 的 `start/stop`（WebSocket + 录音）仍是大头；
+- 仍有 **9 条** eslint warn，全部是 `react-hooks/set-state-in-effect`：`VoiceConfirmationDialog.tsx`（2 处）、`VoiceprintConflictList.tsx`、`useConfigEditor.ts`、`useHistoryMeetings.ts`、`useParticipants.ts`、`useSharedMeeting.ts`、`useSpeakerRoles.ts`、`useVoiceprintAdmin.ts`。**本轮实测纠正了上一版的说法**：把 loading 改成派生值只能消除「多一轮渲染」，并不能消除告警——该规则对「effect 体内调用任何含 `setState` 的函数」一律报错，即使那些 `setState` 都在 `await` 之后（`useParticipants` 已改完，告警仍在 `void fetchList()` 这一行）。所以唯一有效的修法是把取数搬出 effect：迁到 `useQuery`，或改成订阅式（`useSyncExternalStore` + 外部 store）。这属于结构性改动，需连同乐观更新（`patch` 现在直接改本地数组）一起重做，见 IM-RPT-010 第 15、16、17 行；
 
 ## 4 关联文档
 
