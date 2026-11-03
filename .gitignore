@@ -31,6 +31,9 @@ node_modules/
 frontend/dist/
 frontend/dist-next/
 frontend/coverage/
+# 后端覆盖率报告（coverage.json 是给棘轮读的中间产物，不入库；基线文件入库）
+backend/coverage.json
+backend/.coverage
 frontend/.tmp/
 frontend/test-results/
 frontend/playwright-report/

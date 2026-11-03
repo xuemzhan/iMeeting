@@ -40,6 +40,7 @@ dev = [
     "ruff>=0.7",
     "psutil>=5.9",
     "websockets>=12",
+    "pytest-cov>=5",
 ]
 
 [project.scripts]
@@ -81,3 +82,12 @@ filterwarnings = [
     "ignore::DeprecationWarning:jieba.*",
 ]
 addopts = "-ra --strict-markers"
+
+[tool.coverage.run]
+# 只统计业务包；tests/ 与 migrations/ 不计入，避免「覆盖率自我循环」。
+source = ["imeeting"]
+omit = ["*/tests/*", "*/migrations/*"]
+
+[tool.coverage.report]
+skip_covered = true
+show_missing = true
