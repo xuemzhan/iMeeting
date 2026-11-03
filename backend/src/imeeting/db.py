@@ -112,7 +112,8 @@ def pool_metrics() -> tuple[dict[str, float], dict[str, int]]:
     gauges: dict[str, float] = {}
     counters: dict[str, int] = {}
     try:
-        gauges["meeting_db_pool_checked_out"] = float(pool.checkedout())  # type: ignore[attr-defined]
+        # 指标名与 IM-PLN-004 §4.1 的约定对齐（in_use / overflow_limit / timeout_total）
+        gauges["meeting_db_pool_in_use"] = float(pool.checkedout())  # type: ignore[attr-defined]
     except Exception:
         pass
     try:
@@ -122,10 +123,10 @@ def pool_metrics() -> tuple[dict[str, float], dict[str, int]]:
     max_overflow = getattr(pool, "_max_overflow", None)
     if max_overflow is not None:
         # 不用 pool.overflow()：池未满时它返回负值，作为 gauge 会误导告警规则。
-        gauges["meeting_db_pool_max_overflow"] = float(max_overflow)
+        gauges["meeting_db_pool_overflow_limit"] = float(max_overflow)
     timeouts = getattr(pool, "checkout_timeouts", None)
     if timeouts is not None:
-        counters["meeting_db_pool_timeouts_total"] = int(timeouts)
+        counters["meeting_db_pool_timeout_total"] = int(timeouts)
     return gauges, counters
 
 

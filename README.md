@@ -211,6 +211,17 @@ set E2E_PASSWORD=e2e-pass-123
 node scripts/verify-features.mjs
 ```
 
+上面示例按 **cmd** 写法（`set KEY=value`）。换平台只改这一行：
+
+| 平台 | 写法 |
+|---|---|
+| Windows cmd | `set KEY=value` |
+| Windows PowerShell | `$env:KEY="value"` |
+| Linux / macOS bash | `export KEY=value` |
+
+三个平台的变量名与取值完全相同，**只有设置语法不同**；不要混用（例如在 PowerShell 里
+`set` 是 `Set-Variable` 的别名，写 `set KEY=value` 不会设置环境变量）。
+
 ### 四、协议与识别链路（需服务已启动）
 
 ```bash

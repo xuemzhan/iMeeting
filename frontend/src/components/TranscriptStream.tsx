@@ -35,10 +35,12 @@ export function TranscriptStream({
 
   // 贴底时自动跟随最新内容（新内容出现 → 旧内容整体上移）。
   //
-  // P-2（IM-PLN-004）：依赖不能是整个 segments 数组——每条 partial 都换引用，
-  // 于是每 0.6 秒就强制一次同步布局（读 scrollHeight 再写 scrollTop）。这里只依赖
-  // 「条数 + 最后一条的可见文本/时间」，并把滚动写进 requestAnimationFrame：
-  // 同一帧内的多次变更合并成一次，且写操作落在布局之后，不再触发强制回流。
+  // P-2（IM-PLN-004）：这里原来依赖整个 segments 数组，而每条 partial 都会换引用，
+  // 于是每 0.6 秒就做一次「读 scrollHeight → 写 scrollTop」的同步布局。
+  // 现在拆成两条：
+  //   1) scrollable 只在「条数变化」（新的卡片出现）时算——`scrollHeight` 是布局读，
+  //      只在真的可能变高时才读；
+  //   2) 自动跟随写进 requestAnimationFrame，写操作落在布局之后，不再触发强制回流。
   const lastSegment = segments.length > 0 ? segments[segments.length - 1] : null
   const lastText = lastSegment?.text ?? ''
   const lastEndMs = lastSegment?.endMs ?? 0
@@ -46,13 +48,15 @@ export function TranscriptStream({
   useLayoutEffect(() => {
     const el = scrollRef.current
     if (!el) return
-
-    // 内容是否溢出决定要不要显示「可拖动」光标；值没变就不 setState，避免多余重渲染。
+    // 值没变就不 setState，避免多余重渲染。
     const next = isScrollable(el.scrollHeight, el.clientHeight)
     setScrollable((prev) => (prev === next ? prev : next))
+  }, [segments.length])
 
+  useLayoutEffect(() => {
+    const el = scrollRef.current
     // 只有「贴底」时才跟随；用户手动翻看历史时绝不强行拽回底部。
-    if (!pinned) return
+    if (!el || !pinned) return
     const handle = requestAnimationFrame(() => {
       el.scrollTop = el.scrollHeight
     })

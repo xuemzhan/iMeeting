@@ -150,6 +150,15 @@ async def lifespan(app: FastAPI):
         await cleanup_task
     except (asyncio.CancelledError, Exception):
         pass
+    # C-3：排空单写者。队列里的都是"已经算完、只差落库"的片段与状态写入，
+    # 进程退出时丢掉它们等于丢用户数据；close() 会 join 工作线程（最长 10s），
+    # 因此放到线程里等，不能卡在关闭路径的事件循环上。
+    from .application.session_writer import shutdown_writer
+
+    try:
+        await asyncio.to_thread(shutdown_writer)
+    except Exception:  # 排空失败不能让整个关闭流程中断
+        logger.exception("会话写入单写者未能正常排空")
 
     logger.info("=== 服务关闭 ===")
 
@@ -272,7 +281,7 @@ def prometheus_metrics(request: Request):
     from .db import db_statement_counts, engine, pool_metrics
     from .engine import pool
     from .models import LLMUsage
-    from .ops import disk_gauges, prometheus_text
+    from .ops import disk_gauges, dropped_frames_total, prometheus_text
     from .session_registry import active_session_count
 
     if not _metrics_allowed(request):
@@ -286,6 +295,22 @@ def prometheus_metrics(request: Request):
     for op, count in db_statement_counts().items():
         name = f"meeting_db_statements_{op.lower()}_total"
         counters[name] = count
+    # C-3：单写者队列深度（只在启用且已创建时上报，避免观测反而去创建它）
+    from .application.session_writer import writer_stats
+
+    writer = writer_stats()
+    if writer is not None:
+        gauges["meeting_session_writer_queue_depth"] = float(writer["queue_depth"])
+        counters["meeting_session_writer_executed_total"] = writer["executed"]
+        counters["meeting_session_writer_dropped_total"] = writer["dropped"]
+        counters["meeting_session_writer_errors_total"] = writer["errors"]
+    # S-2/P-4：进程线程总数。线程池重建若没有 shutdown，旧 worker 会常驻，
+    # 这里给运维一个能直接看到"改一次配置漏几条线程"的数。
+    import threading as _threading
+
+    gauges["meeting_process_threads"] = float(_threading.active_count())
+    # S-5：被丢弃的超大音频帧（只计数不告警，阈值行为在 stream 侧）
+    counters["meeting_ws_frame_dropped_total"] = dropped_frames_total()
     with Session(engine) as db:
         llm_cost = db.exec(
             select(func.coalesce(func.sum(LLMUsage.cost_usd), 0.0))

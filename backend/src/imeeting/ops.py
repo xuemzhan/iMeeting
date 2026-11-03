@@ -38,6 +38,27 @@ def observe_request(method: str, path: str, status: int, seconds: float) -> None
                 bucket_counts[index] += 1
 
 
+
+
+_dropped_frames = 0
+
+
+def count_dropped_frame() -> None:
+    """记一次被丢弃的音频帧（IM-PLN-004 S-5）。
+
+    为什么要有计数：上限本身只是"不会把内存打爆"，运维还得知道**有没有人在打**。
+    日志会被刷屏截断，指标不会。
+    """
+    global _dropped_frames
+    with _lock:
+        _dropped_frames += 1
+
+
+def dropped_frames_total() -> int:
+    with _lock:
+        return _dropped_frames
+
+
 def reset_metrics() -> None:
     """Clear in-process metrics; intended for tests and process shutdown."""
     with _lock:

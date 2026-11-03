@@ -6,8 +6,15 @@ import argparse
 import shutil
 import sqlite3
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
+
+import httpx
+
+
+class DrainError(RuntimeError):
+    """排空过程中服务端的回应不符合预期。"""
 
 
 class SqliteBackupError(RuntimeError):
@@ -151,6 +158,67 @@ def restore_sqlite(
     return safety
 
 
+def _drain_with(
+    client: httpx.Client,
+    base_url: str,
+    username: str,
+    password: str,
+    timeout_seconds: int,
+    poll_seconds: float,
+) -> int:
+    base = base_url.rstrip("/")
+    login = client.post(
+        f"{base}/api/v1/auth/login",
+        json={"username": username, "password": password},
+    )
+    login.raise_for_status()
+    token = login.json().get("access_token")
+    if not token:
+        raise DrainError("登录响应里没有 access_token")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    started = client.post(
+        f"{base}/api/v1/admin/maintenance/drain",
+        headers=headers,
+        json={"reason": "graceful release"},
+    )
+    started.raise_for_status()
+
+    deadline = time.monotonic() + timeout_seconds
+    while True:
+        state = client.get(f"{base}/api/v1/admin/maintenance", headers=headers)
+        state.raise_for_status()
+        active = int(state.json().get("active_sessions", 0) or 0)
+        if active == 0 or time.monotonic() >= deadline:
+            return active
+        time.sleep(poll_seconds)
+
+
+def drain_server(
+    base_url: str,
+    username: str,
+    password: str,
+    *,
+    timeout_seconds: int = 300,
+    poll_seconds: float = 3.0,
+    client: httpx.Client | None = None,
+) -> int:
+    """请求服务进入排空并等到活跃会话归零，返回最后看到的活跃会话数（IM-PLN-004 §6.1）。
+
+    为什么放在 Python 里：``scripts/graceful_restart.ps1`` 与 Linux 侧脚本各写一遍，
+    「登录 → 触发 drain → 轮询 → 超时判定」这套流程必然漂移；正确性只该有一份实现，
+    两边都是薄包装。返回非 0 表示还有人在开会，调用方必须中止发布。
+    """
+    if client is not None:
+        return _drain_with(
+            client, base_url, username, password, timeout_seconds, poll_seconds
+        )
+    with httpx.Client(timeout=30.0) as session:
+        return _drain_with(
+            session, base_url, username, password, timeout_seconds, poll_seconds
+        )
+
+
 def _main() -> int:
     parser = argparse.ArgumentParser(description="iMeeting SQLite backup/restore")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -166,6 +234,11 @@ def _main() -> int:
 
     verify = subparsers.add_parser("verify")
     verify.add_argument("--path", required=True, type=Path)
+    drain = subparsers.add_parser("drain")
+    drain.add_argument("--base-url", default="http://127.0.0.1:8010")
+    drain.add_argument("--username", default="admin")
+    drain.add_argument("--password", required=True)
+    drain.add_argument("--timeout-seconds", type=int, default=300)
 
     args = parser.parse_args()
     try:
@@ -174,12 +247,23 @@ def _main() -> int:
         elif args.command == "verify":
             verify_sqlite(args.path)
             print(f"verified={args.path}")
+        elif args.command == "drain":
+            active = drain_server(
+                args.base_url,
+                args.username,
+                args.password,
+                timeout_seconds=args.timeout_seconds,
+            )
+            if active:
+                print(f"error: 仍有 {active} 个活跃会话，不要重启", file=sys.stderr)
+                return 3
+            print("drained=ok")
         else:
             safety = restore_sqlite(args.current, args.backup, args.backup_dir)
             if safety is not None:
                 print(f"safety={safety}")
             print(f"restored={args.current}")
-    except (OSError, SqliteBackupError) as exc:
+    except (OSError, SqliteBackupError, DrainError, httpx.HTTPError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     return 0

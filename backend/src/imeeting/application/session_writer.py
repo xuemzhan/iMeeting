@@ -87,16 +87,6 @@ class SessionWriter:
             future.set_result(None)
         return future
 
-    async def submit(
-        self,
-        func: Callable[..., Any],
-        *args: Any,
-        critical: bool = True,
-        **kwargs: Any,
-    ) -> Any:
-        """异步提交并等待结果；异常会原样抛给调用方。"""
-        future = self.submit_sync(func, *args, critical=critical, **kwargs)
-        return await asyncio.wrap_future(future)
 
     def stats(self) -> dict[str, int]:
         return {
@@ -142,6 +132,23 @@ class SessionWriter:
             finally:
                 self._queue.task_done()
 
+    async def submit(
+        self,
+        func: Callable[..., Any],
+        *args: Any,
+        critical: bool = True,
+        **kwargs: Any,
+    ) -> Any:
+        """异步提交并等待结果；异常会原样抛给调用方。
+
+        队列满时 ``submit_sync(critical=True)`` 会阻塞最长 10s。这里把它放到工作线程
+        执行，**绝不阻塞事件循环**——否则正是 C-3 想治的病（"等一个写入把 loop 卡住"）。
+        """
+        future = await asyncio.to_thread(
+            self.submit_sync, func, *args, critical=critical, **kwargs
+        )
+        return await asyncio.wrap_future(future)
+
 
 _writer: SessionWriter | None = None
 _writer_lock = threading.Lock()
@@ -150,13 +157,21 @@ _writer_lock = threading.Lock()
 def get_writer() -> SessionWriter:
     """进程级单例（懒创建）。"""
     global _writer
-    if _writer is not None and not _writer._closed:  # noqa: SLF001 - 同模块内省
+    if _writer is not None and not _writer._closed:
         return _writer
     with _writer_lock:
-        if _writer is None or _writer._closed:  # noqa: SLF001
+        if _writer is None or _writer._closed:
             _writer = SessionWriter()
             logger.info("会话写入单写者已启动")
         return _writer
+
+
+def writer_stats() -> dict[str, int] | None:
+    """已启动时返回队列统计（供 /metrics 使用）；未启动返回 None，不触发创建。"""
+    writer = _writer
+    if writer is None:
+        return None
+    return writer.stats()
 
 
 def shutdown_writer() -> None:

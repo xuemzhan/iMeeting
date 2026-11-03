@@ -575,3 +575,39 @@ class TestInferThreads:
 
         config_store._db_overrides = {"asr.infer_threads": 4}
         assert pool._get_executor() is pool._get_executor()
+
+    def test_rebuilding_returns_threads_to_baseline(self, env):
+        """S-2/P-4 的验收口径：连改 5 次线程数，进程线程数回到基线。
+
+        旧实现只是把 ``_EXECUTOR`` 指向新池，旧池的 worker 永远阻塞在空队列上，
+        于是每改一次配置就永久漏掉 N 个线程。这里用线程名计数而不是 psutil：
+        断言的是同一件事（旧 worker 已退出），却不引入额外依赖。
+        """
+        import threading
+        import time
+
+        from imeeting.settings import config_store
+
+        def asr_threads() -> int:
+            return sum(1 for t in threading.enumerate() if t.name.startswith("asr"))
+
+        baseline = asr_threads()
+        try:
+            for threads in (1, 2, 3, 2, 4):
+                config_store._db_overrides = {"asr.infer_threads": threads}
+                executor = pool._get_executor()
+                # 让新池真的起线程，否则旧池的退出根本不会被检验
+                list(executor.map(lambda _: None, range(threads)))
+        finally:
+            # 只关掉最后那个池：它之前的 4 个池必须已经自己退出，
+            # 否则这句话之后仍然数得到它们的 worker。
+            current = pool._EXECUTOR
+            if current is not None:
+                current.shutdown(wait=True)
+            pool._EXECUTOR = None
+            pool._EXECUTOR_THREADS = 0
+
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline and asr_threads() > baseline:
+            time.sleep(0.05)
+        assert asr_threads() <= baseline, "重建线程池后旧 worker 没有退出（线程泄漏）"

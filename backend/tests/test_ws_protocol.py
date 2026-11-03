@@ -316,6 +316,49 @@ class TestPersistence:
             assert len(segs) >= 1, "异常断开时已定稿的片段丢失了"
             assert meeting.segment_count == len(segs)
 
+    def test_abrupt_disconnect_closes_session_row(self, client, admin_user, echo_mode):
+        """硬断连后 meeting_session 行也必须收口（IM-PLN-004 实施自查发现的缺口）。
+
+        背景：把收尾路径的 DB 调用改成 `await _db(...)` 后，连接被硬断时 endpoint 任务
+        会被取消，`finally` 里第一个 await 就抛 CancelledError —— 后面的
+        `_finish_session_row()` 与 `unregister_session()` 全被跳过。
+        表现是：会议状态是对的（同步写），但 session 行永远停在 recording，
+        且内存里的活跃会话注册表泄漏。
+        """
+        from sqlmodel import Session, select
+
+        from imeeting.db import engine
+        from imeeting.engine import streaming as streaming_module
+        from imeeting.models import MeetingSession
+
+        # 活跃会话注册表是进程级全局状态，而每个用例都会重建库（meeting_id 从 1 开始）。
+        # 先清空，避免把别的用例留下的条目算到本用例头上——本用例要断言的是
+        # "这一次会话结束时确实 unregister 了"。
+        streaming_module._SESSIONS_BY_MEETING.clear()
+
+        mid = None
+        with client.websocket_connect("/ws/stream") as ws:
+            ws.send_text(json.dumps({"type": "start", "title": "硬断连收口"}))
+            mid = ws.receive_json()["meeting_id"]
+            ws.send_bytes(pcm_bytes(0.5))
+            # 不发 stop，直接离开 with（等价于浏览器关标签）
+        assert mid is not None
+
+        with Session(engine) as db:
+            rows = db.exec(
+                select(MeetingSession).where(MeetingSession.meeting_id == mid)
+            ).all()
+        assert rows, "会话行未创建"
+        assert all(row.status != "recording" for row in rows), (
+            f"硬断连后 session 行仍停在 recording：{[r.status for r in rows]}"
+        )
+        assert all(row.ended_at is not None for row in rows)
+        # 活跃会话注册表不能残留这个会议的**未关闭**会话
+        leftovers = streaming_module._SESSIONS_BY_MEETING.get(mid, set())
+        assert not leftovers, (
+            "硬断连后仍残留活跃会话注册，会导致改名等操作作用到已结束的会话上"
+        )
+
     def test_failed_session_marks_failed(self, client, admin_user, echo_mode, monkeypatch):
         """会话处理过程中抛异常，会议应标记为 failed 而不是 recording。"""
         from sqlmodel import Session

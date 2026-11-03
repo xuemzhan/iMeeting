@@ -16,7 +16,7 @@
 | IM-PLN-001 | [手机 / 平板自适应改造方案](plans/2026-11-01-responsive-ui-adaptation.md) | 已实施（P0–P6） | 断点/令牌/逐页改造/验收口径；落地结果见 IM-RPT-009 |
 | IM-PLN-002 | [剩余问题实施方案](plans/2026-11-02-remaining-optimization-plan.md) | P1–P4 已实施 | 9 处 `set-state-in-effect` 已清零（取数迁入 react-query）；实施偏差与未验证项见该方案 §0.1 |
 | IM-PLN-003 | [重构与优化方案 v1](plans/2026-11-04-refactor-optimization-plan.md) | **已被替代** → IM-PLN-004 | 受 IM-REV-006 评审；原样保留以支撑报告的逐条引用，不再据此排期 |
-| IM-PLN-004 | [重构与优化方案 v2（按 IM-REV-006 修订）](plans/2026-11-04-refactor-optimization-plan-v2.md) | **已实施**（见 IM-RPT-011） | 20 项问题按实测重排；实施结果：14 项完成、3 项部分、3 项未做、1 项被否决回退 |
+| IM-PLN-004 | [重构与优化方案 v2（按 IM-REV-006 修订）](plans/2026-11-04-refactor-optimization-plan-v2.md) | **已实施**（见 IM-RPT-011，自查修复见 IM-RPT-012） | 20 项问题按实测重排；实施结果：14 项完成、3 项部分、3 项未做、1 项被否决回退；自查另有 10 项偏离/缺陷已修复 |
 
 需求依赖和未决问题见[需求索引](requirements/README.md)。新实施计划放入 `docs/plans/YYYY-MM-DD-topic.md`，关联需求与设计，阶段结果另写报告。
 
@@ -53,6 +53,7 @@
 | IM-REV-005 | [2026-11-03 收尾阶段深度审查](reviews/2026-11-03-final-deep-review.md) | 阶段快照 | 全量门禁实跑；3 项重要（前端测试偶发 worker 崩溃、录音缓存不回收、延迟关闭误杀新连接）与 4 项次要；P5–P7 未启动 |
 | IM-REV-006 | [2026-11-04 重构方案第三方评审](reviews/2026-11-04-refactor-plan-review.md) | 阶段快照 | 受审 IM-PLN-003：5 阻断项（含"优先级排序缺乏测量支撑"与"PDF 中文在 Linux 失效被漏掉"）、8 重要项；含两处定点实测数据与未验证边界 |
 | IM-RPT-011 | [按 IM-PLN-004 实施交付报告](reports/2026-11-04-refactor-implementation.md) | 阶段快照 | 14 项完成 / 3 项部分 / 3 项未做 / 1 项被既有不变量测试否决；后端 801 项全绿、覆盖率棘轮 81.20% 持平，前端四项与棘轮通过；未验证边界逐条列出 |
+| IM-RPT-012 | [IM-PLN-004 实施的自查与修复记录](reports/2026-11-04-refactor-self-review.md) | 阶段快照 | 逐条复核发现 10 个问题（3 真实缺陷、1 测试自身缺陷、6 与计划不符），全部修复并补 19 条后端用例；修复后全量回归与 ruff、前端四项、双端覆盖率棘轮结果见报告 §4 |
 
 报告列表见[报告索引](reports/README.md)，新增和归档规则见[子项目文档规制](governance/README.md)。最新修复结果查 IM-REV-005 与 IM-RPT-010；旧模型数据与漏洞扫描仍只在各期原范围内有效，本次未生产部署。
 

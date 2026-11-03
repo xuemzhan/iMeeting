@@ -61,6 +61,7 @@ from ...application.meeting_sessions import (
 from ...db import engine as db_engine
 from ...engine.audio import AudioSink
 from ...engine.streaming import StreamSession, unregister_session
+from ...ops import count_dropped_frame
 from ...security import decode_access_token
 from ...session_registry import session_registry
 from ...settings import get_config
@@ -471,6 +472,21 @@ async def stream_endpoint(websocket: WebSocket) -> None:
                 session_id=session.session_id if session else None,
             )
             persisted = len(pending_segments)
+            if session is not None:
+                # 先把 session 行收口（同步、无取消点）：硬断连时 endpoint 任务会在
+                # 下面 `close_task` 的 await 处被取消，若不先写，这一行会永远停在
+                # recording，活跃会话注册表也会泄漏。
+                # 末尾还会用真实时长与音频路径再写一次（finish_session_row 取 max，
+                # 重复调用是安全的），所以这里的时长只是"至少这么多"。
+                _finish_session_row(
+                    meeting_id,
+                    session.session_id,
+                    session.duration_ms,
+                    final_status,
+                    None,
+                    None,
+                )
+                unregister_session(session)
 
         if session is not None:
             # 不要用 wait_for 直接取消：它会在超时时取消正在跑的离线推理，
@@ -507,8 +523,7 @@ async def stream_endpoint(websocket: WebSocket) -> None:
 
         # close() 会把缓冲里的最后一句定稿，补齐这部分片段。
         if meeting_id is not None and len(pending_segments) > persisted:
-            await _db(
-                _persist_segments,
+            _persist_segments(
                 meeting_id,
                 pending_segments,
                 session.meeting_end_ms if session else 0,
@@ -516,26 +531,35 @@ async def stream_endpoint(websocket: WebSocket) -> None:
                 session_id=session.session_id if session else None,
             )
 
-        # 音频收尾（回填 WAV 头）并把路径写进会议记录
-        audio_path = await asyncio.to_thread(sink.close) if sink is not None else None
-        # C-2：把合并写的最后一段 audio_chunk_seq 补上（合并写会吞掉最后几块的持久化）。
-        if meeting_id is not None and _seq_writes:
-            await _db(_record_audio_seq, meeting_id, audio_chunk_seq, critical=False)
-            _seq_writes = 0
-        if meeting_id is not None and audio_path is not None:
-            await _db(_record_audio_path, meeting_id, str(audio_path))
-        if meeting_id is not None and session is not None:
-            await _db(_save_adaptive_profile, meeting_id, session.adaptive_snapshot, critical=False)
-            await _db(
-                _finish_session_row,
-                meeting_id,
-                session.session_id,
-                session.duration_ms,
-                final_status,
-                str(audio_path) if audio_path is not None else None,
-                None,
-            )
-            unregister_session(session)
+        # ---- 收尾写入：必须不可被打断 ----
+        # 背景：连接被硬断时 endpoint 任务会被取消，finally 里任何 await 都会在取消点
+        # 抛 CancelledError 并跳过其后所有语句。实测后果是 session 行停在 recording、
+        # 活跃会话注册表泄漏（test_abrupt_disconnect_closes_session_row 覆盖）。
+        # 因此把「可能被打断的部分」（关音频文件）与「必须成功的状态写入」分开：
+        # 后者放进嵌套 finally，且全部同步调用，不再有任何取消点。
+        audio_path = None
+        try:
+            if sink is not None:
+                # to_thread 是原有写法；它被打断的损失可由 repair_interrupted_wavs 补偿。
+                audio_path = await asyncio.to_thread(sink.close)
+        finally:
+            if meeting_id is not None and _seq_writes:
+                _record_audio_seq(meeting_id, audio_chunk_seq)
+                _seq_writes = 0
+            if meeting_id is not None and audio_path is not None:
+                _record_audio_path(meeting_id, str(audio_path))
+            if meeting_id is not None and session is not None:
+                _save_adaptive_profile(meeting_id, session.adaptive_snapshot)
+                _finish_session_row(
+                    meeting_id,
+                    session.session_id,
+                    session.duration_ms,
+                    final_status,
+                    str(audio_path) if audio_path is not None else None,
+                    None,
+                )
+                # 注册表必须收口，否则已结束的会话仍会被 rename_active_speaker 命中
+                unregister_session(session)
 
         # 短会/提前结束时补一次元信息提取（持久化任务，不阻塞收尾）
         if meeting_id is not None and final_status in ("finished", "abandoned"):
@@ -612,9 +636,9 @@ def _decode_pcm(raw: bytes) -> np.ndarray | None:
     if len(raw) > _MAX_FRAME_BYTES:
         # 旧实现只依赖 uvicorn 的 16MB 上限：单帧被放大到 16MB 时会解码成
         # 400 万个 float（约 16MB numpy 对象），属于可被轻易触发的内存放大。
-        logger.warning(
-            "音频帧过大（%d 字节 > %d），丢弃", len(raw), _MAX_FRAME_BYTES
-        )
+        # 必须计数：只记日志的话，被打屏截断就等于没发生（IM-PLN-004 S-5）。
+        count_dropped_frame()
+        logger.warning("音频帧过大（%d 字节 > %d），丢弃", len(raw), _MAX_FRAME_BYTES)
         return None
     try:
         return np.frombuffer(raw, dtype="<f4").copy()
