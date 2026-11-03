@@ -1,6 +1,5 @@
 import {
   useEffect,
-  useMemo,
   useState,
   type Dispatch,
   type MouseEvent,
@@ -38,15 +37,11 @@ export function useHistoryMeetings({ setOpNotice }: Options) {
     return () => window.clearTimeout(timer)
   }, [q])
 
-  const dateFrom = useMemo(() => {
-    if (range === '7d') {
-      return new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10)
-    }
-    if (range === '30d') {
-      return new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10)
-    }
-    return undefined
-  }, [range])
+  const rangeStart = (value: string): string | undefined => {
+    if (value !== '7d' && value !== '30d') return undefined
+    const days = value === '7d' ? 7 : 30
+    return new Date(Date.now() - days * 86400000).toISOString().slice(0, 10)
+  }
 
   const { data, isLoading, error } = useQuery({
     queryKey: [
@@ -54,13 +49,16 @@ export function useHistoryMeetings({ setOpNotice }: Options) {
       view,
       debouncedQ,
       statusFilter,
-      dateFrom,
+      range,
       archivedFilter,
       tagFilter,
       page,
       pageSize,
     ],
     queryFn: () => {
+      // 日期范围在取数时计算：渲染期调用 Date.now() 既是不纯的，也会让
+      // useMemo 的依赖与实际结果脱节。放进 queryFn 后，key 里用 range 即可。
+      const dateFrom = rangeStart(range)
       if (view === 'trash') {
         return meetingApi.trash(pageSize, page * pageSize)
       }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Copy, Loader2, Share2, Trash2 } from 'lucide-react'
 import { meetingApi } from '../api/client'
 import type { ShareLink } from '../api/types'
@@ -14,15 +14,14 @@ export function ShareDialog({ meetingId, onClose }: { meetingId: number; onClose
   const [error, setError] = useState<string | null>(null)
   const [createdUrl, setCreatedUrl] = useState<string | null>(null)
 
-  const load = () =>
-    meetingApi
-      .listShares(meetingId)
-      .then(setItems)
-      .catch(() => setItems([]))
+  const load = useCallback(
+    () => meetingApi.listShares(meetingId).then(setItems).catch(() => setItems([])),
+    [meetingId],
+  )
 
   useEffect(() => {
     void load()
-  }, [meetingId])
+  }, [load])
 
   const create = async () => {
     setBusy(true)

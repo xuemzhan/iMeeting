@@ -13,7 +13,11 @@ export function Waveform({ level, active, bars = 28 }: Props) {
   const levelRef = useRef(level)
   const rafRef = useRef<number | null>(null)
 
-  levelRef.current = level
+  // 把最新的音量存进 ref 供 rAF 循环读取。写在 effect 里而不是渲染期：
+  // 渲染期改 ref 违反 React 的纯函数约束（并发渲染下可能丢失或错序）。
+  useEffect(() => {
+    levelRef.current = level
+  }, [level])
 
   useEffect(() => {
     const canvas = canvasRef.current

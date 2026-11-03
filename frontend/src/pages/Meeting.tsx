@@ -74,7 +74,12 @@ export default function Meeting() {
   const [minutes, setMinutes] = useState<Minutes | null>(null)
   const [generating, setGenerating] = useState(false)
   const [templateId, setTemplateId] = useState<number | null>(null)
-  const [supportWarning, setSupportWarning] = useState<string | null>(null)
+  // 浏览器能力检查只在挂载时做一次：用惰性初始值取代「effect 里 setState」，
+  // 少一轮渲染，也不会出现「先渲染再补警告」的闪烁。
+  const [supportWarning] = useState<string | null>(() => {
+    const support = checkBrowserSupport()
+    return support.ok ? null : (support.reason ?? null)
+  })
   const [activeTab, setActiveTab] = useState<PaneTab>('transcript')
   const [infoOpen, setInfoOpen] = useState(false)
   const [mindMapOpen, setMindMapOpen] = useState(false)
@@ -138,11 +143,6 @@ export default function Meeting() {
   // 键盘快捷键（Space 暂停、F 切句、Esc 结束）
   useKeyboardShortcuts()
 
-  // 浏览器能力检查
-  useEffect(() => {
-    const support = checkBrowserSupport()
-    if (!support.ok) setSupportWarning(support.reason ?? null)
-  }, [])
 
   // 窗口变窄时把已保存的纪要宽度夹回可用范围，避免把转写挤没
   useEffect(() => {

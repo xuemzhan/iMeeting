@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { CheckSquare, Circle, Loader2 } from 'lucide-react'
 import { meetingApi } from '../api/client'
 import type { ActionItem } from '../api/types'
@@ -13,15 +13,14 @@ export function ActionsPanel({
   const [items, setItems] = useState<ActionItem[]>([])
   const [busy, setBusy] = useState<number | null>(null)
 
-  const load = () =>
-    meetingApi
-      .actions(meetingId)
-      .then(setItems)
-      .catch(() => setItems([]))
+  const load = useCallback(
+    () => meetingApi.actions(meetingId).then(setItems).catch(() => setItems([])),
+    [meetingId],
+  )
 
   useEffect(() => {
     void load()
-  }, [meetingId])
+  }, [load])
 
   const cycle = async (item: ActionItem) => {
     const next =

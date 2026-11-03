@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Loader2, Plus, Trash2, Users } from 'lucide-react'
 import { meetingApi } from '../api/client'
 import { Sheet } from './Sheet'
@@ -23,15 +23,18 @@ export function MembersDialog({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const load = () =>
-    meetingApi
-      .members(meetingId)
-      .then(setItems)
-      .catch((e) => setError(e instanceof Error ? e.message : '加载失败'))
+  const load = useCallback(
+    () =>
+      meetingApi
+        .members(meetingId)
+        .then(setItems)
+        .catch((e) => setError(e instanceof Error ? e.message : '加载失败')),
+    [meetingId],
+  )
 
   useEffect(() => {
     void load()
-  }, [meetingId])
+  }, [load])
 
   return (
     <Sheet
