@@ -15,7 +15,8 @@
 | IM-REQ-002 | [多场景声纹库](requirements/REQ-002-voiceprint-multiscene.md) | 需求草案 | 模板及 UI 已有实现；实时模板匹配仍默认关闭 |
 | IM-PLN-001 | [手机 / 平板自适应改造方案](plans/2026-11-01-responsive-ui-adaptation.md) | 已实施（P0–P6） | 断点/令牌/逐页改造/验收口径；落地结果见 IM-RPT-009 |
 | IM-PLN-002 | [剩余问题实施方案](plans/2026-11-02-remaining-optimization-plan.md) | P1–P4 已实施 | 9 处 `set-state-in-effect` 已清零（取数迁入 react-query）；实施偏差与未验证项见该方案 §0.1 |
-| IM-PLN-003 | [重构与优化方案（高效/稳定/可扩展/双平台）](plans/2026-11-04-refactor-optimization-plan.md) | 草案（待评审） | 12 项关键问题与 4 批实施顺序；只交付方案，未含实现 |
+| IM-PLN-003 | [重构与优化方案 v1](plans/2026-11-04-refactor-optimization-plan.md) | **已被替代** → IM-PLN-004 | 受 IM-REV-006 评审；原样保留以支撑报告的逐条引用，不再据此排期 |
+| IM-PLN-004 | [重构与优化方案 v2（按 IM-REV-006 修订）](plans/2026-11-04-refactor-optimization-plan-v2.md) | 草案（修订版，待评审） | 现行版：20 项问题按实测重排；新增 PDF 中文字体（P0）、连接池（P1）、批次 0 度量、安全不变量、灰度回滚 |
 
 需求依赖和未决问题见[需求索引](requirements/README.md)。新实施计划放入 `docs/plans/YYYY-MM-DD-topic.md`，关联需求与设计，阶段结果另写报告。
 
