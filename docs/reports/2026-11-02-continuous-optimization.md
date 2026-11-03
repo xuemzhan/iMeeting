@@ -21,6 +21,7 @@
 | 8 | 解绑不再抹掉原标注（第三轮补做） | `Segment.speaker_previous`、`persons.bind_speaker`、`schemas.SegmentOut`、`TranscriptPanel`、迁移 `20261102_01` | 改绑/解绑时旧 key 的片段仍改为「未确认说话人」，但原标注（如「郭睿」）写进 `speaker_previous` 并在转写里显示「原标注 X」；反复改标定不再销毁文本证据。兼容 DDL 与 Alembic 两条路径都补列 |
 | 9 | 证据不足的自动声纹会后停用（第三轮补做） | `engine/voice_template.disable_noise_identities`、两个 `spk.auto_identity_min_*` 配置、`TemplateRebuildStatus` | 会后重建结束时扫一遍**本场自动生成**的「待命名」声纹：片段数 < 3 **且** 累计语音 < 3 秒就停用（停用可恢复，不删除；人工命名过的、别的会议的都不动）。重建返回值新增 `noise_disabled`，前端给一行提示 |
 | 10 | 前端覆盖率棘轮（第三轮补做） | `frontend/scripts/coverage-ratchet.mjs`、`coverage-baseline.json`、`vitest.config.ts`、`.github/workflows/ci.yml` | 不设绝对阈值（现状 11.5% 行覆盖，一设就长期红），改为**只保证不倒退**：基线 11.5 / 11.13 / 7.94 / 9.64（行/语句/函数/分支），任一项下降超过 0.2 个百分点即失败；`--update` 显式抬高门槛。CI 的 frontend job 增加该步骤 |
+| 11 | 关键路径测试 + 抬高覆盖率基线（第四轮补做） | `hooks/useParticipants.test.ts`、`components/VoiceprintMergePanel.test.tsx`、`components/TemplateRebuildStatus.test.tsx`、`coverage-baseline.json` | 三个此前零覆盖的文件补了 20 项测试；顺带**修掉一个真缺陷**：`extract()` 的「额度用完 / 转写不足」提示会被紧随其后的 `reload()` 清空，用户永远看不到。基线从 11.5/11.13/7.94/9.64 抬到 15.97/15.42/11.14/12.72 |
 
 新增回归用例：`tests/test_repair_template_slots.py`（4 项）、`tests/test_voiceprint_merge_bulk.py`（5 项）、`tests/test_voiceprint_reenroll.py`（3 项）、`tests/test_relabel_scopes.py`（3 项）、`tests/test_noise_identity_cleanup.py`（2 项）、`tests/test_identity_workflows.py`（+2 项：解绑保留原标注、迁移升降级）。
 
@@ -35,10 +36,10 @@
 | 脚本试运行 | `python scripts/repair_template_slots.py --db data/meeting.db` | `OK: 16 条模板均在 0..4 槽位范围内`（实库无越界数据） |
 | 迁移实库验证 | 拷贝 `data/meeting.db` 后跑 `init_db()`（兼容 DDL 路径与 Alembic 路径各一次） | 两条路径都补上 `segment.speaker_previous`；`alembic_version` 升到 `20261102_01`；2671 条片段无损 |
 | 前端类型 | `npm run typecheck` | 通过 |
-| 前端单测 | `npm test` | 101 passed（13 文件） |
+| 前端单测 | `npm test` | 121 passed（16 文件；上一轮 101/13） |
 | 前端 lint | `npm run lint` | 0 error，17 warn（与改造前同数，新增文件 0 warn） |
 | 前端构建 | `npm run build` | 通过，`dist` 已产出 |
-| 覆盖率棘轮 | `npm run test:coverage && npm run coverage:check` | 四项指标与基线持平（11.5 / 11.13 / 7.94 / 9.64）；人为把基线抬高 1 个百分点后确实 exit 1（已复原） |
+| 覆盖率棘轮 | `npm run test:coverage && npm run coverage:check` | 行 15.97% / 语句 15.42% / 函数 11.14% / 分支 12.72%，均高于基线；人为抬高基线 1 个百分点时确实 exit 1（已复原） |
 
 ## 3 仍未完成（本轮明确不做，附原因）
 
@@ -58,7 +59,7 @@
 
 ### 3.3 结构性技术债
 - 迁移仍是 `create_all` + 手写兼容 DDL + Alembic 三处并存，彻底收敛需在 PostgreSQL 上跑通升降级；
-- 前端覆盖率仍只有 11.5%（行）/ 7.94%（函数），**棘轮只能防倒退、不能代替补测**；下一步应优先补 `pages/` 与 `hooks/` 的关键路径再抬基线；后端还没有覆盖率门禁（未引入 `pytest-cov`）；
+- 前端覆盖率 15.97%（行）/ 11.14%（函数），**棘轮只能防倒退、不能代替补测**：`pages/`、`store/session.ts`、`components/TranscriptStream.tsx` 仍是大头；后端还没有覆盖率门禁（未引入 `pytest-cov`）；
 - 17 条既有 eslint warn（`set-state-in-effect` 等）需逐处结合业务判断。
 
 ## 4 关联文档
