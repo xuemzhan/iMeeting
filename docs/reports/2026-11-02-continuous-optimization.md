@@ -24,6 +24,7 @@
 | 11 | 关键路径测试 + 抬高覆盖率基线（第四轮补做） | `hooks/useParticipants.test.ts`、`components/VoiceprintMergePanel.test.tsx`、`components/TemplateRebuildStatus.test.tsx`、`coverage-baseline.json` | 三个此前零覆盖的文件补了 20 项测试；顺带**修掉一个真缺陷**：`extract()` 的「额度用完 / 转写不足」提示会被紧随其后的 `reload()` 清空，用户永远看不到。基线从 11.5/11.13/7.94/9.64 抬到 15.97/15.42/11.14/12.72 |
 | 12 | 请求层测试 + 基线再抬（第五轮补做） | `api/client.test.ts`、`coverage-baseline.json` | 17 项测试覆盖「出错时怎么办」：detail 三种形状（字符串 / FastAPI 数组 / 不认识）、401 的两种含义（会话失效 vs 密码错 vs 匿名）、204 与纯文本响应、FormData 不设 Content-Type、`relabel` 的 cancel / label_only / confirm_self 三条分流。基线再抬到 17.39/16.85/11.88/14.25 |
 | 13 | 详情页动作层测试（第六轮补做） | `hooks/useMeetingDetail.test.tsx`、`store/session.test.ts`（+5 项） | 19 项测试锁住「改动后必须让相关 query 失效、失败必须落到 genError、没有转写不许生成纪要」；覆盖改名/改正文/确认说话人/生成/导出/跳转/URL 时间戳自动定位，以及 store 的 `persistTitle`（无会议、空标题、成功裁剪、失败留错）与 `reset`。基线再抬到 19.62/18.91/12.92/15.19 |
+| 14 | 后端覆盖率门禁（第七轮补做） | `backend/scripts/coverage_ratchet.py`、`backend/coverage-baseline.json`、`pyproject.toml`（`pytest-cov` + `[tool.coverage.*]`）、`ci.yml` | 与前端同一套棘轮思路：当前 81.20%（11148 条语句）设为基线，低于基线减去 0.2 个百分点即失败；倒退时打印缺口最大的 5 个文件。CI 的 backend job 由「pytest」改为「pytest --cov + ratchet」，只多跑一次（约 11 分钟） |
 
 新增回归用例：`tests/test_repair_template_slots.py`（4 项）、`tests/test_voiceprint_merge_bulk.py`（5 项）、`tests/test_voiceprint_reenroll.py`（3 项）、`tests/test_relabel_scopes.py`（3 项）、`tests/test_noise_identity_cleanup.py`（2 项）、`tests/test_identity_workflows.py`（+2 项：解绑保留原标注、迁移升降级）。
 
@@ -41,7 +42,8 @@
 | 前端单测 | `npm test` | 157 passed（17 文件；本轮 +19） |
 | 前端 lint | `npm run lint` | 0 error，17 warn（与改造前同数，新增文件 0 warn） |
 | 前端构建 | `npm run build` | 通过，`dist` 已产出 |
-| 覆盖率棘轮 | `npm run test:coverage && npm run coverage:check` | 行 19.62% / 语句 18.91% / 函数 12.92% / 分支 15.19%，与基线持平；反向验证仍有效 |
+| 覆盖率棘轮（前端） | `npm run test:coverage && npm run coverage:check` | 行 19.62% / 语句 18.91% / 函数 12.92% / 分支 15.19%，与基线持平；反向验证仍有效 |
+| 覆盖率棘轮（后端） | `pytest -q --cov=imeeting --cov-report=json:coverage.json` + `python scripts/coverage_ratchet.py` | 语句覆盖 **81.20%**（11148 条语句、93 个文件）；持平通过；人为把基线抬高 2 个点后确实 exit 1 并列出缺口文件（已复原） |
 
 ## 3 仍未完成（本轮明确不做，附原因）
 
@@ -61,7 +63,7 @@
 
 ### 3.3 结构性技术债
 - 迁移仍是 `create_all` + 手写兼容 DDL + Alembic 三处并存，彻底收敛需在 PostgreSQL 上跑通升降级；
-- 前端覆盖率 19.62%（行）/ 12.92%（函数），**棘轮只能防倒退、不能代替补测**：`pages/History.tsx`、`pages/Meeting.tsx`、`components/TranscriptStream.tsx`、`store/session.ts` 的 `start/stop`（WebSocket + 录音）仍是大头；后端还没有覆盖率门禁（未引入 `pytest-cov`）；
+- 前端覆盖率 19.62%（行）/ 12.92%（函数），**棘轮只能防倒退、不能代替补测**：`pages/History.tsx`、`pages/Meeting.tsx`、`components/TranscriptStream.tsx`、`store/session.ts` 的 `start/stop`（WebSocket + 录音）仍是大头；
 - 17 条既有 eslint warn（`set-state-in-effect` 等）需逐处结合业务判断。
 
 ## 4 关联文档
