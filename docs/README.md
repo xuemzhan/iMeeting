@@ -48,7 +48,8 @@
 | IM-EVD-011 | [改造前基线](reviews/evidence/2026-11-01-responsive-baseline/README.md) | 阶段快照 | 改造前四视口量测（390px 溢出 +25px、CTA 2 个）与 4 张截图 |
 | IM-EVD-012 | [改造后验证证据](reviews/evidence/2026-11-01-responsive/README.md) | 阶段快照 | 6 档 × 5 页探针输出、会中/详情页 390px 三标签截图、响应式 e2e 记录、CI 门禁与桌面验收结果 |
 | IM-RPT-010 | [2026-11-02 逐项优化](reports/2026-11-02-continuous-optimization.md) | 阶段快照 | 越界槽位整理脚本、重建进度接前端、模板合并预览与批量执行入口、跨设备重新注册；需产品决策的三项单列 |
+| IM-REV-005 | [2026-11-03 收尾阶段深度审查](reviews/2026-11-03-final-deep-review.md) | 阶段快照 | 全量门禁实跑；3 项重要（前端测试偶发 worker 崩溃、录音缓存不回收、延迟关闭误杀新连接）与 4 项次要；P5–P7 未启动 |
 
-报告列表见[报告索引](reports/README.md)，新增和归档规则见[子项目文档规制](governance/README.md)。最新修复结果查 IM-RPT-007、IM-RPT-006 与 IM-RPT-005；旧模型数据与漏洞扫描仍只在各期原范围内有效，本次未生产部署。
+报告列表见[报告索引](reports/README.md)，新增和归档规则见[子项目文档规制](governance/README.md)。最新修复结果查 IM-REV-005 与 IM-RPT-010；旧模型数据与漏洞扫描仍只在各期原范围内有效，本次未生产部署。
 
 联合工作区的核查材料已并入本仓库：修复计划在 [plans/](plans/)，原核查在[代码与文档对应性核查](reviews/2026-10-31-code-document-gap-review.md)，逐条追溯证据在[原始证据](reviews/evidence/2026-10-31-gap-review/)。跨工作区的全量台账（含 FunASR 侧文档）仍由根目录 `docs/governance/` 维护，不随本次迁移。
