@@ -1,9 +1,18 @@
 # 2026-11-02 剩余问题实施方案：取数架构收敛、测试补齐、迁移收敛（v2）
 
-> 文档类型：实施方案；状态：**v2，已按[独立审核意见](../reviews/2026-11-02-remaining-plan-review.md)逐条修订，待实施**；日期：2026-11-02。
+> 文档类型：实施方案；状态：**v2，P1–P4 已实施（见 §0.1），P5–P7 未开始**；日期：2026-11-02。
 > 上承 [连续优化报告](../reports/2026-11-02-continuous-optimization.md)（IM-RPT-010）§3 的「仍未完成」清单；
 > 关联 [手机/平板自适应方案](2026-11-01-responsive-ui-adaptation.md)（IM-PLN-001）、[Gap 修复计划](2026-10-31-gap-remediation-plan.md)。
 > v1 的 4 条阻塞项（B1 重挂载、映射漏项、A2 取值语义、P5 覆盖目标）已在本文修正；对照表见 §8。
+
+## 0.1 实施状态（2026-11-02）
+
+P1–P4 已落地：eslint **9 → 0**、前端单测 **172 passed**、覆盖率 **21.03% → 23.03%**、typecheck 与 build 通过。实施中有两处偏离本文写法，原因记在这里：
+
+1. **A3 改成「refresh 内回读缓存」**，不用 §4 的派生页码。派生页码需要 `total` 参与 queryKey，而 `total` 恰好来自按该 key 取数的结果——循环依赖。改在本页所有变更的收口 `refresh()` 里：失效完成后按当前页的键读一次缓存，空了且不是首页就回退。覆盖面等价（`refetchOnWindowFocus` 已关闭，没有静默刷新路径），且不动 `useHistoryBulkActions` 的签名。
+2. **B1 的身份戳用「会议:声纹:片段」**。`VoiceConfirmation` 类型没有 `id`，只有 `meeting_id` / `voiceprint_id` / `segment_id`，三者拼起来才唯一。
+
+**未验证项**：P1/P3/P4 的 DoD 要求跑 `responsive` 与 `identity-confirmation` 两个 e2e spec，本机 `npx playwright test` 报 `browserType.launch: spawn UNKNOWN`（浏览器无法在这里启动），需在有浏览器的环境补跑。
 
 ## 0 摘要
 
