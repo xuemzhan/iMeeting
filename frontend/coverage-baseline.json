@@ -1,7 +1,7 @@
 {
-  "lines": 11.5,
-  "statements": 11.13,
-  "functions": 7.94,
-  "branches": 9.64,
+  "lines": 15.97,
+  "statements": 15.42,
+  "functions": 11.14,
+  "branches": 12.72,
   "note": "覆盖率基线：低于此值 CI 失败；抬高请重跑 --update"
 }
