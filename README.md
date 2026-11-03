@@ -64,7 +64,7 @@
 
 ## 快速开始
 
-需要 Python 3.10+ 与 Node 20+。
+需要 Python 3.11+ 与 Node 20+（3.10 装不上安全底线 `pillow>=13`，见 `backend/constraints-production.txt`）。
 
 ### 1. 后端
 
@@ -127,7 +127,7 @@ npm run dev
 
 | 项 | 要求 |
 |---|---|
-| Python | 3.10+ |
+| Python | 3.11+（`constraints-production.txt` 要求 pillow>=13，其下限为 3.11） |
 | Node | 20+（Docker 镜像使用 Node 24 构建） |
 | 内存 | 8GB+（全模型常驻约 4.7GB） |
 | 磁盘 | 建议 30GB+，音频留存默认 7 天，可通过后台调整或关闭 |

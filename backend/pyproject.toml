@@ -3,7 +3,10 @@ name = "imeeting"
 version = "0.1.0"
 description = "iMeeting - real-time meeting transcription and intelligent minutes"
 readme = "README.md"
-requires-python = ">=3.10"
+# 3.10 装不上：安全底线 constraints-production.txt 要求 pillow>=13，而 Pillow 13
+# 的 requires-python 是 >=3.11（无 cp310 wheel）。因此声明的最低版本必须同步抬高，
+# 否则 CI 的 3.10 门禁在 pip 安装阶段就死，等于没有门禁。
+requires-python = ">=3.11"
 
 dependencies = [
     "fastapi>=0.115",

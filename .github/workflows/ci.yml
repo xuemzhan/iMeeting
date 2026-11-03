@@ -22,9 +22,10 @@ jobs:
         os: [ubuntu-latest, windows-latest]
         python: ["3.12"]
         include:
-          # requires-python 声明的是 >=3.10，最低版本也要有门禁
+          # requires-python 声明的是 >=3.11（Pillow 13 的下限），最低版本也要有门禁。
+          # 3.10 已被安全底线排除：pillow>=13 在 3.10 上没有可分发的 wheel。
           - os: ubuntu-latest
-            python: "3.10"
+            python: "3.11"
     defaults:
       run:
         working-directory: backend
@@ -102,6 +103,10 @@ jobs:
       - name: Install Chromium for the responsive gate
         run: npx playwright install --with-deps chromium
       - name: Responsive gate (no horizontal overflow / tap targets >= 40 / single CTA)
+        # 这段是 bash 写法（后台作业 + seq + curl 轮询）。Windows runner 默认 shell 是
+        # PowerShell，同一段脚本会在第一行就 ParserError——首跑实测如此。
+        # 显式指定 bash：Windows runner 自带 Git Bash，两平台共用一份脚本。
+        shell: bash
         env:
           CI: '1'
         run: |
