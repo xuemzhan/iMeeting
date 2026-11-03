@@ -94,7 +94,9 @@ jobs:
           npm run coverage:check
       - name: Typecheck
         run: npm run typecheck
-        run: npm run typecheck
+        # 注意：一个 step 只能有一个 run:。这里曾重复写了两行，
+        # 导致整个工作流在 GitHub 侧解析失败（'run' is already defined），
+        # 结果是 CI 连着两个提交都是 0 秒失败——门禁形同不存在。
       - name: Build
         run: npm run build
       - name: Install Chromium for the responsive gate
