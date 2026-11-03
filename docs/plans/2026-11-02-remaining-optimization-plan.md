@@ -3,6 +3,7 @@
 > 文档类型：实施方案；状态：待评审（P1–P4 可立即开工，P5 测试补齐，P6 需 Postgres 环境，P7 需产品拍板）；日期：2026-11-02。
 > 上承 [连续优化报告](../reports/2026-11-02-continuous-optimization.md)（IM-RPT-010）§3 的「仍未完成」清单；
 > 关联 [手机/平板自适应方案](2026-11-01-responsive-ui-adaptation.md)（IM-PLN-001）、[Gap 修复计划](2026-10-31-gap-remediation-plan.md)。
+> **状态提示（2026-11-02）**：本文尚未按[独立审核意见](../reviews/2026-11-02-remaining-plan-review.md)修订。审核判定 4 条阻塞项（B1 的 `key` 重挂载不成立、映射表漏 `useParticipants`、A2 的覆盖层取值语义错误、P5 覆盖率目标不可达），**修订前不要按 §2.2 与 §6 直接开工**。
 
 ## 0 摘要
 
