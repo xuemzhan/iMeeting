@@ -1,16 +1,45 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useMemo, useState } from 'react'
+import { useMutation, useQuery } from '@tanstack/react-query'
 
 import { ApiError, shareApi } from '../api/client'
 import { groupParagraphs } from '../store/paragraphs'
 
+function messageOf(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback
+}
+
+/**
+ * 分享页：口令开门 + 读取内容。
+ *
+ * `shareApi.open()` 其实是两种动作，拆开才不会有 effect 里的命令式调用：
+ * - 首屏「用空口令试一次」是查询（受口令保护时失败属于预期路径）；
+ * - 用户提交口令是变更（`useMutation`）。
+ * `opening` / `authError` 全部由这两者派生。
+ */
 export function useSharedMeeting(token: string) {
   const [password, setPassword] = useState('')
-  const [accessToken, setAccessToken] = useState('')
-  const [opening, setOpening] = useState(true)
-  const [authError, setAuthError] = useState<string | null>(null)
-  const [downloading, setDownloading] = useState(false)
   const [visibleParagraphCount, setVisibleParagraphCount] = useState(200)
+  const [downloading, setDownloading] = useState(false)
+
+  const auto = useQuery({
+    queryKey: ['share-open', token],
+    queryFn: () => shareApi.open(token, ''),
+    enabled: Boolean(token),
+    retry: false,
+    // 换来的 access_token 不留在缓存里
+    gcTime: 0,
+  })
+  const submit = useMutation({
+    mutationFn: (candidate: string) => shareApi.open(token, candidate),
+  })
+
+  const accessToken = submit.data?.access_token ?? auto.data?.access_token ?? ''
+  const opening = auto.isFetching || submit.isPending
+  const authError = submit.isError
+    ? messageOf(submit.error, '无法验证分享访问权限')
+    : auto.isError
+      ? messageOf(auto.error, '无法验证分享访问权限')
+      : null
 
   const shared = useQuery({
     queryKey: ['shared-meeting', token, accessToken],
@@ -25,25 +54,12 @@ export function useSharedMeeting(token: string) {
   const visibleParagraphs = paragraphs.slice(0, visibleParagraphCount)
 
   const open = async (candidate = password) => {
-    setOpening(true)
-    setAuthError(null)
     try {
-      const result = await shareApi.open(token, candidate)
-      setAccessToken(result.access_token)
-    } catch (e) {
-      setAccessToken('')
-      setAuthError(e instanceof Error ? e.message : '无法验证分享访问权限')
-    } finally {
-      setOpening(false)
+      await submit.mutateAsync(candidate)
+    } catch {
+      // 失败原因由 authError 派生展示，这里不再重复落一份状态
     }
   }
-
-  useEffect(() => {
-    if (!token) return
-    void open('')
-    // token 变化时重新验证；口令由用户显式提交。
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token])
 
   const downloadAudio = async () => {
     if (!shared.data) return

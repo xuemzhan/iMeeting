@@ -2,11 +2,14 @@
  *
  * 与声纹模板不同，这里的身份是「姓名」而非「声音」：抽取失败或未确认都不影响
  * 转写本身，只影响面板展示。
+ *
+ * 列表走 `useQuery`：轮询交给 `refetchInterval`，改动用 `setQueryData` 做乐观更新，
+ * 因此 effect 体里不再有取数调用（`react-hooks/set-state-in-effect`）。
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { queryClient } from '../app/queryClient'
 import { personApi } from '../api/client'
 import type { MeetingParticipantItem, ParticipantState } from '../api/types'
 
@@ -39,69 +42,43 @@ export function useParticipants(
   meetingId: number | null,
   { pollMs = 0 }: Options = {},
 ): ParticipantsController {
-  const [items, setItems] = useState<MeetingParticipantItem[]>([])
-  // 「已经为哪个会议取完过一次数」。loading 由它派生，而不是在 effect 体里同步
-  // setLoading(true)：后者会多一轮提交，派生值天然「首帧就为真」，语义相同。
-  const [loadedFor, setLoadedFor] = useState<number | null>(null)
-  const [refreshing, setRefreshing] = useState(false)
+  const qc = useQueryClient()
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const mounted = useRef(true)
 
-  useEffect(() => {
-    mounted.current = true
-    return () => {
-      mounted.current = false
-    }
-  }, [])
+  const listQuery = useQuery({
+    queryKey: ['participants', meetingId],
+    queryFn: () => personApi.participants(meetingId as number),
+    enabled: meetingId != null,
+    // 轮询交给 query：不会像手写 interval 那样每来一次就把 loading 翻成 true
+    refetchInterval: meetingId != null && pollMs > 0 ? pollMs : false,
+  })
 
-  /** 只取数、不碰 loading：effect 体里调用它不会在提交阶段同步 setState。 */
-  const fetchList = useCallback(async () => {
-    if (meetingId == null) return
-    try {
-      const list = await personApi.participants(meetingId)
-      if (mounted.current) {
-        setItems(list)
-        setError(null)
-      }
-    } catch (err) {
-      if (mounted.current) {
-        setError(err instanceof Error ? err.message : '读取参会人失败')
-      }
-    } finally {
-      if (mounted.current) setLoadedFor(meetingId)
-    }
-  }, [meetingId])
+  const items =
+    meetingId == null ? NO_ITEMS : (listQuery.data ?? NO_ITEMS)
+  const loading = listQuery.isLoading
+  // 取数失败也走同一个 error 出口，避免「加载失败但界面没提示」
+  const queryError =
+    listQuery.isError && listQuery.error instanceof Error
+      ? listQuery.error.message
+      : listQuery.isError
+        ? '读取参会人失败'
+        : null
 
-  /** 手动刷新：显式让派生出来的 loading 为真（只从事件/按钮里调用）。 */
   const reload = useCallback(async () => {
     if (meetingId == null) return
-    setRefreshing(true)
-    try {
-      await fetchList()
-    } finally {
-      if (mounted.current) setRefreshing(false)
-    }
-  }, [meetingId, fetchList])
-
-  useEffect(() => {
-    void fetchList()
-    if (meetingId == null || pollMs <= 0) return
-    // 轮询每来一次不该闪一下加载态，所以走不碰 loading 的 fetchList。
-    const timer = window.setInterval(() => void fetchList(), pollMs)
-    return () => window.clearInterval(timer)
-  }, [meetingId, pollMs, fetchList])
-
-  // 派生而非存储：换会议时「还没取到」自然为真，也不需要在 effect 里清空。
-  const loading = meetingId != null && (loadedFor !== meetingId || refreshing)
-
+    await qc.invalidateQueries({ queryKey: ['participants', meetingId] })
+  }, [meetingId, qc])
+  // 订阅其它组件广播的变更（这是订阅：setState 在事件回调里，不是 effect 体）
   useEffect(() => {
     const changed = (event: Event) => {
       if ((event as CustomEvent<number>).detail === meetingId) void reload()
     }
     window.addEventListener('imeeting-participants-changed', changed)
-    return () => window.removeEventListener('imeeting-participants-changed', changed)
+    return () =>
+      window.removeEventListener('imeeting-participants-changed', changed)
   }, [meetingId, reload])
+
 
   const extract = useCallback(async () => {
     if (meetingId == null || busy) return
@@ -117,11 +94,11 @@ export function useParticipants(
           : '转写内容不足，暂无可抽取的信息'
         : null
       await reload()
-      if (skipped && mounted.current) setError(skipped)
+      if (skipped) setError(skipped)
     } catch (err) {
       setError(err instanceof Error ? err.message : '抽取参会人失败')
     } finally {
-      if (mounted.current) setBusy(false)
+      setBusy(false)
     }
   }, [meetingId, busy, reload])
 
@@ -132,27 +109,35 @@ export function useParticipants(
       optimistic?: (item: MeetingParticipantItem) => MeetingParticipantItem,
     ) => {
       if (meetingId == null) return
-      const snapshot = items
-      if (optimistic) {
-        setItems((current) => current.map((item) => (item.person_id === personId ? optimistic(item) : item)))
+      const key = ['participants', meetingId]
+      const snapshot = qc.getQueryData<MeetingParticipantItem[]>(key)
+      if (optimistic && snapshot) {
+        qc.setQueryData(
+          key,
+          snapshot.map((item) =>
+            item.person_id === personId ? optimistic(item) : item,
+          ),
+        )
       }
       try {
-        const updated = await personApi.updateParticipant(meetingId, personId, body)
-        if (mounted.current) {
-          setItems((current) =>
-            current.map((item) => (item.person_id === personId ? updated : item)),
-          )
-          setError(null)
-          void queryClient.invalidateQueries({ queryKey: ['meeting', meetingId] })
-        }
+        const updated = await personApi.updateParticipant(
+          meetingId,
+          personId,
+          body,
+        )
+        qc.setQueryData<MeetingParticipantItem[]>(key, (current) =>
+          (current ?? NO_ITEMS).map((item) =>
+            item.person_id === personId ? updated : item,
+          ),
+        )
+        setError(null)
+        void qc.invalidateQueries({ queryKey: ['meeting', meetingId] })
       } catch (err) {
-        if (mounted.current) {
-          setItems(snapshot)
-          setError(err instanceof Error ? err.message : '修改参会人失败')
-        }
+        if (snapshot) qc.setQueryData(key, snapshot)
+        setError(err instanceof Error ? err.message : '修改参会人失败')
       }
     },
-    [meetingId, items],
+    [meetingId, qc],
   )
 
   const setState = useCallback(
@@ -173,13 +158,14 @@ export function useParticipants(
       try {
         await personApi.bind(meetingId, personId, speakerKey)
         await reload()
-        await queryClient.invalidateQueries({ queryKey: ['meeting', meetingId] })
+        await qc.invalidateQueries({ queryKey: ['meeting', meetingId] })
       } catch (err) {
         setError(err instanceof Error ? err.message : '绑定说话人失败')
       }
     },
-    [meetingId, reload],
+    [meetingId, reload, qc],
   )
+
   const add = useCallback(
     async (name: string, speakerKey?: string | null) => {
       if (meetingId == null) return
@@ -190,34 +176,67 @@ export function useParticipants(
           name: trimmed,
           speaker_key: speakerKey ?? null,
         })
-        if (mounted.current) {
-          setItems((current) => [...current.filter((item) => item.person_id !== created.person_id), created])
-          setError(null)
-        }
+        qc.setQueryData<MeetingParticipantItem[]>(
+          ['participants', meetingId],
+          (current) => [
+            ...(current ?? NO_ITEMS).filter(
+              (item) => item.person_id !== created.person_id,
+            ),
+            created,
+          ],
+        )
+        setError(null)
       } catch (err) {
-        if (mounted.current) setError(err instanceof Error ? err.message : '添加参会人失败')
+        setError(err instanceof Error ? err.message : '添加参会人失败')
         throw err
       }
     },
-    [meetingId],
+    [meetingId, qc],
   )
 
   const confirmAll = async () => {
     if (meetingId == null) return
-    try { setItems(await personApi.confirmAll(meetingId)); setError(null) }
-    catch (err) { setError(err instanceof Error ? err.message : '批量确认失败') }
+    try {
+      const list = await personApi.confirmAll(meetingId)
+      qc.setQueryData(['participants', meetingId], list)
+      setError(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '批量确认失败')
+    }
   }
   const editDetails = async (personId: number, unit: string, title: string) => {
-    await patch(personId, { attributes: [
-      { category: 'org', key: 'unit', value: unit.trim() },
-      { category: 'role', key: 'title', value: title.trim() },
-    ] })
+    await patch(personId, {
+      attributes: [
+        { category: 'org', key: 'unit', value: unit.trim() },
+        { category: 'role', key: 'title', value: title.trim() },
+      ],
+    })
   }
   const merge = async (targetId: number, sourceId: number) => {
-    try { await personApi.merge(targetId, sourceId); await reload(); void queryClient.invalidateQueries({ queryKey: ['meeting', meetingId] }) }
-    catch (err) { setError(err instanceof Error ? err.message : '合并参会人失败') }
+    try {
+      await personApi.merge(targetId, sourceId)
+      await reload()
+      void qc.invalidateQueries({ queryKey: ['meeting', meetingId] })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '合并参会人失败')
+    }
   }
   const clearError = useCallback(() => setError(null), [])
 
-  return { items: meetingId == null ? NO_ITEMS : items, loading, busy, error, reload, extract, add, setState, rename, bind, confirmAll, editDetails, merge, clearError }
+  return {
+    items,
+    loading,
+    busy,
+    error: error ?? queryError,
+    reload,
+    extract,
+    add,
+    setState,
+    rename,
+    bind,
+    confirmAll,
+    editDetails,
+    merge,
+    clearError,
+  }
 }

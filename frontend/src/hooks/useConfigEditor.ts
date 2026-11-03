@@ -2,9 +2,16 @@
  *
  * 后台配置页与设置抽屉都用它——两处逻辑若各写一份，很容易出现
  * 「一处修了、另一处没修」的漂移（例如校验提示、需重启提示）。
+ *
+ * 取数走 `useQuery`、草稿只存「用户改过的键」：
+ * - 服务端值是基线，`values` = 基线 + 覆盖层；
+ * - 因此不需要在 effect 里把 schema 抄进草稿（`react-hooks/set-state-in-effect`），
+ *   也不会出现「保存后草稿和服务端不一致」。
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+
 import { configApi } from '../api/client'
 import type { ConfigSchema } from '../api/types'
 
@@ -18,45 +25,44 @@ interface Options {
   enabled?: boolean
 }
 
+/** 把分组结构拍平成 key -> 服务端当前值。 */
+function flattenSchemaValues(
+  schema: ConfigSchema | null,
+): Record<string, unknown> {
+  if (!schema) return {}
+  const out: Record<string, unknown> = {}
+  for (const fields of Object.values(schema.groups)) {
+    for (const field of fields) out[field.key] = field.value
+  }
+  return out
+}
+
 export function useConfigEditor({ enabled = true }: Options = {}) {
-  const [schema, setSchema] = useState<ConfigSchema | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [loadError, setLoadError] = useState<string | null>(null)
+  const qc = useQueryClient()
+  const schemaQuery = useQuery({
+    queryKey: ['config-schema'],
+    queryFn: () => configApi.schema(),
+    enabled,
+  })
+  const schema = schemaQuery.data ?? null
   const [draft, setDraft] = useState<Record<string, unknown>>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState<ConfigToast | null>(null)
 
-  const load = useCallback(async () => {
-    setIsLoading(true)
-    try {
-      const s = await configApi.schema()
-      const initial: Record<string, unknown> = {}
-      for (const fields of Object.values(s.groups)) {
-        for (const f of fields) initial[f.key] = f.value
-      }
-      setSchema(s)
-      setDraft(initial)
-      setErrors({})
-      setLoadError(null)
-    } catch (err) {
-      setLoadError(err instanceof Error ? err.message : '加载配置失败')
-      setSchema(null)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!enabled) return
-    void load()
-  }, [enabled, load])
+  const baseValues = useMemo(() => flattenSchemaValues(schema), [schema])
+  // 用展开而不是 `??`：`false` / `0` / `''` 都是合法配置值，也都是假值，
+  // 用空值合并会让「把开关关掉」看起来没生效。
+  const values = useMemo(
+    () => ({ ...baseValues, ...draft }),
+    [baseValues, draft],
+  )
 
   const handleChange = useCallback((key: string, value: unknown) => {
-    setDraft((prev) => ({ ...prev, [key]: value }))
-    setErrors((prev) => {
-      if (!(key in prev)) return prev
-      const next = { ...prev }
+    setDraft((previous) => ({ ...previous, [key]: value }))
+    setErrors((previous) => {
+      if (!(key in previous)) return previous
+      const next = { ...previous }
       delete next[key]
       return next
     })
@@ -64,19 +70,26 @@ export function useConfigEditor({ enabled = true }: Options = {}) {
 
   /** 与已保存值不同的字段。只提交这些，避免把未改动的密钥掩码写回。 */
   const changed = useMemo(() => {
-    if (!schema) return {}
     const out: Record<string, unknown> = {}
-    for (const fields of Object.values(schema.groups)) {
-      for (const f of fields) {
-        if (JSON.stringify(f.value) !== JSON.stringify(draft[f.key])) {
-          out[f.key] = draft[f.key]
-        }
+    for (const key of Object.keys(draft)) {
+      if (JSON.stringify(draft[key]) !== JSON.stringify(baseValues[key])) {
+        out[key] = draft[key]
       }
     }
     return out
-  }, [schema, draft])
+  }, [draft, baseValues])
 
   const hasChanges = Object.keys(changed).length > 0
+  const isLoading = schemaQuery.isLoading
+  const loadError = schemaQuery.isError
+    ? schemaQuery.error instanceof Error
+      ? schemaQuery.error.message
+      : '加载配置失败'
+    : null
+
+  const reload = useCallback(async () => {
+    await qc.invalidateQueries({ queryKey: ['config-schema'] })
+  }, [qc])
 
   const save = useCallback(async () => {
     if (saving || !schema) return
@@ -99,31 +112,28 @@ export function useConfigEditor({ enabled = true }: Options = {}) {
       } else {
         setToast({ kind: 'ok', text: `已保存 ${res.updated.length} 项配置，即时生效` })
       }
-      // 保存成功后以服务端返回值为准重新拉取，避免本地草稿与服务端不一致
-      await load()
+      // 保存成功后草稿清空、以服务端返回值为准重新拉取，避免本地与服务端不一致
+      setDraft({})
+      await reload()
     } catch (err) {
       setToast({ kind: 'err', text: err instanceof Error ? err.message : '保存失败' })
     } finally {
       setSaving(false)
     }
-  }, [changed, load, saving, schema])
+  }, [changed, reload, saving, schema])
 
   const reset = useCallback(() => {
-    if (!schema) return
-    const initial: Record<string, unknown> = {}
-    for (const fields of Object.values(schema.groups)) {
-      for (const f of fields) initial[f.key] = f.value
-    }
-    setDraft(initial)
+    setDraft({})
     setErrors({})
     setToast({ kind: 'ok', text: '已还原为上次保存的值' })
-  }, [schema])
+  }, [])
 
   return {
     schema,
     isLoading,
     loadError,
-    draft,
+    /** 基线 + 覆盖层后的完整取值，渲染控件用它 */
+    values,
     errors,
     saving,
     toast,
@@ -132,6 +142,6 @@ export function useConfigEditor({ enabled = true }: Options = {}) {
     save,
     reset,
     setToast,
-    reload: load,
+    reload,
   }
 }

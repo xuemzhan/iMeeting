@@ -1,21 +1,57 @@
 import { useEffect, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 
 import { voiceprintApi } from '../api/client'
-import type { Voiceprint, VoiceprintTemplateItem } from '../api/types'
 import { VOICE_CONFIRMATION_EVENT, type VoiceChoice, type VoiceConfirmationEvent } from '../lib/voiceConfirmation'
 
 /** Every transcript rename/confirmation shares one explicit, cancellable decision. */
 export function VoiceConfirmationDialog() {
   const [queue, setQueue] = useState<VoiceConfirmationEvent[]>([])
-  const [prints, setPrints] = useState<Voiceprint[]>([])
-  const [target, setTarget] = useState('')
-  const [slot, setSlot] = useState('')
-  const [targetSlot, setTargetSlot] = useState('')
-  const [targetTemplates, setTargetTemplates] = useState<VoiceprintTemplateItem[]>([])
-  const [targetReady, setTargetReady] = useState(false)
   const pending = useRef<VoiceConfirmationEvent[]>([])
   const dialog = useRef<HTMLDivElement>(null)
   const current = queue[0]
+  // VoiceConfirmation 没有 id：用「会议 + 声纹 + 片段」作为身份戳
+  const currentId = current
+    ? `${current.confirmation.meeting_id}:${current.confirmation.voiceprint_id}:${current.confirmation.segment_id ?? ''}`
+    : ''
+
+  // 声纹清单与管理页共享同一份缓存
+  const printsQuery = useQuery({
+    queryKey: ['voiceprints'],
+    queryFn: () => voiceprintApi.list(),
+    enabled: Boolean(current),
+  })
+  const prints = printsQuery.data ?? []
+
+  // 「随当前确认项重置」的状态一律带身份戳：换一条确认项自然回到默认值。
+  // 不用 key 重挂载——本组件在 App 层无 props，重挂载会让 cleanup 把排队中的
+  // 请求全部 resolve 成 cancel。
+  const [pick, setPick] = useState<{ id: string; target: string } | null>(null)
+  const [slotPick, setSlotPick] = useState<{ id: string; slot: string } | null>(null)
+  const [targetSlotPick, setTargetSlotPick] = useState<{ id: string; slot: string } | null>(null)
+
+  const defaultTarget = String(
+    current?.confirmation.assessment.other?.voiceprint_id ?? '',
+  )
+  const target = pick && pick.id === currentId ? pick.target : defaultTarget
+  const setTarget = (value: string) => setPick({ id: currentId, target: value })
+  const slot = slotPick && slotPick.id === currentId ? slotPick.slot : ''
+  const setSlot = (value: string) => setSlotPick({ id: currentId, slot: value })
+  const targetSlotKey = `${currentId}:${target}`
+  const targetSlot = targetSlotPick?.id === targetSlotKey ? targetSlotPick.slot : ''
+  const setTargetSlot = (value: string) =>
+    setTargetSlotPick({ id: targetSlotKey, slot: value })
+
+  // 目标声纹的模板：换 target 自动换 query key，不再手工清空三个 state
+  const templatesQuery = useQuery({
+    queryKey: ['voiceprint-templates', target],
+    queryFn: () => voiceprintApi.templates(Number(target)),
+    enabled: Boolean(current && target),
+  })
+  const targetTemplates = (templatesQuery.data?.templates ?? []).filter(
+    (sample) => sample.slot >= 0 && sample.superseded_by == null,
+  )
+  const targetReady = templatesQuery.isSuccess
 
   useEffect(() => {
     const receive = (event: Event) => {
@@ -32,30 +68,10 @@ export function VoiceConfirmationDialog() {
     }
   }, [])
 
+  // 打开一条新的确认时把焦点移进对话框（纯 DOM 副作用，不碰 state）
   useEffect(() => {
-    if (!current) return
-    setTarget(String(current.confirmation.assessment.other?.voiceprint_id ?? ''))
-    setSlot('')
-    let live = true
-    void voiceprintApi.list().then((items) => { if (live) setPrints(items) }).catch(() => { if (live) setPrints([]) })
-    dialog.current?.focus()
-    return () => { live = false }
+    if (current) dialog.current?.focus()
   }, [current])
-
-  useEffect(() => {
-    setTargetSlot('')
-    setTargetTemplates([])
-    setTargetReady(false)
-    if (!current || !target) return
-    let live = true
-    void voiceprintApi.templates(Number(target)).then((result) => {
-      if (live) {
-        setTargetTemplates(result.templates.filter((sample) => sample.slot >= 0 && sample.superseded_by == null))
-        setTargetReady(true)
-      }
-    }).catch(() => { if (live) setTargetReady(false) })
-    return () => { live = false }
-  }, [current, target])
 
   const finish = (choice: VoiceChoice) => {
     const request = pending.current.shift()

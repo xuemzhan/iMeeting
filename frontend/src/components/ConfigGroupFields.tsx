@@ -9,12 +9,12 @@ import { Control } from '../pages/admin/ConfigFieldInput'
  */
 export function ConfigGroupFields({
   fields,
-  draft,
+  values,
   errors,
   onChange,
 }: {
   fields: ConfigField[]
-  draft: Record<string, unknown>
+  values: Record<string, unknown>
   errors: Record<string, string>
   onChange: (key: string, value: unknown) => void
 }) {
@@ -37,7 +37,7 @@ export function ConfigGroupFields({
             )}
           </div>
 
-          <Control field={f} value={draft[f.key]} onChange={(v) => onChange(f.key, v)} />
+          <Control field={f} value={values[f.key]} onChange={(v) => onChange(f.key, v)} />
 
           {f.help && (
             <p className="mt-1 text-meta leading-snug" style={{ color: 'var(--text-tertiary)' }}>

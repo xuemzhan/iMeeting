@@ -7,7 +7,14 @@
  * - 「自动抽取次数已用完」与「转写不足」是两种不同提示，不能混成一句。
  */
 
-import { act, renderHook, waitFor } from '@testing-library/react'
+import {
+  act,
+  renderHook as baseRenderHook,
+  waitFor,
+  type RenderHookOptions,
+} from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { createElement, type ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { personApi } from '../api/client'
@@ -26,9 +33,16 @@ vi.mock('../api/client', () => ({
   },
 }))
 
-vi.mock('../app/queryClient', () => ({
-  queryClient: { invalidateQueries: vi.fn(async () => undefined) },
-}))
+// 列表走 useQuery，每个用例用独立 client，避免缓存跨用例串味
+let client: QueryClient
+
+const wrapper = ({ children }: { children: ReactNode }) =>
+  createElement(QueryClientProvider, { client }, children)
+
+/** 统一注入 QueryClientProvider，用例里的调用方式保持原样。 */
+function renderHook<T, P>(callback: (props: P) => T, options?: RenderHookOptions<P>) {
+  return baseRenderHook(callback, { wrapper, ...options })
+}
 
 function person(overrides: Partial<MeetingParticipantItem> = {}): MeetingParticipantItem {
   return {
@@ -52,6 +66,9 @@ const mocked = vi.mocked(personApi)
 beforeEach(() => {
   vi.clearAllMocks()
   mocked.participants.mockResolvedValue([person()])
+  client = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0, staleTime: 0 } },
+  })
 })
 
 describe('useParticipants', () => {

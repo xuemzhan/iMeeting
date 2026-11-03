@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle, Loader2, X } from 'lucide-react'
 
 import { voiceprintApi } from '../api/client'
@@ -17,27 +18,21 @@ export function VoiceprintConflictList({
   prints: Voiceprint[]
   onChanged: () => void
 }) {
-  const [items, setItems] = useState<VoiceprintConflictItem[]>([])
-  const [loading, setLoading] = useState(false)
+  const qc = useQueryClient()
   const [error, setError] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<number | null>(null)
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const list = await voiceprintApi.conflicts()
-      setItems(list)
-      setError(null)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '读取冲突失败')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    void load()
-  }, [load])
+  const conflictsQuery = useQuery({
+    queryKey: ['voiceprint-conflicts'],
+    queryFn: () => voiceprintApi.conflicts(),
+  })
+  const items = conflictsQuery.data ?? []
+  const loading = conflictsQuery.isLoading
+  const loadError = conflictsQuery.isError
+    ? conflictsQuery.error instanceof Error
+      ? conflictsQuery.error.message
+      : '读取冲突失败'
+    : null
 
   const decide = async (
     item: VoiceprintConflictItem,
@@ -50,7 +45,11 @@ export function VoiceprintConflictList({
       await voiceprintApi.decideConflict(item.conflict_id, action, {
         target_voiceprint_id: target,
       })
-      setItems((current) => current.filter((row) => row.conflict_id !== item.conflict_id))
+      qc.setQueryData<VoiceprintConflictItem[]>(
+        ['voiceprint-conflicts'],
+        (current) =>
+          (current ?? []).filter((row) => row.conflict_id !== item.conflict_id),
+      )
       onChanged()
     } catch (err) {
       setError(err instanceof Error ? err.message : '处理冲突失败')
@@ -59,7 +58,7 @@ export function VoiceprintConflictList({
     }
   }
 
-  if (!loading && items.length === 0 && !error) return null
+  if (!loading && items.length === 0 && !(error ?? loadError)) return null
 
   return (
     <section className="panel mb-5 p-3" aria-label="声纹确认冲突">
@@ -156,9 +155,9 @@ export function VoiceprintConflictList({
         ))}
       </ul>
 
-      {error && (
+      {(error ?? loadError) && (
         <p className="mt-1.5 text-micro" style={{ color: 'var(--danger-text)' }}>
-          {error}
+        {error ?? loadError}
         </p>
       )}
     </section>

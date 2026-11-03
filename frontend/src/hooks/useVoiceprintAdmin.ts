@@ -1,44 +1,61 @@
-import { useEffect, useState } from 'react'
+/** 声纹库管理：列表、建议合并、改名、停用、设备列表。
+ *
+ * 列表与建议都走 `useQuery`：`load()` 退化为「失效重取」，
+ * 因此 effect 里不再有取数调用（`react-hooks/set-state-in-effect`）。
+ * `ok` / `error` 是操作级反馈，仍留在本地 state，不塞进缓存。
+ */
+
+import { useCallback, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { voiceprintApi } from '../api/client'
 import type { Voiceprint } from '../api/types'
 import { useSession } from '../store/session'
 
+type Suggestion = { score: number; source: Voiceprint; target: Voiceprint }
+
 export function useVoiceprintAdmin() {
-  const [prints, setPrints] = useState<Voiceprint[]>([])
-  const [loading, setLoading] = useState(true)
+  const qc = useQueryClient()
   const [error, setError] = useState<string | null>(null)
   const [ok, setOk] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [draft, setDraft] = useState('')
-  const [suggestions, setSuggestions] = useState<
-    { score: number; source: Voiceprint; target: Voiceprint }[]
-  >([])
+
+  const printsQuery = useQuery({
+    queryKey: ['voiceprints'],
+    queryFn: () => voiceprintApi.list(),
+  })
+  const suggestionsQuery = useQuery({
+    queryKey: ['voiceprint-suggestions'],
+    queryFn: () => voiceprintApi.suggestions(),
+    // 列表都没取到时先不取建议，省一次请求
+    enabled: printsQuery.isSuccess,
+  })
+  // 设备列表仍以 session store 为准；这条 query 只负责「何时拉」
+  useQuery({
+    queryKey: ['audio-devices'],
+    queryFn: async () => {
+      await useSession.getState().refreshDevices()
+      return useSession.getState().devices
+    },
+  })
 
   const devices = useSession((state) => state.devices)
   const activeDeviceId = useSession((state) => state.activeDeviceId)
-  const refreshDevices = useSession((state) => state.refreshDevices)
 
-  const load = () => {
-    setLoading(true)
-    voiceprintApi
-      .list()
-      .then((data) => {
-        setPrints(data)
-        setError(null)
-        void voiceprintApi
-          .suggestions()
-          .then(setSuggestions)
-          .catch(() => setSuggestions([]))
-      })
-      .catch((e) => setError(e instanceof Error ? e.message : '加载失败'))
-      .finally(() => setLoading(false))
-  }
+  const prints = printsQuery.data ?? []
+  const suggestions: Suggestion[] = suggestionsQuery.data ?? []
+  const loading = printsQuery.isLoading
+  const queryError = printsQuery.isError
+    ? printsQuery.error instanceof Error
+      ? printsQuery.error.message
+      : '加载失败'
+    : null
 
-  useEffect(() => {
-    load()
-    void refreshDevices()
-  }, [refreshDevices])
+  const load = useCallback(async () => {
+    await qc.invalidateQueries({ queryKey: ['voiceprints'] })
+    await qc.invalidateQueries({ queryKey: ['voiceprint-suggestions'] })
+  }, [qc])
 
   const startEdit = (print: Voiceprint) => {
     setEditingId(print.id)
@@ -59,7 +76,7 @@ export function useVoiceprintAdmin() {
       setOk(`已改名为「${result.name}」`)
       setError(null)
       setEditingId(null)
-      load()
+      await load()
     } catch (e) {
       setError(e instanceof Error ? e.message : '改名失败')
     }
@@ -70,7 +87,7 @@ export function useVoiceprintAdmin() {
       await voiceprintApi.remove(print.id)
       setOk(`已删除「${print.name}」`)
       setError(null)
-      load()
+      await load()
     } catch (e) {
       setError(e instanceof Error ? e.message : '删除失败')
     }
@@ -86,7 +103,7 @@ export function useVoiceprintAdmin() {
             : ''),
       )
       setError(null)
-      load()
+      await load()
     } catch (e) {
       setError(e instanceof Error ? e.message : '合并失败')
     }
@@ -96,7 +113,7 @@ export function useVoiceprintAdmin() {
     try {
       await voiceprintApi.setDisabled(print.id, !print.disabled)
       setOk(`${print.disabled ? '已启用' : '已停用'}「${print.name}」`)
-      load()
+      await load()
     } catch (e) {
       setError(e instanceof Error ? e.message : '状态更新失败')
     }
@@ -108,7 +125,7 @@ export function useVoiceprintAdmin() {
   return {
     prints,
     loading,
-    error,
+    error: error ?? queryError,
     ok,
     editingId,
     draft,
@@ -126,7 +143,7 @@ export function useVoiceprintAdmin() {
     merge,
     toggleDisabled,
     enrollDone: () => {
-      load()
+      void load()
       setError(null)
     },
     clearError: () => setError(null),

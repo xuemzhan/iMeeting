@@ -28,7 +28,7 @@ export default function Admin() {
     schema,
     isLoading,
     loadError,
-    draft,
+    values,
     errors,
     saving,
     toast,
@@ -176,7 +176,7 @@ export default function Admin() {
                     <ConfigFieldInput
                       key={field.key}
                       field={field}
-                      value={draft[field.key]}
+                      value={values[field.key]}
                       error={errors[field.key]}
                       onChange={(v) => handleChange(field.key, v)}
                     />

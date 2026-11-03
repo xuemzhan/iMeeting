@@ -88,7 +88,7 @@ export function SettingsBackendConfig({
           >
             <ConfigGroupFields
               fields={fields}
-              draft={cfg.draft}
+              values={cfg.values}
               errors={cfg.errors}
               onChange={cfg.handleChange}
             />
