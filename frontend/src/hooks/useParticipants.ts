@@ -91,14 +91,15 @@ export function useParticipants(
     setError(null)
     try {
       const result = await personApi.extract(meetingId)
-      if (result.skipped) {
-        setError(
-          result.skipped === 'auto_limit'
-            ? '本场自动抽取次数已用完，稍后再试或手动确认现有参会人'
-            : '转写内容不足，暂无可抽取的信息',
-        )
-      }
+      // 「没抽到东西」的原因必须活过这一次 reload：reload 成功会把 error 清空，
+      // 之前先 setError 再 reload，用户永远看不到提示（单测抓到的真实缺陷）。
+      const skipped = result.skipped
+        ? result.skipped === 'auto_limit'
+          ? '本场自动抽取次数已用完，稍后再试或手动确认现有参会人'
+          : '转写内容不足，暂无可抽取的信息'
+        : null
       await reload()
+      if (skipped && mounted.current) setError(skipped)
     } catch (err) {
       setError(err instanceof Error ? err.message : '抽取参会人失败')
     } finally {
