@@ -14,7 +14,10 @@ import { handleServerMessage, upsertSegment, useSession } from './session'
 
 // updateSegmentText 会 PATCH 片段：用假 client 断言「改什么、发给谁」
 vi.mock('../api/client', () => ({
-  meetingApi: { editSegment: vi.fn(async () => ({ segment_id: 'x' })) },
+  meetingApi: {
+    editSegment: vi.fn(async () => ({ segment_id: 'x' })),
+    updateMetadata: vi.fn(async () => ({})),
+  },
   voiceprintApi: { relabel: vi.fn(async () => ({})) },
 }))
 
@@ -224,5 +227,49 @@ describe('updateSegmentText', () => {
     await useSession.getState().updateSegmentText('c', '新文')
     expect(useSession.getState().segments[0].text).toBe('原文')
     expect(useSession.getState().error).toBe('boom')
+  })
+})
+
+describe('persistTitle', () => {
+  it('没有会议时不发请求', async () => {
+    useSession.setState({ meetingId: null, title: '例会' })
+    await useSession.getState().persistTitle()
+    expect(meetingApi.updateMetadata).not.toHaveBeenCalled()
+  })
+
+  it('只有空白标题时不发请求', async () => {
+    useSession.setState({ meetingId: 7, title: '   ' })
+    await useSession.getState().persistTitle()
+    expect(meetingApi.updateMetadata).not.toHaveBeenCalled()
+  })
+
+  it('成功后裁剪首尾空白并回写本地标题', async () => {
+    useSession.setState({ meetingId: 7, title: '  例会  ', error: null })
+    await useSession.getState().persistTitle()
+    expect(meetingApi.updateMetadata).toHaveBeenCalledWith(7, { title: '例会' })
+    expect(useSession.getState().title).toBe('例会')
+  })
+
+  it('失败时把原因写进 error，标题保持用户输入', async () => {
+    useSession.setState({ meetingId: 7, title: '  例会  ', error: null })
+    vi.mocked(meetingApi.updateMetadata).mockRejectedValueOnce(new Error('保存失败'))
+    await useSession.getState().persistTitle()
+    expect(useSession.getState().error).toBe('保存失败')
+    expect(useSession.getState().title).toBe('  例会  ')
+  })
+})
+
+describe('reset', () => {
+  it('回到 idle 并清空转写与会话状态', () => {
+    upsertSegment(seg('r1', '一句话', true, 0))
+    useSession.setState({ status: 'recording', meetingId: 7, sessionId: 's-1' })
+
+    useSession.getState().reset()
+
+    const state = useSession.getState()
+    expect(state.status).toBe('idle')
+    expect(state.segments).toEqual([])
+    expect(state.indexById.size).toBe(0)
+    expect(state.meetingId).toBeNull()
   })
 })
