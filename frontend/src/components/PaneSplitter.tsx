@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { GripVertical } from 'lucide-react'
 
 import {
@@ -38,6 +38,21 @@ export function PaneSplitter({
   const dragStartRef = useRef({ x: 0, width })
   const [dragging, setDragging] = useState(false)
   const [hover, setHover] = useState(false)
+  // aria-valuemax 需要容器宽度，而渲染期读 ref 违反 React 的纯函数约束。
+  // 用 ResizeObserver 把宽度放进 state：observe 后浏览器会异步回一次当前尺寸，
+  // 不需要再手动 measure（那会变成 effect 里同步 setState）。
+  const [measuredWidth, setMeasuredWidth] = useState(0)
+
+  useEffect(() => {
+    const element = containerRef.current
+    if (!element) return
+    const observer = new ResizeObserver((entries) => {
+      const next = entries[0]?.contentRect.width ?? 0
+      if (next > 0) setMeasuredWidth(next)
+    })
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [containerRef])
 
   const containerWidth = () => {
     const el = containerRef.current
@@ -92,7 +107,8 @@ export function PaneSplitter({
   }
 
   const active = dragging || hover
-  const maxWidth = maxPaneWidth(containerWidth())
+  // 还没量到之前按最大宽度给个保守上界，避免 aria-valuemax 小于 valuemin。
+  const maxWidth = maxPaneWidth(measuredWidth > 0 ? measuredWidth : window.innerWidth)
 
   return (
     <div
