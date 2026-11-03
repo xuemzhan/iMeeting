@@ -14,6 +14,7 @@
 | IM-REQ-001 | [人员本体](requirements/REQ-001-person-ontology.md) | 需求草案 | P0 已有阶段实现，评审/验收与实现分别记录 |
 | IM-REQ-002 | [多场景声纹库](requirements/REQ-002-voiceprint-multiscene.md) | 需求草案 | 模板及 UI 已有实现；实时模板匹配仍默认关闭 |
 | IM-PLN-001 | [手机 / 平板自适应改造方案](plans/2026-11-01-responsive-ui-adaptation.md) | 已实施（P0–P6） | 断点/令牌/逐页改造/验收口径；落地结果见 IM-RPT-009 |
+| IM-PLN-002 | [剩余问题实施方案](plans/2026-11-02-remaining-optimization-plan.md) | 待评审 | 9 处 `set-state-in-effect` 与 4 个零测试模块的到函数级改法；决策项只给选项与推荐，不预设结论 |
 
 需求依赖和未决问题见[需求索引](requirements/README.md)。新实施计划放入 `docs/plans/YYYY-MM-DD-topic.md`，关联需求与设计，阶段结果另写报告。
 
