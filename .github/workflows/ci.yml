@@ -53,7 +53,10 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.python == '3.12'
         run: python scripts/coverage_ratchet.py
       - name: Dependency audit
-        if: matrix.os == 'ubuntu-latest'
+        # 只在基准平台跑：审核的是"装完之后的本地环境"，而 runner 镜像里预装的
+        # setuptools 等构建工具不属于本仓库依赖——py3.11 镜像带 setuptools 79.0.1
+        # （PYSEC-2026-3447），py3.12 镜像没有，同一条规则两个结论必有一个是噪音。
+        if: matrix.os == 'ubuntu-latest' && matrix.python == '3.12'
         run: |
           python -m pip install --upgrade pip-audit
           python -m pip_audit --local --skip-editable
