@@ -26,8 +26,10 @@
 | 13 | 详情页动作层测试（第六轮补做） | `hooks/useMeetingDetail.test.tsx`、`store/session.test.ts`（+5 项） | 19 项测试锁住「改动后必须让相关 query 失效、失败必须落到 genError、没有转写不许生成纪要」；覆盖改名/改正文/确认说话人/生成/导出/跳转/URL 时间戳自动定位，以及 store 的 `persistTitle`（无会议、空标题、成功裁剪、失败留错）与 `reset`。基线再抬到 19.62/18.91/12.92/15.19 |
 | 14 | 后端覆盖率门禁（第七轮补做） | `backend/scripts/coverage_ratchet.py`、`backend/coverage-baseline.json`、`pyproject.toml`（`pytest-cov` + `[tool.coverage.*]`）、`ci.yml` | 与前端同一套棘轮思路：当前 81.20%（11148 条语句）设为基线，低于基线减去 0.2 个百分点即失败；倒退时打印缺口最大的 5 个文件。CI 的 backend job 由「pytest」改为「pytest --cov + ratchet」，只多跑一次（约 11 分钟） |
 | 15 | eslint 告警清理（第八轮补做，17 → 10） | `ActionsPanel`/`MembersDialog`/`ShareDialog`、`pages/Meeting`、`useHistoryMeetings`、`Waveform` | 修 7 条：3 条 `exhaustive-deps`（把 `load` 收进 `useCallback` 并补进依赖，避免每次渲染重建导致的漏依赖）、2 条 `purity`（日期范围从渲染期 `Date.now()` 挪进取数函数，queryKey 改用 `range`）、1 条 `set-state-in-effect`（浏览器能力检查改惰性初始值，少一轮渲染）、1 条 `refs`（波形电平改为在 effect 里写 ref，符合渲染纯函数约束） |
+| 16 | eslint 告警清理（第九轮补做，10 → 9） | `components/PaneSplitter.tsx`、`components/PaneSplitter.test.tsx` | `aria-valuemax` 原本在**渲染期读容器 ref**（违反渲染纯函数约束）。改为用 `ResizeObserver` 把容器宽度量进 state：`observe` 后浏览器会异步回一次当前尺寸，因此不必在 effect 体里同步 measure；还没量到时用 `window.innerWidth` 兜底，保证 `aria-valuemax` 不小于 `aria-valuemin`。拖动/键盘换算仍在事件回调里读 ref（合法）。新增 7 项测试锁住上界跟随容器、窄容器收敛、键盘步进、禁用态、双击复位与拖动夹紧 |
 
 新增回归用例：`tests/test_repair_template_slots.py`（4 项）、`tests/test_voiceprint_merge_bulk.py`（5 项）、`tests/test_voiceprint_reenroll.py`（3 项）、`tests/test_relabel_scopes.py`（3 项）、`tests/test_noise_identity_cleanup.py`（2 项）、`tests/test_identity_workflows.py`（+2 项：解绑保留原标注、迁移升降级）。
+前端本轮补 `components/PaneSplitter.test.tsx`（7 项）。该组件此前零测试，而这轮动的正是它的上界计算。
 
 ## 2 验证
 
@@ -40,10 +42,10 @@
 | 脚本试运行 | `python scripts/repair_template_slots.py --db data/meeting.db` | `OK: 16 条模板均在 0..4 槽位范围内`（实库无越界数据） |
 | 迁移实库验证 | 拷贝 `data/meeting.db` 后跑 `init_db()`（兼容 DDL 路径与 Alembic 路径各一次） | 两条路径都补上 `segment.speaker_previous`；`alembic_version` 升到 `20261102_01`；2671 条片段无损 |
 | 前端类型 | `npm run typecheck` | 通过 |
-| 前端单测 | `npm test` | 157 passed（17 文件；本轮 +19） |
-| 前端 lint | `npm run lint` | 0 error，17 warn（与改造前同数，新增文件 0 warn） |
+| 前端单测 | `npm test` | **164 passed**（19 文件；本轮 +7） |
+| 前端 lint | `npm run lint` | 0 error，**9 warn**（上一轮 10；剩下的全是 `set-state-in-effect`），新增文件 0 warn |
 | 前端构建 | `npm run build` | 通过，`dist` 已产出 |
-| 覆盖率棘轮（前端） | `npm run test:coverage && npm run coverage:check` | 行 19.62% / 语句 18.91% / 函数 12.92% / 分支 15.19%，与基线持平；反向验证仍有效 |
+| 覆盖率棘轮（前端） | `npm run test:coverage && npm run coverage:check` | 行 **20.90%** / 语句 20.07% / 函数 13.62% / 分支 15.99%，四项均高于基线（19.62/18.91/12.92/15.19）；已用 `--update` 把基线抬到当前值 |
 | 覆盖率棘轮（后端） | `pytest -q --cov=imeeting --cov-report=json:coverage.json` + `python scripts/coverage_ratchet.py` | 语句覆盖 **81.20%**（11148 条语句、93 个文件）；持平通过；人为把基线抬高 2 个点后确实 exit 1 并列出缺口文件（已复原） |
 
 ## 3 仍未完成（本轮明确不做，附原因）
@@ -64,8 +66,8 @@
 
 ### 3.3 结构性技术债
 - 迁移仍是 `create_all` + 手写兼容 DDL + Alembic 三处并存，彻底收敛需在 PostgreSQL 上跑通升降级；
-- 前端覆盖率 19.62%（行）/ 12.92%（函数），**棘轮只能防倒退、不能代替补测**：`pages/History.tsx`、`pages/Meeting.tsx`、`components/TranscriptStream.tsx`、`store/session.ts` 的 `start/stop`（WebSocket + 录音）仍是大头；
-- 仍有 **10 条** eslint warn：9 条 `set-state-in-effect`（挂载时同步 `setState` 的取数 hook）+ 1 条 `react-hooks/refs`（`PaneSplitter` 渲染期读容器宽度）。这两类都要结构性改动——把取数迁到 `useQuery`、把容器宽度改成受控状态——不适合顺带做，已单列在 IM-RPT-010 第 15 行；
+- 前端覆盖率 20.90%（行）/ 13.62%（函数），**棘轮只能防倒退、不能代替补测**：`pages/History.tsx`、`pages/Meeting.tsx`、`components/TranscriptStream.tsx`、`store/session.ts` 的 `start/stop`（WebSocket + 录音）仍是大头；
+- 仍有 **9 条** eslint warn，全部是 `react-hooks/set-state-in-effect`：`VoiceConfirmationDialog.tsx`（2 处）、`VoiceprintConflictList.tsx`、`useConfigEditor.ts`、`useHistoryMeetings.ts`、`useParticipants.ts`、`useSharedMeeting.ts`、`useSpeakerRoles.ts`、`useVoiceprintAdmin.ts`。共性是「挂载即取数」的 hook 在 effect 体里**同步** `setLoading(true)` / `setItems([])`，会多一轮渲染。正确修法只有两条：把取数迁到 `useQuery`，或让 loading 由「首帧就为真」的初始值 + 派生状态表达——但后者要先定清「无数据时空转 spinner」的语义（例如 `meetingId == null` 时不该永远转圈），且多数 hook 没有测试兜底，所以不做盲改，见 IM-RPT-010 第 15、16 行；
 
 ## 4 关联文档
 
