@@ -25,6 +25,7 @@
 | 12 | 请求层测试 + 基线再抬（第五轮补做） | `api/client.test.ts`、`coverage-baseline.json` | 17 项测试覆盖「出错时怎么办」：detail 三种形状（字符串 / FastAPI 数组 / 不认识）、401 的两种含义（会话失效 vs 密码错 vs 匿名）、204 与纯文本响应、FormData 不设 Content-Type、`relabel` 的 cancel / label_only / confirm_self 三条分流。基线再抬到 17.39/16.85/11.88/14.25 |
 | 13 | 详情页动作层测试（第六轮补做） | `hooks/useMeetingDetail.test.tsx`、`store/session.test.ts`（+5 项） | 19 项测试锁住「改动后必须让相关 query 失效、失败必须落到 genError、没有转写不许生成纪要」；覆盖改名/改正文/确认说话人/生成/导出/跳转/URL 时间戳自动定位，以及 store 的 `persistTitle`（无会议、空标题、成功裁剪、失败留错）与 `reset`。基线再抬到 19.62/18.91/12.92/15.19 |
 | 14 | 后端覆盖率门禁（第七轮补做） | `backend/scripts/coverage_ratchet.py`、`backend/coverage-baseline.json`、`pyproject.toml`（`pytest-cov` + `[tool.coverage.*]`）、`ci.yml` | 与前端同一套棘轮思路：当前 81.20%（11148 条语句）设为基线，低于基线减去 0.2 个百分点即失败；倒退时打印缺口最大的 5 个文件。CI 的 backend job 由「pytest」改为「pytest --cov + ratchet」，只多跑一次（约 11 分钟） |
+| 15 | eslint 告警清理（第八轮补做，17 → 10） | `ActionsPanel`/`MembersDialog`/`ShareDialog`、`pages/Meeting`、`useHistoryMeetings`、`Waveform` | 修 7 条：3 条 `exhaustive-deps`（把 `load` 收进 `useCallback` 并补进依赖，避免每次渲染重建导致的漏依赖）、2 条 `purity`（日期范围从渲染期 `Date.now()` 挪进取数函数，queryKey 改用 `range`）、1 条 `set-state-in-effect`（浏览器能力检查改惰性初始值，少一轮渲染）、1 条 `refs`（波形电平改为在 effect 里写 ref，符合渲染纯函数约束） |
 
 新增回归用例：`tests/test_repair_template_slots.py`（4 项）、`tests/test_voiceprint_merge_bulk.py`（5 项）、`tests/test_voiceprint_reenroll.py`（3 项）、`tests/test_relabel_scopes.py`（3 项）、`tests/test_noise_identity_cleanup.py`（2 项）、`tests/test_identity_workflows.py`（+2 项：解绑保留原标注、迁移升降级）。
 
@@ -64,7 +65,7 @@
 ### 3.3 结构性技术债
 - 迁移仍是 `create_all` + 手写兼容 DDL + Alembic 三处并存，彻底收敛需在 PostgreSQL 上跑通升降级；
 - 前端覆盖率 19.62%（行）/ 12.92%（函数），**棘轮只能防倒退、不能代替补测**：`pages/History.tsx`、`pages/Meeting.tsx`、`components/TranscriptStream.tsx`、`store/session.ts` 的 `start/stop`（WebSocket + 录音）仍是大头；
-- 17 条既有 eslint warn（`set-state-in-effect` 等）需逐处结合业务判断。
+- 仍有 **10 条** eslint warn：9 条 `set-state-in-effect`（挂载时同步 `setState` 的取数 hook）+ 1 条 `react-hooks/refs`（`PaneSplitter` 渲染期读容器宽度）。这两类都要结构性改动——把取数迁到 `useQuery`、把容器宽度改成受控状态——不适合顺带做，已单列在 IM-RPT-010 第 15 行；
 
 ## 4 关联文档
 
