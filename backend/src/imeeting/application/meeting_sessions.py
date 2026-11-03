@@ -95,8 +95,22 @@ def persist_segments_locked(
     """
     try:
         with Session(engine) as db:
-            existing_ids = set(
-                db.exec(select(Segment.segment_id).where(Segment.meeting_id == meeting_id)).all()
+            # IM-PLN-004 C-1：查重只针对**本批次**的 segment_id。
+            # 旧实现每次都把整场会议的所有 segment_id 拉回来（O(会议段数)），
+            # 而 stream.py 是「每条定稿调用一次」，于是整场成本退化成 O(N²)。
+            # 按批次查重后总成本与段数线性相关，语义完全不变。
+            batch_ids = [seg.get("segment_id") for seg in segments if seg.get("segment_id")]
+            existing_ids = (
+                set(
+                    db.exec(
+                        select(Segment.segment_id).where(
+                            Segment.meeting_id == meeting_id,
+                            Segment.segment_id.in_(batch_ids),
+                        )
+                    ).all()
+                )
+                if batch_ids
+                else set()
             )
             added = 0
             for seg in segments:
@@ -145,15 +159,12 @@ def persist_segments_locked(
                 if duration_ms:
                     # 多段会话：只增不减，避免重连后把整场时长改小
                     meeting.duration_ms = max(meeting.duration_ms or 0, duration_ms)
-                # flush 后计数才包含本批次新增的片段；用 count 避免把整场文本拉回内存
+                # 段数增量维护（C-1）：本批次新增了几段就加几段。
+                # 片段只由本函数写入，所以增量是精确的；收尾时 _migrate_schema 的
+                # 一次性校正与 GET /meetings 的 COUNT(*) 兜底保证不会长期漂移。
+                # 旧实现每次都 COUNT(*)，同样把整场成本抬成 O(N²)。
                 db.flush()
-                meeting.segment_count = int(
-                    db.exec(
-                        select(func.count())
-                        .select_from(Segment)
-                        .where(Segment.meeting_id == meeting_id)
-                    ).one()
-                )
+                meeting.segment_count = int(meeting.segment_count or 0) + added
                 db.add(meeting)
 
             db.commit()

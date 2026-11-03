@@ -48,8 +48,10 @@ def _user_from_credentials(
 
     try:
         user_id = int(payload["sub"])
-    except (KeyError, ValueError, TypeError):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="令牌格式异常")
+    except (KeyError, ValueError, TypeError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="令牌格式异常"
+        ) from exc
 
     user = db.get(User, user_id)
     if user is None:

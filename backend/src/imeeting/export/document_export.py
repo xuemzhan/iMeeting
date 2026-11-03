@@ -3,8 +3,120 @@
 from __future__ import annotations
 
 import io
+import logging
+import os
 from datetime import datetime
+from pathlib import Path
 from xml.sax.saxutils import escape
+
+logger = logging.getLogger(__name__)
+
+#: TTF 候选路径，按平台覆盖。命中第一个存在的文件即用。
+_CJK_FONT_CANDIDATES: tuple[str, ...] = (
+    # Linux（生产镜像装 fonts-noto-cjk 后命中第一条；arphic/wqy 为常见替代）
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+    "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+    "/usr/share/fonts/truetype/arphic/uming.ttc",
+    "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+    "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
+    # Windows
+    r"C:\Windows\Fonts\msyh.ttc",
+    r"C:\Windows\Fonts\simsun.ttc",
+    r"C:\Windows\Fonts\simhei.ttf",
+    # macOS
+    "/System/Library/Fonts/PingFang.ttc",
+)
+
+_TTF_FONT_NAME = "MeetingCJK"
+_CID_FONT_NAME = "STSong-Light"
+_FALLBACK_FONT_NAME = "Helvetica"
+
+#: (显式配置值, 字体名, 来源说明)。None 表示尚未探测。缓存里带 override，
+#: 这样后台改了 ``export.pdf_font_path`` 之后下一次导出立即生效，不必重启。
+_font_cache: tuple[str, str, str] | None = None
+
+
+def reset_pdf_font_cache() -> None:
+    """清空字体探测缓存；供配置变更与测试使用。"""
+    global _font_cache
+    _font_cache = None
+
+
+def _configured_font_path() -> str:
+    """显式指定字体的来源：环境变量 > 配置项 > 空。
+
+    环境变量优先，便于容器里挂载企业字体而无需改数据库（与三级回退一致）。
+    """
+    env_value = os.getenv("IMEETING_PDF_FONT", "").strip()
+    if env_value:
+        return env_value
+    try:
+        from ..settings import get_config
+
+        return str(get_config("export.pdf_font_path") or "").strip()
+    except Exception:  # pragma: no cover - 配置层不可用时不阻断导出
+        return ""
+
+
+def resolve_pdf_font() -> tuple[str, str]:
+    """按降级链决定 PDF 正文字体，返回 ``(字体名, 来源)``。
+
+    为什么要这条链：旧实现直接写死 ``C:\\Windows\\Fonts\\msyh.ttc``，在 Linux 容器里
+    必然失败并回退 ``Helvetica``——而 Helvetica 没有 CJK 字形，**且 reportlab 不报错**，
+    于是导出的中文 PDF 是一份"看起来正常"的废文件（现有测试只断言 ``%PDF`` 魔数，抓不到）。
+
+    四级降级：显式指定 TTF → 常见 CJK 字体路径 → reportlab 内置 CID 字体 → Helvetica。
+    内置 CID 字体不内嵌（PDF 内无 ``FontFile``），依赖阅读器自带字形，只作兜底。
+    """
+    global _font_cache
+    override = _configured_font_path()
+    if _font_cache is not None and _font_cache[0] == override:
+        return _font_cache[1], _font_cache[2]
+
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+
+    tried: set[str] = set()
+    override = _configured_font_path()
+    for path in (override, *_CJK_FONT_CANDIDATES):
+        if not path or path in tried:
+            continue
+        tried.add(path)
+        try:
+            if not Path(path).is_file():
+                raise FileNotFoundError(path)
+            pdfmetrics.registerFont(TTFont(_TTF_FONT_NAME, path, subfontIndex=0))
+        except Exception as exc:
+            if path == override:
+                # 显式配置失效必须显式告警，否则运维以为生效了。
+                logger.warning(
+                    "导出的 PDF 字体配置不可用（%s：%s），继续尝试内置候选", path, exc
+                )
+            else:
+                logger.debug("跳过 PDF 字体候选 %s：%s", path, exc)
+            continue
+        _font_cache = (override, _TTF_FONT_NAME, f"ttf:{path}")
+        logger.info("PDF 导出使用内嵌字体 %s", path)
+        return _font_cache[1], _font_cache[2]
+
+    try:
+        from reportlab.pdfbase.cidfonts import UnicodeCIDFont
+
+        pdfmetrics.registerFont(UnicodeCIDFont(_CID_FONT_NAME))
+        _font_cache = (override, _CID_FONT_NAME, "cid:builtin")
+        logger.warning(
+            "未找到可用的 CJK TTF 字体，PDF 导出回退内置 %s（不内嵌字形，"
+            "严格阅读器/PDF-A 场景需安装字体或设置 IMEETING_PDF_FONT）",
+            _CID_FONT_NAME,
+        )
+        return _font_cache[1], _font_cache[2]
+    except Exception:
+        logger.error(
+            "PDF 导出无任何 CJK 字体可用，回退 Helvetica——中文将不可读；"
+            "请安装 fonts-noto-cjk 或设置 IMEETING_PDF_FONT"
+        )
+        _font_cache = (override, _FALLBACK_FONT_NAME, "fallback:helvetica")
+        return _font_cache[1], _font_cache[2]
 
 
 def _mmss(ms: int) -> str:
@@ -101,8 +213,6 @@ def build_pdf(meeting, segments, minutes, *, company="", footer="") -> bytes:
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-    from reportlab.pdfbase import pdfmetrics
-    from reportlab.pdfbase.ttfonts import TTFont
     from reportlab.platypus import (
         PageBreak,
         Paragraph,
@@ -110,12 +220,9 @@ def build_pdf(meeting, segments, minutes, *, company="", footer="") -> bytes:
         Spacer,
     )
 
-    font_path = r"C:\Windows\Fonts\msyh.ttc"
-    try:
-        pdfmetrics.registerFont(TTFont("MSYH", font_path, subfontIndex=0))
-        font_name = "MSYH"
-    except Exception:
-        font_name = "Helvetica"
+    # 字体由降级链决定（见 resolve_pdf_font）：不得再写死平台路径。
+    font_name, font_source = resolve_pdf_font()
+    logger.debug("PDF 导出字体：%s（%s）", font_name, font_source)
 
     styles = getSampleStyleSheet()
     title_style = ParagraphStyle(

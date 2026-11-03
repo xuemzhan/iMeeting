@@ -277,3 +277,58 @@ describe('TranscriptSocket 收尾', () => {
     expect(second.readyState).toBe(FakeWebSocket.OPEN)
   })
 })
+
+describe('握手前音频缓冲上界（IM-PLN-004 M-5）', () => {
+  /** 旧实现在服务端迟迟不回 ready 时会把每一块音频都堆进内存，直到 OOM。 */
+  it('超过上界的音频丢最旧块，并且只提示一次', async () => {
+    const errors: string[] = []
+    const sock = new TranscriptSocket({
+      onMessage: () => {},
+      onError: (message) => errors.push(message),
+    })
+    sock.connect({ type: 'start', title: '慢握手' })
+    const ws = FakeWebSocket.instances[0]
+    ws.open()
+
+    // 服务端尚未回 ready：这些块全部进 preReady（上界 300）
+    for (let i = 0; i < 305; i += 1) {
+      void sock.sendAudio(new ArrayBuffer(4))
+    }
+    expect(errors).toHaveLength(1)
+    expect(errors[0]).toContain('缓冲上限')
+
+    // 服务端终于 ready：补发的块数必须被上界截断，而不是 305
+    ws.serverPush({ type: 'ready', meeting_id: 9, audio_chunk_seq: 0 })
+    await sock.sendAudio(new ArrayBuffer(4))
+
+    const chunkFrames = ws.sent.filter(
+      (frame) => typeof frame === 'string' && frame.includes('"audio_chunk"'),
+    ).length
+    expect(chunkFrames).toBeGreaterThanOrEqual(300)
+    expect(chunkFrames).toBeLessThan(305)
+  })
+
+  it('未超过上界时一块都不丢', async () => {
+    const errors: string[] = []
+    const sock = new TranscriptSocket({
+      onMessage: () => {},
+      onError: (message) => errors.push(message),
+    })
+    sock.connect({ type: 'start', title: '快握手' })
+    const ws = FakeWebSocket.instances[0]
+    ws.open()
+
+    for (let i = 0; i < 50; i += 1) {
+      void sock.sendAudio(new ArrayBuffer(4))
+    }
+    expect(errors).toHaveLength(0)
+
+    ws.serverPush({ type: 'ready', meeting_id: 10, audio_chunk_seq: 0 })
+    await sock.sendAudio(new ArrayBuffer(4))
+
+    const chunkFrames = ws.sent.filter(
+      (frame) => typeof frame === 'string' && frame.includes('"audio_chunk"'),
+    ).length
+    expect(chunkFrames).toBe(51)
+  })
+})

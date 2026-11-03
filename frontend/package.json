@@ -16,7 +16,9 @@
     "e2e": "playwright test",
     "verify:features": "node scripts/verify-features.mjs",
     "verify:responsive": "node scripts/responsive-probe.mjs --strict --paths /,/login,/history,/knowledge,/voiceprints",
-    "codemod:font": "node scripts/codemod-font-scale.mjs"
+    "codemod:font": "node scripts/codemod-font-scale.mjs",
+    "worklet:sync": "node scripts/sync-worklet.mjs",
+    "worklet:check": "node scripts/sync-worklet.mjs --check"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.62.7",
@@ -26,7 +28,6 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.1.1",
-    "react-window": "^1.8.10",
     "zustand": "^5.0.2"
   },
   "devDependencies": {
@@ -39,7 +40,6 @@
     "@types/node": "^26.6.3",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
-    "@types/react-window": "^1.8.8",
     "@vitejs/plugin-react": "^4.3.4",
     "@vitest/coverage-v8": "^4.1.12",
     "eslint": "^10.14.0",

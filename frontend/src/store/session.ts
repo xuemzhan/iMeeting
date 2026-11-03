@@ -598,21 +598,90 @@ export function handleServerMessage(msg: ServerMessage): void {
   }
 }
 
+/**
+ * 片段排序比较器：按全局时间轴，再按 seq。
+ * 抽出来是因为快路径与慢路径必须用同一个比较器，否则两处漂移会导致顺序 bug。
+ */
+function compareSegments(a: Segment, b: Segment): number {
+  return a.startMs - b.startMs || a.seq - b.seq
+}
+
+/**
+ * partial 处理耗时采样（M0 度量）。
+ *
+ * 为什么需要：计划里"每条 partial 全量排序会掉帧"这个判断曾是**未经测量**的。
+ * 有了这组数字，P-1/P-2/P-3 的收益才能被证伪或被证成。
+ * 采样用固定容量的环形缓冲，避免长会议把内存吃光。
+ */
+const PARTIAL_TIMING_CAPACITY = 2000
+const partialTimings: number[] = []
+let partialTimingCursor = 0
+
+export interface PartialTimingStats {
+  count: number
+  p50Ms: number
+  p95Ms: number
+  maxMs: number
+}
+
+/** 读出当前采样窗口的统计量（p50/p95）。 */
+export function getPartialTimingStats(): PartialTimingStats {
+  if (partialTimings.length === 0) {
+    return { count: 0, p50Ms: 0, p95Ms: 0, maxMs: 0 }
+  }
+  const sorted = [...partialTimings].sort((a, b) => a - b)
+  const at = (q: number) => sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))]
+  return {
+    count: sorted.length,
+    p50Ms: at(0.5),
+    p95Ms: at(0.95),
+    maxMs: sorted[sorted.length - 1],
+  }
+}
+
+/** 清空采样窗口；供测试使用。 */
+export function resetPartialTiming(): void {
+  partialTimings.length = 0
+  partialTimingCursor = 0
+}
+
+function recordPartialTiming(durationMs: number): void {
+  if (partialTimings.length < PARTIAL_TIMING_CAPACITY) {
+    partialTimings.push(durationMs)
+  } else {
+    partialTimings[partialTimingCursor] = durationMs
+    partialTimingCursor = (partialTimingCursor + 1) % PARTIAL_TIMING_CAPACITY
+  }
+  // 开发模式每 600 条打一次，便于在真实长会议里观察趋势（生产不打日志）。
+  if (import.meta.env.DEV && partialTimings.length > 0 && partialTimings.length % 600 === 0) {
+    const stats = getPartialTimingStats()
+    console.info(
+      `[session] partial 处理 ${stats.count} 条：p50 ${stats.p50Ms.toFixed(3)}ms，` +
+        `p95 ${stats.p95Ms.toFixed(3)}ms，max ${stats.maxMs.toFixed(3)}ms`,
+    )
+  }
+}
+
 /** 把片段写入状态：同 id 覆盖，且定稿后不会被迟到的 partial 回退。
  *
  * 导出以便单测覆盖——这是整个前端最关键的语义，
  * 一旦退化成「追加」会导致屏幕上文字重复。
+ *
+ * 快路径（IM-PLN-004 P-1）：partial 覆盖同一条片段时位置不会变，
+ * 因此只替换该下标，**不排序、不重建索引**。索引只在"新增片段"或
+ * "时间戳变化导致需要重排"时才重建。语义与旧实现完全一致。
  */
 export function upsertSegment(seg: Segment): void {
+  const started =
+    typeof performance !== 'undefined' ? performance.now() : 0
+
   useSession.setState((state) => {
     const index = state.indexById.get(seg.segmentId)
 
     if (index === undefined) {
       // 新片段：按全局时间轴插入。有界重排可能让 final 晚于后面的片段到达，
       // 仅靠追加会让字幕顺序错乱。
-      const segments = [...state.segments, seg].sort(
-        (a, b) => a.startMs - b.startMs || a.seq - b.seq,
-      )
+      const segments = [...state.segments, seg].sort(compareSegments)
       const indexById = new Map(
         segments.map((item, i) => [item.segmentId, i] as const),
       )
@@ -625,12 +694,20 @@ export function upsertSegment(seg: Segment): void {
 
     const segments = state.segments.slice()
     segments[index] = seg
-    segments.sort((a, b) => a.startMs - b.startMs || a.seq - b.seq)
+
+    if (existing.startMs === seg.startMs) {
+      // 位置不变 → indexById 依然正确，无需重建（这是绝大多数消息的路径）。
+      return { segments }
+    }
+
+    segments.sort(compareSegments)
     const indexById = new Map(
       segments.map((item, i) => [item.segmentId, i] as const),
     )
     return { segments, indexById }
   })
+
+  if (started) recordPartialTiming(performance.now() - started)
 }
 
 function defaultTitle(): string {

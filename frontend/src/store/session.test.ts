@@ -273,3 +273,70 @@ describe('reset', () => {
     expect(state.meetingId).toBeNull()
   })
 })
+
+describe('upsertSegment 快路径与耗时采样（IM-PLN-004 P-1/M0）', () => {
+  function bulkSegments(count: number): Segment[] {
+    return Array.from({ length: count }, (_, i) => ({
+      segmentId: `s-${i}`,
+      text: `片段 ${i}`,
+      // 末段是"正在说话的那一句"（未定稿），其余都已定稿：
+      // 只有未定稿的片段才会被 partial 覆盖，这是既有语义。
+      isFinal: i !== count - 1,
+      startMs: i * 3000,
+      endMs: i * 3000 + 2500,
+      speaker: null,
+      seq: i,
+    }))
+  }
+
+  it('partial 覆盖同一条片段时不重排，索引仍与数组一致', () => {
+    const segments = bulkSegments(200)
+    useSession.setState({
+      segments,
+      indexById: new Map(segments.map((item, i) => [item.segmentId, i] as const)),
+    })
+
+    // 200 条 partial 全部落在最后一段上（真实会议里绝大多数消息是这样）
+    for (let i = 0; i < 200; i += 1) {
+      upsertSegment({
+        ...segments[199],
+        text: `草稿 ${i}`,
+        isFinal: false,
+      })
+    }
+
+    const state = useSession.getState()
+    expect(state.segments).toHaveLength(200)
+    expect(state.segments[199].text).toBe('草稿 199')
+    for (let i = 1; i < state.segments.length; i += 1) {
+      expect(state.segments[i].startMs).toBeGreaterThan(state.segments[i - 1].startMs)
+    }
+    // 索引与数组必须双向一致（快路径最容易在这里失配）
+    state.segments.forEach((item, index) => {
+      expect(state.indexById.get(item.segmentId)).toBe(index)
+    })
+  })
+
+  it('时间戳变化时回到排序路径，顺序仍然正确', () => {
+    const segments = bulkSegments(5)
+    useSession.setState({
+      segments,
+      indexById: new Map(segments.map((item, i) => [item.segmentId, i] as const)),
+    })
+
+    // 把第 0 段的时间戳挪到最后 → 必须重排
+    upsertSegment({ ...segments[0], startMs: 99999, isFinal: true })
+
+    const state = useSession.getState()
+    expect(state.segments.map((item) => item.segmentId)).toEqual([
+      's-1',
+      's-2',
+      's-3',
+      's-4',
+      's-0',
+    ])
+    state.segments.forEach((item, index) => {
+      expect(state.indexById.get(item.segmentId)).toBe(index)
+    })
+  })
+})

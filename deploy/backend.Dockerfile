@@ -9,12 +9,15 @@ ENV PYTHONUNBUFFERED=1 \
     MODELSCOPE_CACHE=/models/modelscope \
     TORCH_HOME=/models/torch
 
+# fonts-noto-cjk：中文 PDF 导出的字形来源。缺了 PDF 会静默回退 Helvetica（中文变缺字），
+# 因此这里必须装。约 60MB；若镜像体积敏感，可改为挂载字体目录并设置 IMEETING_PDF_FONT。
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         curl \
         ffmpeg \
         libgomp1 \
         libsndfile1 \
+        fonts-noto-cjk \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app/backend

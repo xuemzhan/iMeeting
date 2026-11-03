@@ -103,7 +103,13 @@ async def lifespan(app: FastAPI):
     for warning in production_config_warnings():
         logger.warning("生产配置提示：%s", warning)
     logger.info("=== %s 启动中 ===", SERVER_CONFIG["app_name"])
+    # 启动分解（M0）：分别计时建库/迁移与模型预热，便于判断 C-4 是否退化。
+    _startup_started = time.perf_counter()
     initialize_app_database()
+    logger.info(
+        "启动分解：数据库初始化 %.0f ms",
+        (time.perf_counter() - _startup_started) * 1000,
+    )
     # init_db 内的 Alembic fileConfig 会重置根 logger；必须在迁移之后重装，
     # 否则只有启动日志落盘，真正重要的会话/定稿/错误事件全部丢失。
     _install_file_logging()
@@ -263,7 +269,7 @@ def prometheus_metrics(request: Request):
     from sqlmodel import Session, select
 
     from .application.jobs import job_metrics, job_stats
-    from .db import engine
+    from .db import db_statement_counts, engine, pool_metrics
     from .engine import pool
     from .models import LLMUsage
     from .ops import disk_gauges, prometheus_text
@@ -274,6 +280,12 @@ def prometheus_metrics(request: Request):
 
     jobs = job_metrics()
     gauges = disk_gauges(SERVER_CONFIG["data_dir"])
+    # M0：连接池水位与取连接超时（S-7 的观测依据）
+    pool_gauges, counters = pool_metrics()
+    gauges.update(pool_gauges)
+    for op, count in db_statement_counts().items():
+        name = f"meeting_db_statements_{op.lower()}_total"
+        counters[name] = count
     with Session(engine) as db:
         llm_cost = db.exec(
             select(func.coalesce(func.sum(LLMUsage.cost_usd), 0.0))
@@ -302,6 +314,7 @@ def prometheus_metrics(request: Request):
                 "meeting_jobs": job_stats(),
             },
             gauges=gauges,
+            counters=counters,
         ),
         media_type="text/plain; version=0.0.4",
     )

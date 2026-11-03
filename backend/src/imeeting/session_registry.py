@@ -24,6 +24,21 @@ class SessionRegistry:
         with self._lock:
             self._session_ids.discard(session_id)
 
+    def try_acquire(self, session_id: str, limit: int) -> bool:
+        """原子地「检查 + 占位」（IM-PLN-004 S-1）。
+
+        旧调用方的写法是 ``count() >= limit`` 再 ``add()``：两个连接可以在
+        读与写之间同时通过，实际并发数超过上限；CPU 型推理下这会直接压垮机器。
+        这里把判断和占位放进同一把锁，超限时不占位。
+        """
+        with self._lock:
+            if session_id in self._session_ids:
+                return True
+            if len(self._session_ids) >= limit:
+                return False
+            self._session_ids.add(session_id)
+            return True
+
     def contains(self, session_id: str) -> bool:
         with self._lock:
             return session_id in self._session_ids

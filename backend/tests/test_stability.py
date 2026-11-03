@@ -221,7 +221,7 @@ class TestSustainedLoad:
 
             peak_stream_buf = 0
             peak_seg_buf = 0
-            for i in range(500):  # 500 * 600ms = 300s
+            for _ in range(500):  # 500 * 600ms = 300s
                 await s.push_audio(tone(0.6))
                 await s.push_audio(silence(0.05))
                 sb = sum(len(x) for x in s._streaming_buffer)

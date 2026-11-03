@@ -167,6 +167,11 @@ class AudioSink:
             # 每块都回填头（44 字节的 seek+write，代价可忽略），这样文件在任何时刻
             # 都是「声明长度 = 实际长度」的合法 WAV；进程被杀最多丢当前这一块。
             # 同时 flush，避免数据只躺在 Python 缓冲里（否则崩溃后文件是 0 字节）。
+            #
+            # IM-PLN-004 P-6 曾尝试把它降频到「每 64 块或每 1 秒」，被既有不变量
+            # 测试否决（test_wav_is_readable_before_close / test_header_matches_data_without_close）：
+            # 现场那次 75MB/39 分钟录音变成不可读，就是这条性质被破坏的后果。
+            # 省下的两次 seek 远不值得换掉"任何时刻可播放"。
             self._refresh_header()
         except Exception:
             # 音频落盘属附加能力，失败不能影响转写主链路

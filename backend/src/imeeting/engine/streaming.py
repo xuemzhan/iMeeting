@@ -22,6 +22,7 @@ import logging
 import threading
 import time
 import uuid
+from collections import deque
 from typing import Awaitable, Callable
 
 import numpy as np
@@ -104,7 +105,8 @@ class StreamSession:
 
         # 流式模型的会话级 cache —— 必须隔离
         self._cache: dict = {}
-        self._streaming_buffer: list[np.ndarray] = []
+        # deque 而不是 list：头删是 O(1)（list.pop(0) 是 O(n)，P-6）
+        self._streaming_buffer: deque[np.ndarray] = deque()
         self._stream_chunk_samples = self._resolve_chunk_samples()
 
         self._current: SegmentState | None = None
@@ -427,7 +429,7 @@ class StreamSession:
         while need > 0 and self._streaming_buffer:
             head = self._streaming_buffer[0]
             if len(head) <= need:
-                out.append(self._streaming_buffer.pop(0))
+                out.append(self._streaming_buffer.popleft())
                 need -= len(head)
             else:
                 out.append(head[:need])

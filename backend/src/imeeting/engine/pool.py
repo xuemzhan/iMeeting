@@ -74,8 +74,15 @@ def _get_executor() -> ThreadPoolExecutor:
         _EXECUTOR_THREADS = want
         logger.info("ASR 推理线程池已就绪：%d 个线程", want)
         if old is not None:
-            # 旧池可能有任务在执行，交给解释器退出时回收，不在此处阻塞
-            logger.info("推理线程数由 %d 调整为 %d，旧线程池待其任务结束后释放", old_threads, want)
+            # 必须显式 shutdown：ThreadPoolExecutor 的 worker 线程会永久阻塞在空队列上，
+            # 不调用它就等于每次改配置泄漏 want 个常驻线程（IM-PLN-004 S-2/P-4）。
+            # wait=False：让正在跑的任务自然结束，不阻塞配置写入。
+            old.shutdown(wait=False)
+            logger.info(
+                "推理线程数由 %d 调整为 %d，旧线程池已关闭（在跑任务结束后释放）",
+                old_threads,
+                want,
+            )
     return _EXECUTOR
 
 _models: dict[str, Any] = {}

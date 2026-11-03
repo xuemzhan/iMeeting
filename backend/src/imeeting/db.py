@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import logging
 import os
+from collections import defaultdict
 from collections.abc import Generator
 from contextlib import contextmanager
 
 from sqlalchemy import event, inspect, text
-from sqlalchemy.pool import StaticPool
+from sqlalchemy.exc import TimeoutError as SATimeoutError
+from sqlalchemy.pool import QueuePool, StaticPool
 from sqlmodel import Session, SQLModel, create_engine, select
 
 from .models import AppConfigRow, User, utcnow
@@ -38,12 +40,93 @@ def admin_credentials_from_env() -> tuple[str, str]:
 _db_url = SERVER_CONFIG["database_url"]
 SERVER_CONFIG["data_dir"].mkdir(parents=True, exist_ok=True)
 
+
+def _pool_env(name: str, default: str) -> str:
+    """读池参数：环境变量存在但为空串时回退默认值（与 settings._env_or 同约定）。"""
+    raw = os.getenv(name)
+    return raw if raw else default
+
+
+class _CountingQueuePool(QueuePool):
+    """QueuePool + 取连接超时计数。
+
+    为什么需要：``create_engine`` 未配置池参数时是 ``QueuePool(5 + 10)``，而并发方
+    （anyio 线程池里的同步端点、``asyncio.to_thread`` 落库、job worker、清理线程）
+    远超 15，满载时会抛 ``TimeoutError``。这个超时**不会**经过 ``handle_error``
+    （那时连接还没拿到），只能在 ``connect()`` 里数，否则线上只会看到零星的 500。
+    """
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.checkout_timeouts = 0
+
+    def connect(self):  # type: ignore[override]
+        try:
+            return super().connect()
+        except SATimeoutError:
+            self.checkout_timeouts += 1
+            raise
+
+
 _connect_args = {"check_same_thread": False} if _db_url.startswith("sqlite") else {}
 _engine_kwargs: dict = {"echo": False, "connect_args": _connect_args}
 if ":memory:" in _db_url:
     _engine_kwargs["poolclass"] = StaticPool
+else:
+    # 显式配置而不是留默认：默认 5+10 且 pool_timeout=30s，
+    # 满载时表现为"请求卡 30 秒再 500"，比快速失败更难排查。
+    _engine_kwargs.update(
+        poolclass=_CountingQueuePool,
+        pool_size=int(_pool_env("DB_POOL_SIZE", "5")),
+        max_overflow=int(_pool_env("DB_POOL_MAX_OVERFLOW", "10")),
+        pool_timeout=float(_pool_env("DB_POOL_TIMEOUT", "10")),
+    )
 
 engine = create_engine(_db_url, **_engine_kwargs)
+
+#: 语句计数（M0 度量）：op -> 次数。只做观测，失败不影响主链路。
+_statement_counts: dict[str, int] = defaultdict(int)
+
+
+@event.listens_for(engine, "before_cursor_execute")
+def _count_db_statement(_conn, _cursor, statement, _parameters, _context, _executemany) -> None:
+    """按语句首词归类计数，供 ``/metrics`` 暴露（量化 C-1/C-2/C-4/S-7 的依据）。"""
+    head = statement.lstrip()
+    op = head.split(None, 1)[0].upper() if head else "UNKNOWN"
+    _statement_counts[op] += 1
+
+
+def db_statement_counts() -> dict[str, int]:
+    """当前进程的 SQL 语句计数快照。"""
+    return dict(_statement_counts)
+
+
+def reset_db_statement_counts() -> None:
+    """清空语句计数；供测试与压测分段使用。"""
+    _statement_counts.clear()
+
+
+def pool_metrics() -> tuple[dict[str, float], dict[str, int]]:
+    """返回 (池水位 gauge, 取连接超时计数器)。"""
+    pool = engine.pool
+    gauges: dict[str, float] = {}
+    counters: dict[str, int] = {}
+    try:
+        gauges["meeting_db_pool_checked_out"] = float(pool.checkedout())  # type: ignore[attr-defined]
+    except Exception:
+        pass
+    try:
+        gauges["meeting_db_pool_size"] = float(pool.size())  # type: ignore[attr-defined]
+    except Exception:
+        pass
+    max_overflow = getattr(pool, "_max_overflow", None)
+    if max_overflow is not None:
+        # 不用 pool.overflow()：池未满时它返回负值，作为 gauge 会误导告警规则。
+        gauges["meeting_db_pool_max_overflow"] = float(max_overflow)
+    timeouts = getattr(pool, "checkout_timeouts", None)
+    if timeouts is not None:
+        counters["meeting_db_pool_timeouts_total"] = int(timeouts)
+    return gauges, counters
 
 
 @event.listens_for(engine, "connect")
@@ -106,7 +189,37 @@ def _run_versioned_migrations() -> None:
         logger.exception("Alembic 版本迁移失败")
         raise
 
+_BACKFILL_KEY = "legacy_backfill_2026_11_04"
+_ONCE_TABLE = "compat_migration"
 
+
+def _once_done(conn, key: str) -> bool:
+    """判断某个一次性回填是否已执行过。
+
+    表不存在时不创建（避免每次启动都产生 DDL），只在真正要记录时才建。
+    """
+    exists = conn.execute(
+        text("SELECT 1 FROM sqlite_master WHERE type='table' AND name=:name"),
+        {"name": _ONCE_TABLE},
+    ).first()
+    if exists is None:
+        return False
+    return conn.execute(
+        text(f"SELECT 1 FROM {_ONCE_TABLE} WHERE key = :key"), {"key": key}
+    ).first() is not None
+
+
+def _mark_once(conn, key: str) -> None:
+    conn.execute(
+        text(
+            f"CREATE TABLE IF NOT EXISTS {_ONCE_TABLE} "
+            "(key VARCHAR(64) PRIMARY KEY, applied_at DATETIME)"
+        )
+    )
+    conn.execute(
+        text(f"INSERT OR IGNORE INTO {_ONCE_TABLE} (key, applied_at) VALUES (:key, :at)"),
+        {"key": key, "at": utcnow()},
+    )
 def _migrate_schema() -> None:
     """补齐 SQLModel ``create_all`` 不会处理的增量列，并修复历史数据。
 
@@ -136,6 +249,12 @@ def _migrate_schema() -> None:
         return {c["name"] for c in inspector.get_columns(table)}
 
     with engine.begin() as conn:
+        # IM-PLN-004 C-4：重型历史回填只在库还没跑过这些 SQL 时执行一次。
+        # 加列的 DDL 与安全相关迁移（分享令牌摘要）仍然每次都跑——它们幂等且便宜，
+        # 而且必须能被"列被删掉"这类场景重新触发。
+        run_backfill = not _once_done(conn, _BACKFILL_KEY)
+        if not run_backfill:
+            logger.debug("历史回填已执行过（%s），跳过全表扫描", _BACKFILL_KEY)
         if "voiceprint_template" in tables:
             if "disabled" not in columns("voiceprint_template"):
                 conn.execute(text("ALTER TABLE voiceprint_template ADD COLUMN disabled BOOLEAN NOT NULL DEFAULT 0"))
@@ -315,26 +434,28 @@ def _migrate_schema() -> None:
                     conn.execute(
                         text(f"ALTER TABLE segment ADD COLUMN {name} {ddl}")
                     )
-            conn.execute(
-                text(
-                    "UPDATE segment SET original_text = text "
-                    "WHERE (original_text IS NULL OR original_text = '')"
-                )
-            )
-            # 旧数据：segment_id 形如 s-<session_id>-<seq>-<rand>
-            rows = conn.execute(
-                text(
-                    "SELECT id, segment_id FROM segment "
-                    "WHERE session_id IS NULL AND segment_id LIKE 's-%'"
-                )
-            ).fetchall()
-            for row in rows:
-                parts = str(row[1]).split("-")
-                if len(parts) >= 2:
-                    conn.execute(
-                        text("UPDATE segment SET session_id = :sid WHERE id = :id"),
-                        {"sid": parts[1], "id": row[0]},
+            if run_backfill:
+                conn.execute(
+                    text(
+                        "UPDATE segment SET original_text = text "
+                        "WHERE (original_text IS NULL OR original_text = '')"
                     )
+                )
+            # 旧数据：segment_id 形如 s-<session_id>-<seq>-<rand>
+            if run_backfill:
+                rows = conn.execute(
+                    text(
+                        "SELECT id, segment_id FROM segment "
+                        "WHERE session_id IS NULL AND segment_id LIKE 's-%'"
+                    )
+                ).fetchall()
+                for row in rows:
+                    parts = str(row[1]).split("-")
+                    if len(parts) >= 2:
+                        conn.execute(
+                            text("UPDATE segment SET session_id = :sid WHERE id = :id"),
+                            {"sid": parts[1], "id": row[0]},
+                        )
             conn.execute(
                 text(
                     "CREATE INDEX IF NOT EXISTS ix_segment_session_id "
@@ -349,24 +470,28 @@ def _migrate_schema() -> None:
             )
             # 增量落库与收尾批量落库可能并发，历史上已产生过重复片段。
             # 先去重（同一 segment_id 保留最早一条），再加唯一约束兜底。
-            conn.execute(
-                text(
-                    "DELETE FROM segment WHERE id NOT IN ("
-                    "SELECT MIN(id) FROM segment GROUP BY meeting_id, segment_id)"
+            # 去重是全表扫描 + 排序：只在第一次启动跑；新增重复由唯一索引直接拦住。
+            if run_backfill:
+                conn.execute(
+                    text(
+                        "DELETE FROM segment WHERE id NOT IN ("
+                        "SELECT MIN(id) FROM segment GROUP BY meeting_id, segment_id)"
+                    )
                 )
-            )
             conn.execute(
                 text(
                     "CREATE UNIQUE INDEX IF NOT EXISTS ux_segment_meeting_sid "
                     "ON segment (meeting_id, segment_id)"
                 )
             )
-            conn.execute(
-                text(
-                    "UPDATE meeting SET segment_count = "
-                    "(SELECT COUNT(*) FROM segment WHERE segment.meeting_id = meeting.id)"
+            # 逐会议重算段数：O(会议数 × 段数)，同样只在第一次启动跑。
+            if run_backfill:
+                conn.execute(
+                    text(
+                        "UPDATE meeting SET segment_count = "
+                        "(SELECT COUNT(*) FROM segment WHERE segment.meeting_id = meeting.id)"
+                    )
                 )
-            )
             # FTS5：trigram tokenizer 支持中文子串检索；失败时搜索自动回退 LIKE
             if engine.dialect.name == "sqlite":
                 try:
@@ -453,13 +578,14 @@ def _migrate_schema() -> None:
                 )
             # 历史临时声纹按“首次发现会议”归入会议作用域，避免跨会议串味；
             # 人工命名过的（provisional=0）保持全局身份。
-            conn.execute(
-                text(
-                    "UPDATE voiceprint SET meeting_id = source_meeting_id "
-                    "WHERE meeting_id IS NULL AND provisional = 1 "
-                    "AND source_meeting_id IS NOT NULL"
+            if run_backfill:
+                conn.execute(
+                    text(
+                        "UPDATE voiceprint SET meeting_id = source_meeting_id "
+                        "WHERE meeting_id IS NULL AND provisional = 1 "
+                        "AND source_meeting_id IS NOT NULL"
+                    )
                 )
-            )
             conn.execute(
                 text(
                     "CREATE INDEX IF NOT EXISTS ix_voiceprint_meeting_id "
@@ -467,20 +593,21 @@ def _migrate_schema() -> None:
                 )
             )
             # 修复历史身份分裂：某些片段用了 vp_<id>，而同一会议声纹行
-            # 已经有稳定的 spk_* 键，两者应归一。
-            for vid, speaker_key in conn.execute(
-                text(
-                    "SELECT id, speaker_key FROM voiceprint "
-                    "WHERE speaker_key IS NOT NULL"
-                )
-            ).fetchall():
-                conn.execute(
+            # 已经有稳定的 spk_* 键，两者应归一。逐行 UPDATE 是 N+1 写，只跑一次。
+            if run_backfill:
+                for vid, speaker_key in conn.execute(
                     text(
-                        "UPDATE segment SET speaker_key = :sk "
-                        "WHERE speaker_key = :vp"
-                    ),
-                    {"sk": speaker_key, "vp": f"vp_{vid}"},
-                )
+                        "SELECT id, speaker_key FROM voiceprint "
+                        "WHERE speaker_key IS NOT NULL"
+                    )
+                ).fetchall():
+                    conn.execute(
+                        text(
+                            "UPDATE segment SET speaker_key = :sk "
+                            "WHERE speaker_key = :vp"
+                        ),
+                        {"sk": speaker_key, "vp": f"vp_{vid}"},
+                    )
 
         if "minutes" in tables:
             cols = columns("minutes")
@@ -592,7 +719,12 @@ def _migrate_schema() -> None:
                     )
                 )
 
-    _backfill_session_offsets()
+    if run_backfill:
+        # 注意：_backfill_session_offsets 自己开事务，必须在外层写事务提交之后执行，
+        # 否则 SQLite 上会出现 database is locked（外层已持 RESERVED 锁）。
+        _backfill_session_offsets()
+        with engine.begin() as conn:
+            _mark_once(conn, _BACKFILL_KEY)
 
 
 def _backfill_session_offsets() -> None:

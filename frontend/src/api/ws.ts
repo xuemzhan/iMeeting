@@ -18,6 +18,15 @@ interface Options {
 
 const MAX_RECONNECT_DELAY = 8000
 const HEARTBEAT_INTERVAL = 20000
+/**
+ * 握手前暂存音频块的上界（M-5）。
+ *
+ * 为什么必须有上界：服务端迟迟不回 `ready`（模型加载慢、网络半开）时，
+ * 旧实现会把每一块音频都堆在内存里，直到浏览器 OOM。放宽服务端持久化节奏
+ * （C-2）之前必须先有这个界，否则断线补传量会被放大。
+ * 300 块 ≈ 3 分钟音频，足够覆盖模型预热，也远小于内存风险线。
+ */
+const PRE_READY_LIMIT = 300
 
 export class TranscriptSocket {
   private ws: WebSocket | null = null
@@ -41,8 +50,10 @@ export class TranscriptSocket {
    * ``audio_ack``；需要这个字段让那些 ack 仍能找到归属。
    */
   private closingMeetingId: number | null = null
-  /** 会议 id 尚未由服务端返回前，先暂存音频。 */
+  /** 会议 id 尚未由服务端返回前，先暂存音频（有上界，见 PRE_READY_LIMIT）。 */
   private preReady: ArrayBuffer[] = []
+  /** 是否已就"握手前缓冲被截断"提示过用户（只提示一次，避免刷屏）。 */
+  private preReadyWarned = false
   private nextSeq = 0
   private sendChain: Promise<void> = Promise.resolve()
 
@@ -203,6 +214,14 @@ export class TranscriptSocket {
   /** 发送音频块：先写本地库，服务端确认后才删除。 */
   sendAudio(buffer: ArrayBuffer): Promise<void> {
     if (this.meetingId === null) {
+      if (this.preReady.length >= PRE_READY_LIMIT) {
+        // 丢最旧的块而不是最新的：最新音频更接近用户当下说的话。
+        this.preReady.shift()
+        if (!this.preReadyWarned) {
+          this.preReadyWarned = true
+          this.opts.onError?.('连接建立较慢，最早的音频未能上传（超过缓冲上限）')
+        }
+      }
       this.preReady.push(buffer)
       return Promise.resolve()
     }

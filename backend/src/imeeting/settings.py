@@ -1145,6 +1145,18 @@ CONFIG_SCHEMA: list[ConfigField] = [
         help="CPU 环境下建议不超过物理核数的一半。",
     ),
     _f(
+        key="session.writer_enabled",
+        label="会话写入走单写者",
+        group="会话与安全",
+        type="bool",
+        default=False,
+        help=(
+            "开启后，WebSocket 会话的数据库写入统一交给一个串行写者线程执行，"
+            "避免同步写把事件循环拖慢（IM-PLN-004 C-3）。默认关闭；"
+            "切换后只影响新建立的会话，已在进行中的会议不受影响。"
+        ),
+    ),
+    _f(
         key="session.close_timeout_s",
         label="会话收尾超时 (秒)",
         group="会话与安全",
@@ -1347,6 +1359,17 @@ CONFIG_SCHEMA: list[ConfigField] = [
         group="会话与安全",
         default="",
         help="写入 Word/PDF 导出的页脚，例如“机密 · 内部使用”。",
+    ),
+    _f(
+        key="export.pdf_font_path",
+        label="PDF 导出字体文件",
+        group="会话与安全",
+        default="",
+        help=(
+            "PDF 导出使用的 TTF/TTC 字体绝对路径；留空时自动探测系统 CJK 字体，"
+            "探测不到则用 reportlab 内置 STSong-Light（不内嵌字形）。"
+            "环境变量 IMEETING_PDF_FONT 优先级更高。改完立即生效。"
+        ),
     ),
     _f(
         key="session.max_duration_minutes",

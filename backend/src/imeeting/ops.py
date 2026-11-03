@@ -50,6 +50,7 @@ def reset_metrics() -> None:
 def prometheus_text(
     extra: dict[str, dict[str, int]] | None = None,
     gauges: dict[str, float] | None = None,
+    counters: dict[str, int] | None = None,
 ) -> str:
     lines = [
         "# HELP meeting_uptime_seconds Process uptime.",
@@ -102,6 +103,9 @@ def prometheus_text(
     for name, value in (gauges or {}).items():
         lines.append(f"# TYPE {name} gauge")
         lines.append(f"{name} {value:.6f}")
+    for name, value in (counters or {}).items():
+        lines.append(f"# TYPE {name} counter")
+        lines.append(f"{name} {int(value)}")
     return "\n".join(lines) + "\n"
 
 

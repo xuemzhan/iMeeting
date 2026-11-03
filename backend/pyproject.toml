@@ -66,8 +66,13 @@ target-version = "py310"
 # The legacy model code still uses a large number of Optional[...] and
 # FastAPI Depends(...) defaults, so style-only modernization rules would
 # create a noisy refactor unrelated to this release.
-select = ["E4", "E7", "E9", "F", "I"]
-ignore = ["E501"]
+#
+# IM-PLN-004 §5.7：新增 B（bugbear）与 ASYNC。ASYNC 正是 C-3 那类
+# "async 函数里直接做同步阻塞调用"的静态抓手；B008 在此忽略是因为
+# `Depends()`/`Query()` 作为默认参数值是 FastAPI 的既定写法
+# （启用前存量 217 处，全部属这一类）。
+select = ["E4", "E7", "E9", "F", "I", "B", "ASYNC"]
+ignore = ["E501", "B008"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

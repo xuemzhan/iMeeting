@@ -452,3 +452,44 @@ class TestPersistence:
         assert len(sessions) == 2
         assert sessions[0].duration_ms > 0
         assert sessions[1].start_offset_ms >= sessions[0].duration_ms
+
+
+class TestWriterPath:
+    """C-3 灰度路径：session.writer_enabled 打开后，整条链路仍必须正确落库。"""
+
+    def test_writer_enabled_persists_and_closes_state(
+        self, client, admin_user, echo_mode, monkeypatch
+    ):
+        from sqlmodel import Session, select
+
+        from imeeting.db import engine
+        from imeeting.models import Meeting, Segment
+        from imeeting.settings import config_store
+
+        config_store._db_overrides["session.writer_enabled"] = True
+        try:
+            mid = None
+            with client.websocket_connect("/ws/stream") as ws:
+                ws.send_text(json.dumps({"type": "start", "title": "单写者路径"}))
+                mid = ws.receive_json()["meeting_id"]
+                ws.send_bytes(pcm_bytes(1.0))
+                # 直接 stop：不要先等 final——服务端在等更多音频/控制消息，
+                # 双方互等只会在 90 秒空闲超时后才推进（这条测试曾因此假失败）。
+                ws.send_text(json.dumps({"type": "stop"}))
+                for _ in range(200):
+                    try:
+                        if ws.receive_json()["type"] == "closed":
+                            break
+                    except Exception:
+                        break
+        finally:
+            config_store._db_overrides.pop("session.writer_enabled", None)
+
+        assert mid is not None
+        with Session(engine) as db:
+            meeting = db.get(Meeting, mid)
+            segs = db.exec(select(Segment).where(Segment.meeting_id == mid)).all()
+        assert meeting is not None
+        assert meeting.status == "finished", "单写者路径也必须把会议状态收口"
+        assert len(segs) >= 1, "单写者路径也必须把定稿落库"
+        assert meeting.segment_count == len(segs)

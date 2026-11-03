@@ -226,6 +226,22 @@ def invalidate_cache() -> None:
         _CACHE.clear()
 
 
+def invalidate(meeting_id: int | None = None) -> None:
+    """只失效**指定会议**的缓存项（IM-PLN-004 S-3）。
+
+    为什么要区分：``save_discovered`` 每 5 段就写一次临时声纹，而它原先调用的是
+    全量 ``invalidate_cache()`` —— 一场会议里缓存几乎永远不命中，每次说话人判定
+    都要回表重读所有已录入声纹。写入只影响本会话的可见性，没必要污染其它会议。
+
+    ``meeting_id=None`` 等价于全量失效（改名/删除等全局操作仍用 ``invalidate_cache``）。
+    """
+    if meeting_id is None:
+        invalidate_cache()
+        return
+    with _cache_lock:
+        _CACHE.pop(meeting_id, None)
+
+
 def match_enrolled(
     emb: np.ndarray,
     threshold: float,
@@ -356,7 +372,9 @@ def save_discovered(
                     )
                 )
             db.commit()
-        invalidate_cache()
+        # 只失效本会议的缓存：这是高频写入（每 N 段一次），全量失效会把
+        # 其它会议的声纹缓存一起打掉（IM-PLN-004 S-3）。
+        invalidate(meeting_id)
         # 识别到（新的）讲话人就把它加进参会人，会中面板立刻能看到
         _auto_add_participant(meeting_id, speaker_key, name)
     except Exception:

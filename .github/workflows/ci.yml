@@ -11,15 +11,33 @@ permissions:
 
 jobs:
   backend:
-    runs-on: ubuntu-latest
+    # X-1（IM-PLN-004）：Windows 与 Linux 都要跑。
+    # 目的不是"多跑一遍"，而是让"Windows 适配"这件事有强制门禁——
+    # 上一版方案里它是纯人工承诺，回归没人会发现。
+    name: backend (${{ matrix.os }}, py${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.12"]
+        include:
+          # requires-python 声明的是 >=3.10，最低版本也要有门禁
+          - os: ubuntu-latest
+            python: "3.10"
     defaults:
       run:
         working-directory: backend
+    env:
+      # 测试不加载模型：与 README 的自测口径一致
+      ASR_MODE: echo
+      SKIP_MODEL_WARMUP: "1"
+      PYTHONIOENCODING: utf-8
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python }}
           cache: pip
       - name: Install backend
         run: |
@@ -30,14 +48,24 @@ jobs:
       - name: Test with coverage
         run: python -m pytest -q --cov=imeeting --cov-report=json:coverage.json
       - name: Coverage ratchet (fails only when coverage drops)
+        # 棘轮只在基准平台（ubuntu 3.12）上生效，避免跨平台覆盖率差异误伤
+        if: matrix.os == 'ubuntu-latest' && matrix.python == '3.12'
         run: python scripts/coverage_ratchet.py
       - name: Dependency audit
+        if: matrix.os == 'ubuntu-latest'
         run: |
           python -m pip install --upgrade pip-audit
           python -m pip_audit --local --skip-editable
 
   frontend:
-    runs-on: ubuntu-latest
+    # X-1：Windows 上跑一遍前端四项检查——它能直接暴露路径大小写、换行符、
+    # 脚本里 shell 方言这类"只在 Windows 出错"的问题。
+    name: frontend (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
     defaults:
       run:
         working-directory: frontend
@@ -50,17 +78,22 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - name: Install frontend
         run: npm ci
+      - name: pcm-worklet must match its single source
+        run: npm run worklet:check
       - name: Dependency audit
+        if: matrix.os == 'ubuntu-latest'
         run: npm audit --registry=https://registry.npmjs.org --audit-level=high
       - name: Lint
         run: npm run lint
       - name: Test
         run: npm test
       - name: Coverage ratchet (fails only when coverage drops)
+        if: matrix.os == 'ubuntu-latest'
         run: |
           npm run test:coverage
           npm run coverage:check
       - name: Typecheck
+        run: npm run typecheck
         run: npm run typecheck
       - name: Build
         run: npm run build

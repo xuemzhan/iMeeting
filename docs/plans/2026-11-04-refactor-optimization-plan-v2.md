@@ -1,7 +1,7 @@
 # iMeeting 重构与优化方案 v2（按 IM-REV-006 修订）
 
 <!-- doc-governance: IM-PLN-004 -->
-> 文档类型：计划；状态：草案（修订版 v2，待评审）；受审基线：IM-PLN-003 @ `981e189`；依据：[IM-REV-006](../reviews/2026-11-04-refactor-plan-review.md)；修订日期：2026-11-04。
+> 文档类型：计划；状态：**已实施**（结果见 [IM-RPT-011](../reports/2026-11-04-refactor-implementation.md)：14 项完整实施、3 项部分、3 项未做、1 项被否决回退）；受审基线：IM-PLN-003 @ `981e189`；依据：[IM-REV-006](../reviews/2026-11-04-refactor-plan-review.md)；修订日期：2026-11-04。
 > 维护责任：待指派（iMeeting 文档维护者）。[文档中心](../README.md) · [维护规则](../governance/README.md) · [v1 原文](2026-11-04-refactor-optimization-plan.md)。
 
 **v2 的核心变化：把"按推理排优先级"改成"按实测排优先级"，并补一条 v1 漏掉的用户可见缺陷。**
