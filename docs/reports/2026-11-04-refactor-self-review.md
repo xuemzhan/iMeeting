@@ -264,12 +264,25 @@ PDF 合法、能打开、中文全缺字。所以"可读"一直挂在"人眼看�
 （抽出来的是乱码/缺字），也就是说这两条能真正区分"看起来正常的废文件"与"能读的文件"。
 
 **代价**：`pypdf>=5` 进入 `dev` 额外依赖（仅测试用，`constraints-production.txt` 不动）。
-**证据**：GitHub Actions `41768192826` 在 ubuntu 3.12 / 3.11 与 windows 3.12 上均 822 passed。
+
+### 2.16 C-3 收尾：补上灰度开关的双写比对
+
+IM-RPT-011 §3.3 把"双写比对"列为未做，于是 `session.writer_enabled` 这个开关的
+"打开等同不打开"只能靠人工读代码确认——去重、`segment_count`、状态收口中任何一处
+在单写者路径上变了，现有用例都不会红。
+
+**做法**：对两条路径各建一场会议，按真实收尾顺序跑同一批写入
+（`start_session_row` → 增量 `persist_segments` → `record_audio_seq` →
+含**重复 segment_id** 的收口写入 → `record_audio_path` → `save_adaptive_profile` →
+`finish_session_row`），然后把 `meeting` / `meeting_session` / `segment` 三张表的
+结果压成快照（去掉 id 与时间戳）逐字段比较，断言完全相等。
+
+**证据**：`test_writer_path_matches_direct_path`；GitHub Actions `41769830227`
+在 ubuntu 3.12/3.11 与 windows 3.12 上均 **823 passed**（Windows 10 分 58 秒）。
 
 ---
 
 ## 3. 复核后仍然成立的实现（未改动）
-
 | 项 | 复核结论 |
 |---|---|
 | X-2 字体降级链 | 4 级顺序正确；配置失效**先告警**再降级；缓存键含 override（改配置即时生效）；6 条测试含"旧实现会失败"的判别性断言 |
@@ -289,15 +302,15 @@ PDF 合法、能打开、中文全缺字。所以"可读"一直挂在"人眼看�
 
 | 检查 | 结果 |
 |---|---|
-| 本地后端全量回归（Windows） | **820 passed / 0 failed**（8 分 39 秒；X-2 可读性门禁加入后为 822） |
+| 本地后端全量回归（Windows） | **820 passed / 0 failed**（8 分 39 秒，早期一轮；最终为 823） |
 | 本地后端静态检查（`ruff`，含 `B` + `ASYNC`） | All checks passed |
 | 本地后端覆盖率棘轮 | **81.20% → 81.73%（+0.53）通过** |
 | 本地前端 lint / typecheck / build | 均通过（退出码 0） |
 | 本地前端单测 | 23 个文件 / 184 条用例通过 |
 | 本地前端覆盖率棘轮 | lines 23.51% → 23.80%、statements 22.57% → 22.82%，通过 |
-| 本轮新增用例 | 后端 +21（D-1 1、D-2 1、D-4 5、D-5 2、D-7 2、D-8 2、D-9 1、D-10 5、X-2 可读性 2），前端 0 新增 |
+| 本轮新增用例 | 后端 +22（D-1 1、D-2 1、D-4 5、D-5 2、D-7 2、D-8 2、D-9 1、D-10 5、X-2 可读性 2、C-3 双写比对 1），前端 0 新增 |
 | **GitHub Actions `41741208223`（`87a8281`）** | **7 / 7 作业全绿**：backend（ubuntu 3.12 / 3.11 / windows 3.12）、frontend（ubuntu / windows）、e2e、deploy |
-| **GitHub Actions `41768192826`（`38b55bd`，含 X-2 可读性门禁）** | **7 / 7 作业全绿**；Linux 基准平台 ruff 通过、**822 passed**、覆盖率 81.20% → **81.69%**；Windows 822 passed |
+| **GitHub Actions `41769830227`（`937844a`，最终版本）** | **7 / 7 作业全绿**；Linux 基准平台 ruff 通过、**823 passed**（7 分 33 秒）、覆盖率 81.20% → **81.69%**；Windows **823 passed**（10 分 58 秒）；py3.11 腿同样 green |
 | Linux 前端（ubuntu） | lint / 184 用例 / typecheck / build / worklet / 覆盖率棘轮 / 响应式门禁 全通过 |
 | deploy 作业（ubuntu） | compose config（含 tls profile）、promtool、caddy validate、前端镜像构建 + trivy、SBOM、三个部署脚本 `sh -n` 全通过 |
 
@@ -306,14 +319,15 @@ PDF 合法、能打开、中文全缺字。所以"可读"一直挂在"人眼看�
 ## 5. 仍未验证的边界（与 IM-RPT-011 §6 相同，未因本轮修复而消除）
 
 1. **X-2 的"中文可读"已从"人眼看"改为自动断言**（§2.15）：Linux CI 上把导出的 PDF 重新解析、
-   比对中文文本，822 项里包含这两条。**仍然成立的风险**：内置 CID 字体不内嵌，
-   严格阅读器 / PDF-A 场景仍可能显示异常——生产镜像应装 `fonts-noto-cjk` 走第 2 级（原风险未变）。
+   比对中文文本。**仍然成立的风险**：内置 CID 字体不内嵌，严格阅读器 / PDF-A 场景仍可能显示异常
+   ——生产镜像应装 `fonts-noto-cjk` 走第 2 级（原风险未变）。
 2. Windows CI 已真实跑通（见 §4），但只在 `windows-latest` + Python 3.12 上；
    更老的 Windows / 其它 Python 版本未覆盖。
 3. P-2 的收益仍未在浏览器 trace 里量化；D-3 同样只有代码层结论。
 4. 未跑 `scripts/stress.py`（需真实语音与模型）：S-7 的池耗尽、C-3 的事件循环停顿
    4 路并发 + 100rps 仍未复现验证。
-5. C-3 的双写比对仍未实现（IM-RPT-011 §3.3）。
+5. C-3 的双写比对**已补**（§2.16），但只覆盖"顺序执行同一批写入"的等价性；
+   真并发（4 路会话同时压队列）下的顺序性与吞吐仍未实测。
 6. D-10 的 `drain` 只在 `MockTransport` 上验证过协议交互，没有对着真实服务跑过；
    `deploy/graceful_drain.sh` 只做 `sh -n` 语法检查（本轮已把它加进 `deploy` 作业），未真实执行。
 7. R-1 / R-2 / R-3 仍未开始。
