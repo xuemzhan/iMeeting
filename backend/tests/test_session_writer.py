@@ -198,3 +198,125 @@ def test_lifespan_drains_the_writer_on_shutdown(
         pass
 
     assert calls == [1], "服务关闭时必须排空单写者"
+
+
+def _seed_meeting(owner_id: int, title: str) -> int:
+    """建一条 recording 会议，返回 id。"""
+    from sqlmodel import Session
+
+    from imeeting.db import engine
+    from imeeting.models import Meeting
+
+    with Session(engine) as db:
+        meeting = Meeting(title=title, owner_id=owner_id, status="recording")
+        db.add(meeting)
+        db.commit()
+        db.refresh(meeting)
+        return meeting.id
+
+
+def _apply_session_ops(meeting_id: int, session_id: str, run) -> None:
+    """按真实收尾顺序执行一遍写入（C-1/C-2/C-3 覆盖到的那些函数）。
+
+    顺序刻意包含「同一片段重复投递」与「先增量、后收口」，因为灰度切换
+    真正会踩到的就是这两处语义。
+    """
+    from imeeting.application.meeting_sessions import (
+        finish_session_row,
+        persist_segments,
+        record_audio_path,
+        record_audio_seq,
+        save_adaptive_profile,
+        start_session_row,
+    )
+
+    seg1 = {"segment_id": "s-1", "text": "第一句", "start_ms": 0, "end_ms": 900,
+            "speaker": "张三", "seq": 0}
+    seg2 = {"segment_id": "s-2", "text": "第二句", "start_ms": 900, "end_ms": 1800,
+            "speaker": "李四", "seq": 1}
+    seg3 = {"segment_id": "s-3", "text": "第三句", "start_ms": 1800, "end_ms": 3000,
+            "speaker": "张三", "seq": 2}
+
+    run(start_session_row, meeting_id, session_id, 0)
+    run(persist_segments, meeting_id, [seg1, seg2], 0,
+        final_status=None, session_id=session_id)
+    run(record_audio_seq, meeting_id, 500)
+    # seg2 再投一次：两条路径都必须按 segment_id 去重
+    run(persist_segments, meeting_id, [seg2, seg3], 4200,
+        final_status="finished", session_id=session_id)
+    run(record_audio_path, meeting_id, "audio/x.wav")
+    run(save_adaptive_profile, meeting_id, {"gain": 1.2})
+    run(finish_session_row, meeting_id, session_id, 4200, "finished", "audio/x.wav", None)
+
+
+def _snapshot(meeting_id: int) -> dict:
+    """把两条路径写出来的库状态压成可比对的快照（去掉 id 与时间戳）。"""
+    from sqlmodel import Session, select
+
+    from imeeting.db import engine
+    from imeeting.models import Meeting, MeetingSession, Segment
+
+    with Session(engine) as db:
+        meeting = db.get(Meeting, meeting_id)
+        sessions = db.exec(
+            select(MeetingSession).where(MeetingSession.meeting_id == meeting_id)
+        ).all()
+        segments = db.exec(
+            select(Segment).where(Segment.meeting_id == meeting_id).order_by(Segment.seq)
+        ).all()
+        return {
+            "meeting": {
+                "status": meeting.status,
+                "segment_count": meeting.segment_count,
+                "duration_ms": meeting.duration_ms,
+                "audio_path": meeting.audio_path,
+            },
+            "sessions": [
+                {
+                    "status": row.status,
+                    "duration_ms": row.duration_ms,
+                    "segment_count": row.segment_count,
+                    "audio_path": row.audio_path,
+                    "ended": row.ended_at is not None,
+                }
+                for row in sessions
+            ],
+            "segments": [
+                {
+                    "segment_id": seg.segment_id,
+                    "text": seg.text,
+                    "start_ms": seg.start_ms,
+                    "end_ms": seg.end_ms,
+                    "speaker": seg.speaker,
+                    "seq": seg.seq,
+                }
+                for seg in segments
+            ],
+        }
+
+
+def test_writer_path_matches_direct_path(admin_user) -> None:
+    """C-3 灰度开关两个位置必须写出**逐字段相同**的库状态。
+
+    IM-RPT-011 §3.3 把这条列为未做。缺了它，"打开开关"就只能靠人工比对：
+    去重、segment_count、状态收口任何一处变了，都不会有人发现。
+    """
+    writer = SessionWriter(capacity=64)
+
+    def direct(fn, *args, **kwargs):
+        return fn(*args, **kwargs)
+
+    def through_writer(fn, *args, **kwargs):
+        return writer.submit_sync(fn, *args, **kwargs).result(timeout=10)
+
+    direct_meeting = _seed_meeting(admin_user.id, "直调路径")
+    writer_meeting = _seed_meeting(admin_user.id, "单写者路径")
+
+    try:
+        _apply_session_ops(direct_meeting, "sess-direct", direct)
+        _apply_session_ops(writer_meeting, "sess-writer", through_writer)
+    finally:
+        writer.close(timeout=5)
+        shutdown_writer()
+
+    assert _snapshot(writer_meeting) == _snapshot(direct_meeting)
