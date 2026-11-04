@@ -5,13 +5,15 @@
 > 维护责任：待指派（iMeeting 文档维护者）。[文档中心](../README.md) · [维护规则](../governance/README.md)。
 
 **结论**：对照 [IM-PLN-004](../plans/2026-11-04-refactor-optimization-plan-v2.md) 逐条复核实现，
-**发现 10 个问题**，全部已修复并补测试：
+**发现 13 个问题**，全部已修复并补验证：
 
-- 3 个真实缺陷（D-1、D-2、D-7）——其中两个是本轮改造自己引入的；
+- 6 个真实缺陷（D-1、D-2、D-7、D-11、D-13，外加 D-11 的后果"CI 从未运行"）；
 - 1 个既有测试缺陷（D-6）；
-- 6 个"计划写了、代码只做了一半或没做"的偏离（D-3、D-4、D-5、D-8、D-9、D-10）。
+- 6 个"计划写了、代码只做了一半或没做"的偏离（D-3、D-4、D-5、D-8、D-9、D-10、D-12）。
 
-修复后全量回归见 §4。
+其中 D-11 / D-12 / D-13 只有在 GitHub 上真实跑 CI（Linux + Windows）才暴露；
+修复后该次运行 `41741208223` **7/7 作业全绿**。逐项证据见 §2，验证结果见 §4。
+
 
 ---
 
@@ -29,6 +31,14 @@
 | D-8 | S-2/P-4 只做了 `shutdown`，没做计划要求的"线程数回基线"验收，线程总数也没进 `/metrics` | 与计划不符 | §2.8 |
 | D-9 | S-5 超限帧只打日志，没有计划要求的"丢弃并计数" | 与计划不符 | §2.9 |
 | D-10 | §6.1 的优雅重启没有下沉（只有 `.ps1`，缺 `drain` 子命令与 `.sh` 薄包装），README 也没有分平台写法 | 与计划不符 | §2.10 |
+
+> 下面三条是**首次在 GitHub 上真实跑 CI（Linux + Windows）才暴露**的——本地只做静态校验永远看不出来。
+>
+> | 编号 | 问题 | 性质 | 处置 |
+> |---|---|---|---|
+> | D-11 | `ci.yml` 里一个 step 写了两个 `run:`，GitHub 判定整份工作流非法，**最近两个提交的 CI 全是 0 秒失败** | **真实缺陷**（门禁形同不存在） | §2.11 |
+> | D-12 | `py3.10` 矩阵腿在 `pip install` 阶段就死：安全底线 `pillow>=13` 的 `requires-python` 是 `>=3.11` | 与声明不符（`requires-python = ">=3.10"`） | §2.12 |
+> | D-13 | 前端 Windows 腿在响应式门禁处 `ParserError`：脚本是 bash 写法，Windows 默认 PowerShell | **真实缺陷**（X-1 要抓的正是这类） | §2.13 |
 
 ---
 
@@ -178,6 +188,63 @@ AssertionError: 硬断连后 session 行仍停在 recording：['recording']
 **验证**：`tests/test_drain_cli.py` 5 条（轮询到 0 / 超时报剩余数 / 缺 token / CLI 退出码 0 与 3），
 用 `httpx.MockTransport`，不需要真起服务。
 
+
+### 2.11 D-11：工作流本身非法，CI 从来没跑起来（真实缺陷）
+
+**现象**：`gh workflow run ci.yml --ref perf` 直接 422：
+
+```
+HTTP 422: Invalid Argument - failed to parse workflow: (Line: 97, Col: 9):
+'run' is already defined
+```
+
+查 run 列表，`39ee83d` 与 `805c6fb` 两次推送的 CI 都是 **0 秒失败**——也就是说
+IM-RPT-011 里"矩阵与 YAML 只做了静态校验"这句话的实际后果比写得更严重：
+不是"没跑过 Windows"，而是**整条 CI 一条都没跑过**。
+
+**根因**：frontend 作业的 Typecheck step 里写了两行 `run:`。YAML 解析器把重复键
+当错误（GitHub 用严格解析），整份工作流作废。
+
+**修复**：删掉重复行并留注释；同时补一个本地严格校验脚本（自写 PyYAML loader，
+把重复键变成异常），避免同类错误再次只靠肉眼发现。校验结果：`ci.yml` / `compose.yaml`
+`/prometheus-alerts.yml` 均通过。
+
+### 2.12 D-12：声明支持 3.10，但装不上（与声明不符）
+
+**现象**：`backend (ubuntu-latest, py3.10)` 在 `pip install -c constraints-production.txt -e ".[dev]"`
+阶段 `ResolutionImpossible`，报 `reportlab ... depends on pillow>=9.0.0` 且
+"no matching distributions available for your environment"。
+
+**根因**：安全底线 `constraints-production.txt` 要求 `pillow>=13.0.0`，而 PyPI 上
+Pillow 13.0.0 的 `requires-python` 是 `>=3.11` 且**没有 cp310 wheel**。
+`pyproject.toml` 却还写着 `requires-python = ">=3.10"`——声明与实际可安装性矛盾。
+
+**修复**：`requires-python` 抬到 `">=3.11"`；CI 的最低版本腿由 3.10 改为 3.11；
+README 两处（安装要求表、快速开始）同步。
+**验证**：`backend (ubuntu-latest, py3.11)` 腿由"装不上"变为 820 passed 全绿。
+
+### 2.13 D-13：前端 Windows 腿的响应式门禁死在 shell 方言（真实缺陷）
+
+**现象**：`frontend (windows-latest)` 直到响应式门禁前都是绿的（23 文件 / 184 用例通过），
+然后：
+
+```
+ParserError: D:\a\_temp\....ps1:3
+```
+
+**根因**：该 step 的脚本是 bash 写法（`npx vite preview ... &`、`for i in $(seq 1 60)`、
+`curl`），但 Windows runner 默认 shell 是 PowerShell。
+
+**修复**：该 step 显式 `shell: bash`（Windows runner 自带 Git Bash），两平台共用一份脚本。
+**验证**：`frontend (windows-latest)` 由失败变为 success。
+
+### 2.14 附带发现：依赖审计在非基准平台上是噪音
+
+py3.11 腿在 820 项全绿之后仍失败：`pip-audit --local` 报了 runner 镜像**预装**的
+`setuptools 79.0.1`（PYSEC-2026-3447）。它不属于本仓库依赖，且 py3.12 镜像没有——
+同一条规则在两个 runner 上给出相反结论，说明条件写错了。改为与覆盖率棘轮一致，
+只在基准平台（ubuntu + py3.12）执行。
+
 ---
 
 ## 3. 复核后仍然成立的实现（未改动）
@@ -201,24 +268,34 @@ AssertionError: 硬断连后 session 行仍停在 recording：['recording']
 
 | 检查 | 结果 |
 |---|---|
-| 后端全量回归 | **820 passed / 0 failed**（8 分 39 秒） |
-| 后端静态检查（`ruff`，含 `B` + `ASYNC`） | All checks passed |
-| 后端覆盖率棘轮 | **81.20% → 81.73%（+0.53），通过** |
-| 前端 lint / typecheck / build | 均通过（`npm run lint` / `typecheck` / `build` 退出码 0） |
-| 前端单测 | 23 个文件 / 184 条用例通过 |
-| 前端覆盖率棘轮 | lines 23.51% → 23.80%、statements 22.57% → 22.82%，通过 |
+| 本地后端全量回归（Windows） | **820 passed / 0 failed**（8 分 39 秒） |
+| 本地后端静态检查（`ruff`，含 `B` + `ASYNC`） | All checks passed |
+| 本地后端覆盖率棘轮 | **81.20% → 81.73%（+0.53）通过** |
+| 本地前端 lint / typecheck / build | 均通过（退出码 0） |
+| 本地前端单测 | 23 个文件 / 184 条用例通过 |
+| 本地前端覆盖率棘轮 | lines 23.51% → 23.80%、statements 22.57% → 22.82%，通过 |
 | 本轮新增用例 | 后端 +19（D-1 1、D-2 1、D-4 5、D-5 2、D-7 2、D-8 2、D-9 1、D-10 5），前端 0 新增 |
+| **GitHub Actions `41741208223`（commit `87a8281`）** | **7 / 7 作业全绿**：backend（ubuntu 3.12 / ubuntu 3.11 / windows 3.12）、frontend（ubuntu / windows）、e2e、deploy |
+| Linux 后端（ubuntu 3.12，基准平台） | ruff + **820 passed** + 覆盖率棘轮 + 依赖审计 全通过 |
+| Linux 前端（ubuntu） | lint / 174+ 用例 / typecheck / build / worklet / 覆盖率棘轮 / 响应式门禁 全通过 |
+| Windows 后端（windows 3.12） | 820 passed（X-1 的首次真实数据点） |
+| Windows 前端（windows） | 23 文件 / 184 用例 + lint + typecheck + build + 响应式门禁 全通过 |
+| deploy 作业（ubuntu） | compose config（含 tls profile）、promtool、caddy validate、前端镜像构建 + trivy、SBOM 全通过 |
 
 ---
 
 ## 5. 仍未验证的边界（与 IM-RPT-011 §6 相同，未因本轮修复而消除）
 
-1. 未在 Linux 上运行；X-2 的容器内中文 PDF 仍未目视确认。
-2. Windows CI 未真实跑过（只有静态校验）。
+1. **X-2 的"中文 PDF 在 Linux 上可读"仍未目视确认**：CI 里 `test_pdf_font.py` 在 Linux 上通过，
+   证明降级链按预期选到了内置 CID 字体（而不是 Helvetica），但"渲染出来对不对"仍需人眼看一次。
+2. Windows CI 已真实跑通（见 §4），但只在 `windows-latest` + Python 3.12 上；
+   更老的 Windows / 其它 Python 版本未覆盖。
 3. P-2 的收益仍未在浏览器 trace 里量化；D-3 同样只有代码层结论。
 4. 未跑 `scripts/stress.py`（需真实语音与模型）：S-7 的池耗尽、C-3 的事件循环停顿
    4 路并发 + 100rps 仍未复现验证。
 5. C-3 的双写比对仍未实现（IM-RPT-011 §3.3）。
 6. D-10 的 `drain` 只在 `MockTransport` 上验证过协议交互，没有对着真实服务跑过；
-   `deploy/graceful_drain.sh` 未在 Linux 上执行过。
+   `deploy/graceful_drain.sh` 只做 `sh -n` 语法检查（本轮已把它加进 `deploy` 作业），未真实执行。
 7. R-1 / R-2 / R-3 仍未开始。
+8. 本轮未在 GitHub Codespaces 中验证：`gh` token 缺 `codespace` 作用域，
+   创建 codespace 需要账号级授权（`gh auth refresh -h github.com -s codespace`），未执行。

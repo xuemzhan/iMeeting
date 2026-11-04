@@ -172,6 +172,7 @@ jobs:
         run: |
           sh -n deploy/backup_sqlite.sh
           sh -n deploy/restore_sqlite.sh
+          sh -n deploy/graceful_drain.sh
           docker run --rm \
             -v "$PWD/deploy/prometheus-alerts.yml:/rules.yml:ro" \
             --entrypoint promtool \
