@@ -245,6 +245,27 @@ py3.11 腿在 820 项全绿之后仍失败：`pip-audit --local` 报了 runner �
 同一条规则在两个 runner 上给出相反结论，说明条件写错了。改为与覆盖率棘轮一致，
 只在基准平台（ubuntu + py3.12）执行。
 
+
+
+### 2.15 X-2 收尾：把"Linux 上中文可读"从人眼确认改成断言
+
+计划 §11.3 对 X-2 的通过标准里有一句"Linux 容器导出中文 PDF 可读"，而原先所有用例只断言
+结构（`CIDFontType0` / `STSong` 存在）——**旧实现的静默回退恰好满足这些结构断言**：
+PDF 合法、能打开、中文全缺字。所以"可读"一直挂在"人眼看一次"上。
+
+**做法**：用 `pypdf` 把导出的 PDF 重新解析，把抽出的文本与源字符串比对。新增两条用例：
+
+| 用例 | 覆盖的路径 |
+|---|---|
+| `test_cid_font_pdf_text_is_actually_readable` | 只有内置 CID 字体（Linux 容器缺 CJK 字体时的真实路径） |
+| `test_pdf_text_is_readable_whatever_font_this_host_offers` | 不 mock 探测：Windows 走内嵌 TTF、Linux 走 CID，两条都要过 |
+
+**判别性已验证**：把字体强制降级到 Helvetica 后，两条用例里的中文断言全部为 `False`
+（抽出来的是乱码/缺字），也就是说这两条能真正区分"看起来正常的废文件"与"能读的文件"。
+
+**代价**：`pypdf>=5` 进入 `dev` 额外依赖（仅测试用，`constraints-production.txt` 不动）。
+**证据**：GitHub Actions `41768192826` 在 ubuntu 3.12 / 3.11 与 windows 3.12 上均 822 passed。
+
 ---
 
 ## 3. 复核后仍然成立的实现（未改动）
@@ -268,26 +289,25 @@ py3.11 腿在 820 项全绿之后仍失败：`pip-audit --local` 报了 runner �
 
 | 检查 | 结果 |
 |---|---|
-| 本地后端全量回归（Windows） | **820 passed / 0 failed**（8 分 39 秒） |
+| 本地后端全量回归（Windows） | **820 passed / 0 failed**（8 分 39 秒；X-2 可读性门禁加入后为 822） |
 | 本地后端静态检查（`ruff`，含 `B` + `ASYNC`） | All checks passed |
 | 本地后端覆盖率棘轮 | **81.20% → 81.73%（+0.53）通过** |
 | 本地前端 lint / typecheck / build | 均通过（退出码 0） |
 | 本地前端单测 | 23 个文件 / 184 条用例通过 |
 | 本地前端覆盖率棘轮 | lines 23.51% → 23.80%、statements 22.57% → 22.82%，通过 |
-| 本轮新增用例 | 后端 +19（D-1 1、D-2 1、D-4 5、D-5 2、D-7 2、D-8 2、D-9 1、D-10 5），前端 0 新增 |
-| **GitHub Actions `41741208223`（commit `87a8281`）** | **7 / 7 作业全绿**：backend（ubuntu 3.12 / ubuntu 3.11 / windows 3.12）、frontend（ubuntu / windows）、e2e、deploy |
-| Linux 后端（ubuntu 3.12，基准平台） | ruff + **820 passed** + 覆盖率棘轮 + 依赖审计 全通过 |
-| Linux 前端（ubuntu） | lint / 174+ 用例 / typecheck / build / worklet / 覆盖率棘轮 / 响应式门禁 全通过 |
-| Windows 后端（windows 3.12） | 820 passed（X-1 的首次真实数据点） |
-| Windows 前端（windows） | 23 文件 / 184 用例 + lint + typecheck + build + 响应式门禁 全通过 |
-| deploy 作业（ubuntu） | compose config（含 tls profile）、promtool、caddy validate、前端镜像构建 + trivy、SBOM 全通过 |
+| 本轮新增用例 | 后端 +21（D-1 1、D-2 1、D-4 5、D-5 2、D-7 2、D-8 2、D-9 1、D-10 5、X-2 可读性 2），前端 0 新增 |
+| **GitHub Actions `41741208223`（`87a8281`）** | **7 / 7 作业全绿**：backend（ubuntu 3.12 / 3.11 / windows 3.12）、frontend（ubuntu / windows）、e2e、deploy |
+| **GitHub Actions `41768192826`（`38b55bd`，含 X-2 可读性门禁）** | **7 / 7 作业全绿**；Linux 基准平台 ruff 通过、**822 passed**、覆盖率 81.20% → **81.69%**；Windows 822 passed |
+| Linux 前端（ubuntu） | lint / 184 用例 / typecheck / build / worklet / 覆盖率棘轮 / 响应式门禁 全通过 |
+| deploy 作业（ubuntu） | compose config（含 tls profile）、promtool、caddy validate、前端镜像构建 + trivy、SBOM、三个部署脚本 `sh -n` 全通过 |
 
 ---
 
 ## 5. 仍未验证的边界（与 IM-RPT-011 §6 相同，未因本轮修复而消除）
 
-1. **X-2 的"中文 PDF 在 Linux 上可读"仍未目视确认**：CI 里 `test_pdf_font.py` 在 Linux 上通过，
-   证明降级链按预期选到了内置 CID 字体（而不是 Helvetica），但"渲染出来对不对"仍需人眼看一次。
+1. **X-2 的"中文可读"已从"人眼看"改为自动断言**（§2.15）：Linux CI 上把导出的 PDF 重新解析、
+   比对中文文本，822 项里包含这两条。**仍然成立的风险**：内置 CID 字体不内嵌，
+   严格阅读器 / PDF-A 场景仍可能显示异常——生产镜像应装 `fonts-noto-cjk` 走第 2 级（原风险未变）。
 2. Windows CI 已真实跑通（见 §4），但只在 `windows-latest` + Python 3.12 上；
    更老的 Windows / 其它 Python 版本未覆盖。
 3. P-2 的收益仍未在浏览器 trace 里量化；D-3 同样只有代码层结论。
