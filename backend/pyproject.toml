@@ -44,6 +44,9 @@ dev = [
     "psutil>=5.9",
     "websockets>=12",
     "pytest-cov>=5",
+    # pypdf 只用于 X-2 的"中文 PDF 真能读出来"门禁：断言不是看魔数，
+    # 而是把导出的 PDF 重新解析、比对中文文本（Helvetica 回退时抽不出这些字）。
+    "pypdf>=5",
 ]
 
 [project.scripts]

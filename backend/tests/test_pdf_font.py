@@ -141,3 +141,53 @@ def test_resolver_is_cached_within_same_config(monkeypatch):
     resolve_pdf_font()
 
     assert calls["count"] == first_round, "同配置下不应重复探测字体文件"
+
+
+def _pdf_text(pdf: bytes) -> str:
+    """把导出的 PDF 重新解析成文本（X-2 的"可读"判据）。"""
+    import io
+
+    from pypdf import PdfReader
+
+    reader = PdfReader(io.BytesIO(pdf))
+    return "\n".join(page.extract_text() or "" for page in reader.pages)
+
+
+def test_cid_font_pdf_text_is_actually_readable(monkeypatch):
+    """只用内置 CID 字体（Linux 容器的默认路径）时，中文必须仍能被读出。
+
+    为什么这条比"PDF 里有 CIDFontType0"更硬：旧实现在缺字体时静默回退 Helvetica，
+    生成的 PDF 照样有合法结构、照样能打开——只是中文全是缺字。只有把文本抽出来
+    比对，才能区分"看起来正常的废文件"和"真的能读"。
+
+    判别性已验证：强制 Helvetica 路径时，下面的中文断言全部为 False。
+    """
+    monkeypatch.setattr(doc, "_CJK_FONT_CANDIDATES", ())
+    monkeypatch.setattr(doc, "_configured_font_path", lambda: "")
+    assert resolve_pdf_font()[1] == "cid:builtin"
+
+    pdf = build_pdf(_meeting(), [_segment()], None)
+    text = _pdf_text(pdf)
+
+    assert "季度评审会议" in text, "标题里的中文没能被读出——导出的是缺字废文件"
+    assert "这里是中文转写内容" in text, "转写正文里的中文没能被读出"
+    assert "张三" in text
+
+
+def test_pdf_text_is_readable_whatever_font_this_host_offers():
+    """不 mock 字体探测：这台机器能给什么字体就给什么，中文都必须读得出来。
+
+    Windows 开发机走内嵌 TTF、Linux CI 走内置 CID，两条路径都要过——
+    这正是 X-2"PDF 中文在 Linux 上不可读"的自动化版本。
+    """
+    _font, source = resolve_pdf_font()
+    assert source != "fallback:helvetica", (
+        "本机没有可用的 CJK 字体，降级到了 Helvetica；"
+        "这条用例覆盖不到真实路径，请安装 fonts-noto-cjk 或配置 export.pdf_font_path"
+    )
+
+    pdf = build_pdf(_meeting(), [_segment()], None)
+    text = _pdf_text(pdf)
+
+    assert "季度评审会议" in text
+    assert "这里是中文转写内容" in text
